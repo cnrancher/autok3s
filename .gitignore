@@ -13,3 +13,12 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Third-party directories
+.idea/
+.DS_Store
+
+# Compile the resulting file
+dist/
+bin/
+main

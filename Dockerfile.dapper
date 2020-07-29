@@ -1,0 +1,53 @@
+FROM golang:1.13.12-buster
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+        xz-utils \
+        unzip \
+        netcat \
+    && rm -rf /var/lib/apt/lists/*
+
+# -- for make rules
+## install docker client
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+    && rm -rf /var/lib/apt/lists/*; \
+    \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - >/dev/null; \
+    echo "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/debian buster stable" > /etc/apt/sources.list.d/docker.list; \
+    \
+    apt-get update -qq && apt-get install -y --no-install-recommends \
+        docker-ce-cli=5:19.03.* \
+    && rm -rf /var/lib/apt/lists/*; \
+    docker --version
+## install golangci-lint
+RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.27.0; \
+        golangci-lint --version; \
+    fi
+## install mockgen
+RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
+        GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.3; \
+        mockgen --version; \
+    fi
+## install ginkgo
+RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
+        GO111MODULE=on go get github.com/onsi/ginkgo/ginkgo@v1.13.0; \
+        ginkgo version; \
+    fi
+# -- for make rules
+
+# -- for dapper
+ENV DAPPER_RUN_ARGS --privileged --network host
+ENV GO111MODULE=off
+ENV CROSS=false
+ENV DAPPER_ENV CROSS CLUSTER_TYPE DOCKER_USERNAME DOCKER_PASSWORD WITHOUT_MANIFEST ONLY_MANIFEST IGNORE_MISSING DRONE_TAG REPO TAG OS ARCH IMAGE_NAME DIRTY_CHECK
+ENV DAPPER_SOURCE /go/src/github.com/Jason-ZW/autok3s/
+ENV DAPPER_OUTPUT ./bin ./dist
+ENV DAPPER_DOCKER_SOCKET true
+ENV HOME ${DAPPER_SOURCE}
+# -- for dapper
+
+WORKDIR ${DAPPER_SOURCE}
+ENTRYPOINT ["make", "-se", "autok3s"]
