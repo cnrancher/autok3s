@@ -33,6 +33,7 @@ replace (
 
 require (
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.4
@@ -41,6 +42,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
+	github.com/spf13/viper v1.4.0
 	k8s.io/component-base v0.0.0
 	k8s.io/kubernetes v0.0.0-00010101000000-000000000000
 )

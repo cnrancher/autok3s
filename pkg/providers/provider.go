@@ -10,6 +10,8 @@ import (
 type Provider interface {
 	GetProviderName() string
 	GetCreateFlags() *pflag.FlagSet
+	GetCredentialFlags() *pflag.FlagSet
+	CreateK3sCluster()
 }
 
 func Register(provider string) Provider {

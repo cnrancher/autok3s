@@ -31,5 +31,7 @@ func Main() {
 }
 
 func EmbedCommand() *cobra.Command {
-	return cmd.NewDefaultKubectlCommand()
+	c := cmd.NewDefaultKubectlCommand()
+	c.Short = "Kubectl controls the Kubernetes cluster manager"
+	return c
 }

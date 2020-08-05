@@ -20,7 +20,7 @@ var (
 )
 
 func init() {
-	versionCmd.Flags().BoolVarP(&short, "short", "s", short, "print just the version number")
+	versionCmd.Flags().BoolVarP(&short, "short", "s", short, "Print just the version number")
 }
 
 func VersionCommand(gitVersion, gitCommit, gitTreeState, buildDate string) *cobra.Command {
