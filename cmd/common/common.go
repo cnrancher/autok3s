@@ -2,8 +2,10 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/Jason-ZW/autok3s/pkg/common"
 	"github.com/Jason-ZW/autok3s/pkg/providers"
 
 	"github.com/sirupsen/logrus"
@@ -12,8 +14,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var bindPrefix = "autok3s.providers.%s.%s"
-
 func BindPFlags(cmd *cobra.Command, p providers.Provider) {
 	name, err := cmd.Flags().GetString("provider")
 	if err != nil {
@@ -21,15 +21,40 @@ func BindPFlags(cmd *cobra.Command, p providers.Provider) {
 	}
 
 	cmd.Flags().Visit(func(f *pflag.Flag) {
-		if IsAccessFlag(f.Name, p.GetCredentialFlags()) {
-			if err := viper.BindPFlag(fmt.Sprintf(bindPrefix, name, f.Name), f); err != nil {
+		if IsCredentialFlag(f.Name, p.GetCredentialFlags(cmd)) {
+			if err := viper.BindPFlag(fmt.Sprintf(common.BindPrefix, name, f.Name), f); err != nil {
 				logrus.Fatalln(err)
 			}
 		}
 	})
 }
 
-func IsAccessFlag(s string, nfs *pflag.FlagSet) bool {
+// Borrowed from https://github.com/docker/machine/blob/master/commands/create.go#L267.
+func FlagHackLookup(flagName string) string {
+	// e.g. "-d" for "--driver"
+	flagPrefix := flagName[1:3]
+
+	// TODO: Should we support -flag-name (single hyphen) syntax as well?
+	for i, arg := range os.Args {
+		if strings.Contains(arg, flagPrefix) {
+			// format '--driver foo' or '-d foo'
+			if arg == flagPrefix || arg == flagName {
+				if i+1 < len(os.Args) {
+					return os.Args[i+1]
+				}
+			}
+
+			// format '--driver=foo' or '-d=foo'
+			if strings.HasPrefix(arg, flagPrefix+"=") || strings.HasPrefix(arg, flagName+"=") {
+				return strings.Split(arg, "=")[1]
+			}
+		}
+	}
+
+	return ""
+}
+
+func IsCredentialFlag(s string, nfs *pflag.FlagSet) bool {
 	found := false
 	nfs.VisitAll(func(f *pflag.Flag) {
 		if strings.EqualFold(s, f.Name) {

@@ -1,30 +1,33 @@
 package providers
 
 import (
-	"github.com/Jason-ZW/autok3s/pkg/providers/alibaba"
+	"errors"
 
-	"github.com/sirupsen/logrus"
+	"github.com/Jason-ZW/autok3s/pkg/providers/alibaba"
+	"github.com/Jason-ZW/autok3s/pkg/types"
+
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 type Provider interface {
 	GetProviderName() string
-	GetCreateFlags() *pflag.FlagSet
-	GetCredentialFlags() *pflag.FlagSet
-	CreateK3sCluster()
+	GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet
+	GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet
+	CreateK3sCluster(ssh *types.SSH) error
 }
 
-func Register(provider string) Provider {
+func Register(provider string) (Provider, error) {
 	var p Provider
 
 	switch provider {
 	case "alibaba":
 		p = alibaba.NewProvider()
 	default:
-		logrus.Fatalln("not a valid provider, please run `autok3s get provider` display valid providers")
+		return p, errors.New("not a valid provider, please run `autok3s get provider` display valid providers\n")
 	}
 
-	return p
+	return p, nil
 }
 
 func SupportedProviders(provider string) [][]string {

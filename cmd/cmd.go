@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Jason-ZW/autok3s/pkg/common"
 	"github.com/Jason-ZW/autok3s/pkg/utils"
 
 	"github.com/morikuni/aec"
@@ -24,8 +25,6 @@ const ascIIStr = `
 `
 
 var (
-	cfgFile = "/var/lib/rancher/autok3s/config.yaml"
-
 	cmd = &cobra.Command{
 		Use:   "autok3s",
 		Short: "autok3s is used to manage the lifecycle of K3s on multiple cloud providers",
@@ -35,7 +34,7 @@ var (
 
 func init() {
 	cobra.OnInitialize(initCfg)
-	cmd.PersistentFlags().StringVarP(&cfgFile, "cfg", "c", cfgFile, "Path to the cfg file to use for CLI requests")
+	cmd.PersistentFlags().StringVarP(&common.CfgFile, "cfg", "c", common.CfgFile, "Path to the cfg file to use for CLI requests")
 }
 
 func Command() *cobra.Command {
@@ -58,10 +57,10 @@ func Command() *cobra.Command {
 
 func initCfg() {
 	viper.SetConfigType("yaml")
-	viper.SetConfigFile(cfgFile)
+	viper.SetConfigFile(common.CfgFile)
 	viper.AutomaticEnv()
 
-	if err := utils.EnsureCfgFileExist(cfgFile); err != nil {
+	if err := utils.EnsureFileExist(common.CfgFile); err != nil {
 		logrus.Fatalln(err)
 	}
 }
