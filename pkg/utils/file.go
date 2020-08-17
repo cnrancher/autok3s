@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/ghodss/yaml"
 )
@@ -17,21 +16,20 @@ const (
 	UserProfileEnv = "USERPROFILE"
 )
 
-func EnsureFileExist(path string) error {
+func EnsureFileExist(path, file string) error {
 	if path == "" {
 		return errors.New(fmt.Sprintf("path %s cannot be empty\n", path))
 	}
 
-	dir := path[0:strings.LastIndex(path, "/")]
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		dirE := os.MkdirAll(dir, os.ModePerm)
-		if dirE != nil {
-			return dirE
-		}
+	n := fmt.Sprintf("%s/%s", path, file)
+
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		return err
 	}
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		_, fileE := os.Create(path)
+	if _, err := os.Stat(n); os.IsNotExist(err) {
+		_, fileE := os.Create(n)
 		if fileE != nil {
 			return fileE
 		}
@@ -58,6 +56,23 @@ func WriteYaml(source interface{}, path, name string) error {
 		return err
 	}
 
+	n := fmt.Sprintf("%s/%s", path, name)
+
+	if _, err := os.Stat(n); os.IsNotExist(err) {
+		f, err := os.Create(n)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			_ = f.Close()
+		}()
+	}
+
+	return ioutil.WriteFile(n, b, 0644)
+}
+
+func WriteBytesToYaml(b []byte, path, name string) error {
 	n := fmt.Sprintf("%s/%s", path, name)
 
 	if _, err := os.Stat(n); os.IsNotExist(err) {

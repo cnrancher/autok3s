@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/Jason-ZW/autok3s/pkg/common"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -33,5 +35,6 @@ func Main() {
 func EmbedCommand() *cobra.Command {
 	c := cmd.NewDefaultKubectlCommand()
 	c.Short = "Kubectl controls the Kubernetes cluster manager"
+	c.PersistentFlags().Set("kubeconfig", fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 	return c
 }

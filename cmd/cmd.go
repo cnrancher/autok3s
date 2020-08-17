@@ -34,7 +34,7 @@ var (
 
 func init() {
 	cobra.OnInitialize(initCfg)
-	cmd.PersistentFlags().StringVarP(&common.CfgFile, "cfg", "c", common.CfgFile, "Path to the cfg file to use for CLI requests")
+	cmd.Flags().StringVarP(&common.CfgPath, "cfg", "c", common.CfgPath, "Path to the cfg file to use for CLI requests")
 }
 
 func Command() *cobra.Command {
@@ -57,10 +57,10 @@ func Command() *cobra.Command {
 
 func initCfg() {
 	viper.SetConfigType("yaml")
-	viper.SetConfigFile(common.CfgFile)
+	viper.SetConfigFile(fmt.Sprintf("%s/%s", common.CfgPath, common.ConfigFile))
 	viper.AutomaticEnv()
 
-	if err := utils.EnsureFileExist(common.CfgFile); err != nil {
+	if err := utils.EnsureFileExist(common.CfgPath, common.ConfigFile); err != nil {
 		logrus.Fatalln(err)
 	}
 }

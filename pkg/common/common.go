@@ -7,9 +7,11 @@ const (
 	WorkerInstanceName   = WorkerInstancePrefix + "[%d,%d]" // autok3s.<cluster>.w<index>
 	WildcardInstanceName = "autok3s.%s.*"                   // autok3s.<cluster>.*
 	BindPrefix           = "autok3s.providers.%s.%s"
+	ConfigFile           = "config.yaml"
 	StateFile            = ".state"
+	KubeCfgFile          = ".kube/config"
 )
 
 var (
-	CfgFile = "/var/lib/rancher/autok3s/config.yaml"
+	CfgPath = "/var/lib/rancher/autok3s"
 )
