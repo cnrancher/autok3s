@@ -14,6 +14,8 @@ type Provider interface {
 	GetProviderName() string
 	GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet
 	GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet
+	// Use this method to bind Viper, although it is somewhat repetitive.
+	BindCredentialFlags() *pflag.FlagSet
 	CreateK3sCluster(ssh *types.SSH) error
 }
 

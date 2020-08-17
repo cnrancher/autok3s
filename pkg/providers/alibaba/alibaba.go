@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	accessKeyID             = "accessKeyID"
-	accessKeySecret         = "accessKeySecret"
+	accessKeyID             = "access-key"
+	accessKeySecret         = "access-secret"
 	imageID                 = "ubuntu_18_04_x64_20G_alibase_20200618.vhd"
 	instanceType            = "ecs.c6.large"
 	internetMaxBandwidthOut = "50"
@@ -60,8 +60,8 @@ func NewProvider() *Alibaba {
 		Options: alibaba.Options{
 			DiskCategory:            diskCategory,
 			DiskSize:                diskSize,
-			ImageID:                 imageID,
-			InstanceType:            instanceType,
+			Image:                   imageID,
+			Type:                    instanceType,
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
 		},
 		Status: types.Status{
@@ -133,13 +133,13 @@ func (p *Alibaba) generateClientSDK() error {
 func (p *Alibaba) runInstances(num int, master bool) error {
 	request := ecs.CreateRunInstancesRequest()
 	request.Scheme = "https"
-	request.InstanceType = p.InstanceType
-	request.ImageId = p.ImageID
-	request.VSwitchId = p.VSwitchID
-	request.KeyPairName = p.KeyPairName
+	request.InstanceType = p.Type
+	request.ImageId = p.Image
+	request.VSwitchId = p.VSwitch
+	request.KeyPairName = p.KeyPair
 	request.SystemDiskCategory = p.DiskCategory
 	request.SystemDiskSize = p.DiskSize
-	request.SecurityGroupId = p.SecurityGroupID
+	request.SecurityGroupId = p.SecurityGroup
 	outBandWidth, _ := strconv.Atoi(p.InternetMaxBandwidthOut)
 	request.InternetMaxBandwidthOut = requests.NewInteger(outBandWidth)
 	request.Amount = requests.NewInteger(num)
@@ -242,7 +242,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 		v := value.(types.Node)
 		v.Port = ssh.Port
 		v.User = ssh.User
-		v.SSHKeyPath = ssh.SSHKeyPath
+		v.SSHKey = ssh.SSHKey
 		if v.Master {
 			p.Status.MasterNodes = append(p.Status.MasterNodes, v)
 		} else {
@@ -271,21 +271,27 @@ func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 	return response, nil
 }
 
-func (p *Alibaba) isClusterExist() bool {
+func (p *Alibaba) isClusterExist() (bool, error) {
 	request := ecs.CreateDescribeInstancesRequest()
 	request.Scheme = "https"
 	request.InstanceName = strings.ToLower(fmt.Sprintf(common.WildcardInstanceName, p.Name))
 
 	response, err := p.c.DescribeInstances(request)
-	if err == nil && len(response.Instances.Instance) == 0 {
-		return true
+	if err != nil || len(response.Instances.Instance) > 0 {
+		return false, err
 	}
 
-	return false
+	return true, nil
 }
 
 func (p *Alibaba) preflight() error {
-	if !p.isClusterExist() {
+	exist, err := p.isClusterExist()
+
+	if err != nil {
+		return err
+	}
+
+	if !exist {
 		return errors.New(fmt.Sprintf("[%s] calling preflight error: cluster name `%s` already exist\n",
 			p.GetProviderName(), p.Name))
 	}

@@ -8,11 +8,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func SSHPrivateKeyPath(sshKeyPath string) (string, error) {
-	if sshKeyPath[:2] == "~/" {
-		sshKeyPath = filepath.Join(UserHome(), sshKeyPath[2:])
+func SSHPrivateKeyPath(sshKey string) (string, error) {
+	if sshKey[:2] == "~/" {
+		sshKey = filepath.Join(UserHome(), sshKey[2:])
 	}
-	buff, err := ioutil.ReadFile(sshKeyPath)
+	buff, err := ioutil.ReadFile(sshKey)
 	if err != nil {
 		return "", fmt.Errorf("error while reading SSH key file: %v", err)
 	}

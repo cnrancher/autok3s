@@ -31,11 +31,11 @@ type Host struct {
 }
 
 type dialer struct {
-	signer       ssh.Signer
-	sshKeyString string
-	sshAddress   string
-	username     string
-	netConn      string
+	signer     ssh.Signer
+	sshKey     string
+	sshAddress string
+	username   string
+	netConn    string
 }
 
 type DialersOptions struct {
@@ -73,14 +73,13 @@ func newDialer(h *Host, kind string) (*dialer, error) {
 	}
 
 	d = &dialer{
-		sshAddress:   fmt.Sprintf("%s:%s", h.PublicIPAddress[0], h.Port),
-		username:     h.User,
-		sshKeyString: h.SSHKey,
+		sshAddress: fmt.Sprintf("%s:%s", h.PublicIPAddress[0], h.Port),
+		username:   h.User,
 	}
 
-	if d.sshKeyString == "" {
+	if d.sshKey == "" {
 		var err error
-		d.sshKeyString, err = utils.SSHPrivateKeyPath(h.SSHKeyPath)
+		d.sshKey, err = utils.SSHPrivateKeyPath(h.SSHKey)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +94,7 @@ func newDialer(h *Host, kind string) (*dialer, error) {
 }
 
 func (d *dialer) getSSHTunnelConnection() (*ssh.Client, error) {
-	cfg, err := utils.GetSSHConfig(d.username, d.sshKeyString)
+	cfg, err := utils.GetSSHConfig(d.username, d.sshKey)
 	if err != nil {
 		return nil, err
 	}

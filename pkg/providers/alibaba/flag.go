@@ -25,69 +25,69 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			P:         &p.Region,
 			V:         p.Region,
 			ShortHand: "r",
-			Usage:     "Regions are physical locations (data centers) that spread all over the world to reduce the network latency",
+			Usage:     "Physical locations (data centers) that spread all over the world to reduce the network latency",
 			Required:  true,
 		},
 		{
-			Name:      "keyPairName",
-			P:         &p.KeyPairName,
-			V:         p.KeyPairName,
+			Name:      "key-pair",
+			P:         &p.KeyPair,
+			V:         p.KeyPair,
 			ShortHand: "k",
-			Usage:     "KeyPairName is used to connect to an instance",
+			Usage:     "Used to connect to an instance",
 			Required:  true,
 		},
 		{
-			Name:      "imageID",
-			P:         &p.ImageID,
-			V:         p.ImageID,
+			Name:      "image",
+			P:         &p.Image,
+			V:         p.Image,
 			ShortHand: "i",
-			Usage:     "ImageID is used to specify the image to be used by the instance",
+			Usage:     "Used to specify the image to be used by the instance",
 			Required:  true,
 		},
 		{
-			Name:      "instanceType",
-			P:         &p.InstanceType,
-			V:         p.InstanceType,
+			Name:      "type",
+			P:         &p.Type,
+			V:         p.Type,
 			ShortHand: "t",
-			Usage:     "InstanceType is used to specify the type to be used by the instance",
+			Usage:     "Used to specify the type to be used by the instance",
 			Required:  true,
 		},
 		{
-			Name:      "vSwitchID",
-			P:         &p.VSwitchID,
-			V:         p.VSwitchID,
+			Name:      "v-switch",
+			P:         &p.VSwitch,
+			V:         p.VSwitch,
 			ShortHand: "v",
-			Usage:     "VSwitchID is used to specify the vSwitch to be used by the instance",
+			Usage:     "Used to specify the vSwitch to be used by the instance",
 			Required:  true,
 		},
 		{
-			Name:     "diskCategory",
+			Name:     "disk-category",
 			P:        &p.DiskCategory,
 			V:        p.DiskCategory,
-			Usage:    "diskCategory is used to specify the system disk category used by the instance",
+			Usage:    "Used to specify the system disk category used by the instance",
 			Required: true,
 		},
 		{
-			Name:     "diskSize",
+			Name:     "disk-size",
 			P:        &p.DiskSize,
 			V:        p.DiskSize,
-			Usage:    "diskSize is used to specify the system disk size used by the instance",
+			Usage:    "Used to specify the system disk size used by the instance",
 			Required: true,
 		},
 		{
-			Name:      "securityGroupID",
-			P:         &p.SecurityGroupID,
-			V:         p.SecurityGroupID,
+			Name:      "security-group",
+			P:         &p.SecurityGroup,
+			V:         p.SecurityGroup,
 			ShortHand: "s",
-			Usage:     "securityGroupID is used to specify the security group used by the instance",
+			Usage:     "Used to specify the security group used by the instance",
 			Required:  true,
 		},
 		{
-			Name:      "InternetMaxBandwidthOut",
+			Name:      "internet-max-bandwidth-out",
 			P:         &p.InternetMaxBandwidthOut,
 			V:         p.InternetMaxBandwidthOut,
 			ShortHand: "o",
-			Usage:     "internetMaxBandwidthOut is used to specify the maximum out flow of the instance internet",
+			Usage:     "Used to specify the maximum out flow of the instance internet",
 			Required:  true,
 		},
 		{
@@ -144,33 +144,30 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
 			Name:     accessKeyID,
-			P:        &p.AccessKeyID,
-			V:        p.AccessKeyID,
-			Usage:    "User access key ID.",
+			P:        &p.AccessKey,
+			V:        p.AccessKey,
+			Usage:    "User access key ID",
 			Required: true,
 		},
 		{
 			Name:     accessKeySecret,
-			P:        &p.AccessKeySecret,
-			V:        p.AccessKeySecret,
-			Usage:    "User access key secret.",
+			P:        &p.AccessSecret,
+			V:        p.AccessSecret,
+			Usage:    "User access key secret",
 			Required: true,
 		},
 	}
-
-	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
 
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
 				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
-				nfs.StringVar(f.P, f.Name, f.V, f.Usage)
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
 				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
-				nfs.StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
 			}
+
 		}
 	}
 
@@ -190,5 +187,12 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 		return errors.New(fmt.Sprintf("required flags(s) \"%s\" not set\n", errFlags))
 	}
 
+	return cmd.Flags()
+}
+
+func (p *Alibaba) BindCredentialFlags() *pflag.FlagSet {
+	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
+	nfs.StringVar(&p.AccessKey, accessKeyID, p.AccessKey, "User access key ID")
+	nfs.StringVar(&p.AccessSecret, accessKeySecret, p.AccessSecret, "User access key secret")
 	return nfs
 }

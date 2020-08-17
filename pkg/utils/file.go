@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/ghodss/yaml"
 )
@@ -23,7 +24,7 @@ func EnsureFileExist(path, file string) error {
 
 	n := fmt.Sprintf("%s/%s", path, file)
 
-	err := os.MkdirAll(path, os.ModePerm)
+	err := os.MkdirAll(n[0:strings.LastIndex(n, "/")], os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}

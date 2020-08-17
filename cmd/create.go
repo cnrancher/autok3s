@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/Jason-ZW/autok3s/cmd/common"
 	"github.com/Jason-ZW/autok3s/pkg/providers"
-	"github.com/Jason-ZW/autok3s/pkg/types"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -16,22 +15,13 @@ var (
 		Short:   "Create k3s cluster",
 		Example: `  autok3s create --provider alibaba`,
 	}
-
-	provider = ""
-	p        providers.Provider
-
-	ssh = &types.SSH{
-		SSHKeyPath: "~/.ssh/id_rsa",
-		User:       "root",
-		Port:       "22",
-	}
 )
 
 func init() {
-	createCmd.Flags().StringVarP(&provider, "provider", "p", provider, "Provider is a module which provides an interface for managing cloud resources")
-	createCmd.Flags().StringVar(&ssh.User, "sshUser", ssh.User, "SSH user for host")
-	createCmd.Flags().StringVar(&ssh.Port, "sshPort", ssh.Port, "SSH port for host")
-	createCmd.Flags().StringVar(&ssh.SSHKeyPath, "sshKeyPath", ssh.SSHKeyPath, "SSH private key path")
+	createCmd.Flags().StringVarP(&common.Provider, "provider", "p", common.Provider, "Provider is a module which provides an interface for managing cloud resources")
+	createCmd.Flags().StringVar(&common.SSH.User, "user", common.SSH.User, "SSH user for host")
+	createCmd.Flags().StringVar(&common.SSH.Port, "ssh-port", common.SSH.Port, "SSH port for host")
+	createCmd.Flags().StringVar(&common.SSH.SSHKey, "ssh-key", common.SSH.SSHKey, "SSH private key path")
 }
 
 func CreateCommand() *cobra.Command {
@@ -41,16 +31,16 @@ func CreateCommand() *cobra.Command {
 		if reg, err := providers.Register(pStr); err != nil {
 			logrus.Fatalln(err)
 		} else {
-			p = reg
+			common.P = reg
 		}
 
-		createCmd.Flags().AddFlagSet(p.GetCredentialFlags(createCmd))
-		createCmd.Flags().AddFlagSet(p.GetCreateFlags(createCmd))
+		createCmd.Flags().AddFlagSet(common.P.GetCredentialFlags(createCmd))
+		createCmd.Flags().AddFlagSet(common.P.GetCreateFlags(createCmd))
 	}
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
 		// must bind after dynamic provider flags loaded.
-		common.BindPFlags(cmd, p)
+		common.BindPFlags(cmd, common.P)
 
 		// read options from config.
 		if err := viper.ReadInConfig(); err != nil {
@@ -62,7 +52,7 @@ func CreateCommand() *cobra.Command {
 			logrus.Fatalln(err)
 		}
 
-		if err := p.CreateK3sCluster(ssh); err != nil {
+		if err := common.P.CreateK3sCluster(common.SSH); err != nil {
 			logrus.Fatalln(err)
 		}
 	}

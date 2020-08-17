@@ -1,43 +1,42 @@
 package types
 
 type AutoK3s struct {
-	Clusters []Cluster `json:"clusters"`
+	Clusters []Cluster `json:"clusters" yaml:"clusters"`
 }
 
 type Cluster struct {
 	Metadata `json:",inline" mapstructure:",squash"`
 
-	Status `json:"status"`
+	Status `json:"status" yaml:"status"`
 }
 
 type Metadata struct {
-	Name     string `json:"name"`
-	Provider string `json:"provider"`
-	Master   string `json:"master"`
-	Worker   string `json:"worker"`
+	Name     string `json:"name" yaml:"name"`
+	Provider string `json:"provider" yaml:"provider"`
+	Master   string `json:"master" yaml:"master"`
+	Worker   string `json:"worker" yaml:"worker"`
 }
 
 type Status struct {
-	MasterNodes []Node `json:"masterNodes,omitempty"`
-	WorkerNodes []Node `json:"workerNodes,omitempty"`
+	MasterNodes []Node `json:"master-nodes,omitempty"`
+	WorkerNodes []Node `json:"worker-nodes,omitempty"`
 }
 
 type Node struct {
 	SSH `json:",inline"`
 
-	Master            bool     `json:"master,omitempty"`
-	Port              string   `json:"port,omitempty"`
-	InstanceID        string   `json:"instanceID,omitempty"`
-	InstanceStatus    string   `json:"instanceStatus,omitempty"`
-	PublicIPAddress   []string `json:"publicIPAddress,omitempty"`
-	InternalIPAddress []string `json:"internalIPAddress,omitempty"`
+	Master            bool     `json:"master,omitempty" yaml:"master,omitempty"`
+	Port              string   `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty"`
+	InstanceID        string   `json:"instance-id,omitempty" yaml:"instance-id,omitempty"`
+	InstanceStatus    string   `json:"instance-status,omitempty" yaml:"instance-status,omitempty"`
+	PublicIPAddress   []string `json:"public-ip-address,omitempty" yaml:"public-ip-address,omitempty"`
+	InternalIPAddress []string `json:"internal-ip-address,omitempty" yaml:"internal-ip-address,omitempty"`
 }
 
 type SSH struct {
-	Port       string `json:"port,omitempty"`
-	User       string `json:"user,omitempty"`
-	SSHKey     string `json:"sshKey,omitempty"`
-	SSHKeyPath string `json:"sshKeyPath,omitempty"`
+	Port   string `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty"`
+	User   string `json:"user,omitempty" yaml:"user,omitempty"`
+	SSHKey string `json:"ssh-key,omitempty" yaml:"ssh-key,omitempty"`
 }
 
 type Flag struct {
