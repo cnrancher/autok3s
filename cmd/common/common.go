@@ -7,23 +7,11 @@ import (
 
 	"github.com/Jason-ZW/autok3s/pkg/common"
 	"github.com/Jason-ZW/autok3s/pkg/providers"
-	"github.com/Jason-ZW/autok3s/pkg/types"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-)
-
-var (
-	Provider = ""
-	P        providers.Provider
-
-	SSH = &types.SSH{
-		SSHKey: "~/.ssh/id_rsa",
-		User:   "root",
-		Port:   "22",
-	}
 )
 
 func BindPFlags(cmd *cobra.Command, p providers.Provider) {

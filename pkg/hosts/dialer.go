@@ -3,8 +3,8 @@ package hosts
 import (
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/Jason-ZW/autok3s/pkg/common"
 	"github.com/Jason-ZW/autok3s/pkg/types"
 	"github.com/Jason-ZW/autok3s/pkg/utils"
 
@@ -16,14 +16,6 @@ import (
 const (
 	tcpNetProtocol = "tcp"
 	networkKind    = "network"
-)
-
-var (
-	backoff = wait.Backoff{
-		Duration: 5 * time.Second,
-		Factor:   2,
-		Steps:    5,
-	}
 )
 
 type Host struct {
@@ -52,7 +44,7 @@ func (d *dialer) OpenTunnel() (*Tunnel, error) {
 	var conn *ssh.Client
 	var err error
 
-	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		conn, err = d.getSSHTunnelConnection()
 		if err != nil {
 			return false, err

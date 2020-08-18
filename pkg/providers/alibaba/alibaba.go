@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/Jason-ZW/autok3s/pkg/cluster"
 	"github.com/Jason-ZW/autok3s/pkg/common"
@@ -31,14 +30,6 @@ const (
 	diskSize                = "40"
 	master                  = "1"
 	worker                  = "1"
-)
-
-var (
-	backoff = wait.Backoff{
-		Duration: 30 * time.Second,
-		Factor:   2,
-		Steps:    5,
-	}
 )
 
 type Alibaba struct {
@@ -85,7 +76,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
 		return err
 	}
 
-	if err := p.preflight(); err != nil {
+	if err := p.createCheck(); err != nil {
 		return err
 	}
 
@@ -93,12 +84,12 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
 	workerNum, _ := strconv.Atoi(p.Worker)
 
 	// run ecs master instances.
-	if err := p.runInstances(masterNum, true); err != nil {
+	if err := p.runInstances(masterNum, 1, true); err != nil {
 		return err
 	}
 
 	// run ecs worker instances.
-	if err := p.runInstances(workerNum, false); err != nil {
+	if err := p.runInstances(workerNum, 1, false); err != nil {
 		return err
 	}
 
@@ -114,8 +105,59 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
 		return err
 	}
 
-	// initialize k3s cluster.
+	// initialize K3s cluster.
 	return cluster.InitK3sCluster(c)
+}
+
+func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
+	s := utils.NewSpinner("Joining K3s node: ")
+	s.Start()
+	defer s.Stop()
+
+	if err := p.generateClientSDK(); err != nil {
+		return err
+	}
+
+	if err := p.joinCheck(); err != nil {
+		return err
+	}
+
+	// TODO: join master node will be added soon.
+	workerNum, _ := strconv.Atoi(p.Worker)
+
+	// run ecs worker instances.
+	if err := p.runInstances(workerNum, len(p.WorkerNodes)+1, false); err != nil {
+		return err
+	}
+
+	// wait ecs instances to be running status.
+	if err := p.getInstanceStatus(); err != nil {
+		return err
+	}
+
+	// assemble instance status.
+	var merged *types.Cluster
+	var err error
+	if merged, err = p.assembleInstanceStatus(ssh); err != nil {
+		return err
+	}
+
+	added := &types.Cluster{
+		Metadata: merged.Metadata,
+		Options:  merged.Options,
+		Status:   types.Status{},
+	}
+
+	p.m.Range(func(key, value interface{}) bool {
+		v := value.(types.Node)
+		if !v.Master {
+			added.Status.WorkerNodes = append(added.Status.WorkerNodes, v)
+		}
+		return true
+	})
+
+	// join K3s node.
+	return cluster.JoinK3sNode(merged, added)
 }
 
 func (p *Alibaba) generateClientSDK() error {
@@ -130,7 +172,7 @@ func (p *Alibaba) generateClientSDK() error {
 	return nil
 }
 
-func (p *Alibaba) runInstances(num int, master bool) error {
+func (p *Alibaba) runInstances(num, startIndex int, master bool) error {
 	request := ecs.CreateRunInstancesRequest()
 	request.Scheme = "https"
 	request.InstanceType = p.Type
@@ -145,11 +187,13 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	request.Amount = requests.NewInteger(num)
 
 	if master {
-		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name, 1, 1)
-		request.HostName = fmt.Sprintf(common.MasterInstanceName, p.Name, 1, 1)
+		// TODO: HA mode will be added soon, temporary set master number to 1.
+		request.Amount = requests.NewInteger(1)
+		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 1)
+		request.HostName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 1)
 	} else {
-		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.Name, 1, 1)
-		request.HostName = fmt.Sprintf(common.WorkerInstanceName, p.Name, 1, 1)
+		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 1)
+		request.HostName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 1)
 	}
 
 	response, err := p.c.RunInstances(request)
@@ -182,9 +226,9 @@ func (p *Alibaba) getInstanceStatus() error {
 	wait.ErrWaitTimeout = errors.New(fmt.Sprintf("[%s] calling getInstanceStatus error. region=%s, "+"instanceName=%s, message=not running status\n",
 		p.GetProviderName(), p.Region, ids))
 
-	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		response, err := p.c.DescribeInstanceStatus(request)
-		if err != nil || !response.IsSuccess() {
+		if err != nil || !response.IsSuccess() || len(response.InstanceStatuses.InstanceStatus) <= 0 {
 			return false, nil
 		}
 
@@ -195,7 +239,6 @@ func (p *Alibaba) getInstanceStatus() error {
 					v.InstanceStatus = alibaba.StatusRunning
 					p.m.Store(status.InstanceId, v)
 				}
-
 			} else {
 				return false, nil
 			}
@@ -206,14 +249,34 @@ func (p *Alibaba) getInstanceStatus() error {
 		return err
 	}
 
-	p.Status.MasterNodes = make([]types.Node, 0)
-	p.Status.WorkerNodes = make([]types.Node, 0)
 	p.m.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		if v.Master {
-			p.Status.MasterNodes = append(p.Status.MasterNodes, v)
+			index := -1
+			for i, n := range p.Status.MasterNodes {
+				if n.InstanceID == v.InstanceID {
+					index = i
+					break
+				}
+			}
+			if index > -1 {
+				p.Status.MasterNodes[index] = v
+			} else {
+				p.Status.MasterNodes = append(p.Status.MasterNodes, v)
+			}
 		} else {
-			p.Status.WorkerNodes = append(p.Status.WorkerNodes, v)
+			index := -1
+			for i, n := range p.Status.WorkerNodes {
+				if n.InstanceID == v.InstanceID {
+					index = i
+					break
+				}
+			}
+			if index > -1 {
+				p.Status.WorkerNodes[index] = v
+			} else {
+				p.Status.WorkerNodes = append(p.Status.WorkerNodes, v)
+			}
 		}
 		return true
 	})
@@ -236,23 +299,44 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 		}
 	}
 
-	p.Status.MasterNodes = make([]types.Node, 0)
-	p.Status.WorkerNodes = make([]types.Node, 0)
 	p.m.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		v.Port = ssh.Port
 		v.User = ssh.User
 		v.SSHKey = ssh.SSHKey
 		if v.Master {
-			p.Status.MasterNodes = append(p.Status.MasterNodes, v)
+			index := -1
+			for i, n := range p.Status.MasterNodes {
+				if n.InstanceID == v.InstanceID {
+					index = i
+					break
+				}
+			}
+			if index > -1 {
+				p.Status.MasterNodes[index] = v
+			} else {
+				p.Status.MasterNodes = append(p.Status.MasterNodes, v)
+			}
 		} else {
-			p.Status.WorkerNodes = append(p.Status.WorkerNodes, v)
+			index := -1
+			for i, n := range p.Status.WorkerNodes {
+				if n.InstanceID == v.InstanceID {
+					index = i
+					break
+				}
+			}
+			if index > -1 {
+				p.Status.WorkerNodes[index] = v
+			} else {
+				p.Status.WorkerNodes = append(p.Status.WorkerNodes, v)
+			}
 		}
 		return true
 	})
 
 	return &types.Cluster{
 		Metadata: p.Metadata,
+		Options:  p.Options,
 		Status:   p.Status,
 	}, nil
 }
@@ -278,13 +362,28 @@ func (p *Alibaba) isClusterExist() (bool, error) {
 
 	response, err := p.c.DescribeInstances(request)
 	if err != nil || len(response.Instances.Instance) > 0 {
-		return false, err
+		return true, err
 	}
 
-	return true, nil
+	return false, nil
 }
 
-func (p *Alibaba) preflight() error {
+func (p *Alibaba) createCheck() error {
+	exist, err := p.isClusterExist()
+
+	if err != nil {
+		return err
+	}
+
+	if exist {
+		return errors.New(fmt.Sprintf("[%s] calling preflight error: cluster name `%s` already exist\n",
+			p.GetProviderName(), p.Name))
+	}
+
+	return nil
+}
+
+func (p *Alibaba) joinCheck() error {
 	exist, err := p.isClusterExist()
 
 	if err != nil {
@@ -292,7 +391,7 @@ func (p *Alibaba) preflight() error {
 	}
 
 	if !exist {
-		return errors.New(fmt.Sprintf("[%s] calling preflight error: cluster name `%s` already exist\n",
+		return errors.New(fmt.Sprintf("[%s] calling preflight error: cluster name `%s` do not exist\n",
 			p.GetProviderName(), p.Name))
 	}
 

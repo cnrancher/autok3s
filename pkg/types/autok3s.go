@@ -6,6 +6,7 @@ type AutoK3s struct {
 
 type Cluster struct {
 	Metadata `json:",inline" mapstructure:",squash"`
+	Options  interface{} `json:"options,omitempty"`
 
 	Status `json:"status" yaml:"status"`
 }
@@ -15,6 +16,7 @@ type Metadata struct {
 	Provider string `json:"provider" yaml:"provider"`
 	Master   string `json:"master" yaml:"master"`
 	Worker   string `json:"worker" yaml:"worker"`
+	Token    string `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
 type Status struct {
@@ -26,7 +28,6 @@ type Node struct {
 	SSH `json:",inline"`
 
 	Master            bool     `json:"master,omitempty" yaml:"master,omitempty"`
-	Port              string   `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty"`
 	InstanceID        string   `json:"instance-id,omitempty" yaml:"instance-id,omitempty"`
 	InstanceStatus    string   `json:"instance-status,omitempty" yaml:"instance-status,omitempty"`
 	PublicIPAddress   []string `json:"public-ip-address,omitempty" yaml:"public-ip-address,omitempty"`

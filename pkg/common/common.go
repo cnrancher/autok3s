@@ -1,5 +1,10 @@
 package common
 
+import (
+	"k8s.io/apimachinery/pkg/util/wait"
+	"time"
+)
+
 const (
 	MasterInstancePrefix = "autok3s.%s.m"                   // autok3s.<cluster>.m
 	WorkerInstancePrefix = "autok3s.%s.w"                   // autok3s.<cluster>.w
@@ -14,4 +19,10 @@ const (
 
 var (
 	CfgPath = "/var/lib/rancher/autok3s"
+	// retry 5 times, total 150 seconds.
+	Backoff = wait.Backoff{
+		Duration: 30 * time.Second,
+		Factor:   1,
+		Steps:    5,
+	}
 )
