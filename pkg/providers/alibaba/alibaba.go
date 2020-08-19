@@ -301,9 +301,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 
 	p.m.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
-		v.Port = ssh.Port
-		v.User = ssh.User
-		v.SSHKey = ssh.SSHKey
+		v.SSH = *ssh
 		if v.Master {
 			index := -1
 			for i, n := range p.Status.MasterNodes {

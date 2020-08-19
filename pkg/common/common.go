@@ -1,8 +1,9 @@
 package common
 
 import (
-	"k8s.io/apimachinery/pkg/util/wait"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
