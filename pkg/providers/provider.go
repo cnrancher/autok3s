@@ -24,6 +24,8 @@ type Provider interface {
 	CreateK3sCluster(ssh *types.SSH) error
 	// K3s join node interface.
 	JoinK3sNode(ssh *types.SSH) error
+	// Rollback when error occurs.
+	Rollback() error
 }
 
 func Register(provider string) (Provider, error) {

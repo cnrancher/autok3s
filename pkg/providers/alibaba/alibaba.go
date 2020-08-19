@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Jason-ZW/autok3s/pkg/cluster"
 	"github.com/Jason-ZW/autok3s/pkg/common"
@@ -158,6 +159,46 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 
 	// join K3s node.
 	return cluster.JoinK3sNode(merged, added)
+}
+
+func (p *Alibaba) Rollback() error {
+	s := utils.NewSpinner("Executing rollback process: ")
+	s.Start()
+	defer s.Stop()
+
+	ids := make([]string, 0)
+
+	p.m.Range(func(key, value interface{}) bool {
+		ids = append(ids, key.(string))
+		return true
+	})
+
+	request := ecs.CreateDeleteInstancesRequest()
+	request.Scheme = "https"
+	request.InstanceId = &ids
+	request.Force = requests.NewBoolean(true)
+
+	wait.ErrWaitTimeout = errors.New(fmt.Sprintf("[%s] calling rollback error, please remove the cloud provider instances manually. region=%s, "+
+		"instanceName=%s, message=the maximum number of attempts reached\n", p.GetProviderName(), p.Region, ids))
+
+	// retry 5 times, total 120 seconds.
+	backoff := wait.Backoff{
+		Duration: 30 * time.Second,
+		Factor:   1,
+		Steps:    5,
+	}
+
+	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		response, err := p.c.DeleteInstances(request)
+		if err != nil || !response.IsSuccess() {
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Alibaba) generateClientSDK() error {

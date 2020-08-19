@@ -63,7 +63,10 @@ func JoinCommand() *cobra.Command {
 		}
 
 		if err := jp.JoinK3sNode(jSSH); err != nil {
-			logrus.Fatalln(err)
+			logrus.Errorln(err)
+			if rErr := cp.Rollback(); rErr != nil {
+				logrus.Fatalln(rErr)
+			}
 		}
 	}
 

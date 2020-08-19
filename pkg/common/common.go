@@ -20,7 +20,7 @@ const (
 
 var (
 	CfgPath = "/var/lib/rancher/autok3s"
-	// retry 5 times, total 150 seconds.
+	// retry 5 times, total 120 seconds.
 	Backoff = wait.Backoff{
 		Duration: 30 * time.Second,
 		Factor:   1,

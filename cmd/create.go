@@ -63,7 +63,10 @@ func CreateCommand() *cobra.Command {
 		}
 
 		if err := cp.CreateK3sCluster(cSSH); err != nil {
-			logrus.Fatalln(err)
+			logrus.Errorln(err)
+			if rErr := cp.Rollback(); rErr != nil {
+				logrus.Fatalln(rErr)
+			}
 		}
 	}
 

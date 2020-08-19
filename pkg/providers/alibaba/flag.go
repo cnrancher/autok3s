@@ -192,11 +192,11 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Required: true,
 		},
 		{
-			Name:      "key-pair",
-			P:         &p.KeyPair,
-			V:         p.KeyPair,
-			Usage:     "Used to connect to an instance",
-			Required:  true,
+			Name:     "key-pair",
+			P:        &p.KeyPair,
+			V:        p.KeyPair,
+			Usage:    "Used to connect to an instance",
+			Required: true,
 		},
 		{
 			Name:     "image",
