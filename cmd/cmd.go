@@ -35,6 +35,7 @@ var (
 func init() {
 	cobra.OnInitialize(initCfg)
 	cmd.Flags().StringVarP(&common.CfgPath, "cfg", "c", common.CfgPath, "Path to the cfg file to use for CLI requests")
+	cmd.Flags().IntVarP(&common.Backoff.Steps, "retry", "r", common.Backoff.Steps, "The number of retries waiting for the desired state")
 }
 
 func Command() *cobra.Command {
