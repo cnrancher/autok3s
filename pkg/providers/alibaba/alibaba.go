@@ -67,6 +67,10 @@ func (p *Alibaba) GetProviderName() string {
 	return "alibaba"
 }
 
+func (p *Alibaba) GenerateClusterName() {
+	p.Name = fmt.Sprintf("%s.%s", p.Name, p.Region)
+}
+
 func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
 	s := utils.NewSpinner("Generating K3s cluster: ")
 	s.Start()

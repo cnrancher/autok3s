@@ -20,6 +20,8 @@ type Provider interface {
 	GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Use this method to bind Viper, although it is somewhat repetitive.
 	BindCredentialFlags() *pflag.FlagSet
+	// Generate cluster name.
+	GenerateClusterName()
 	// K3s create cluster interface.
 	CreateK3sCluster(ssh *types.SSH) error
 	// K3s join node interface.

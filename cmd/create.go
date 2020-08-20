@@ -62,6 +62,10 @@ func CreateCommand() *cobra.Command {
 			logrus.Fatalln(err)
 		}
 
+		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
+		cp.GenerateClusterName()
+
+		// create k3s cluster with generated cluster name.
 		if err := cp.CreateK3sCluster(cSSH); err != nil {
 			logrus.Errorln(err)
 			if rErr := cp.Rollback(); rErr != nil {
