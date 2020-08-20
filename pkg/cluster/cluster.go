@@ -122,33 +122,37 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 }
 
 func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
-	r := make([]types.Cluster, 0)
 	v := common.CfgPath
 	if v == "" {
-		return r, errors.New("[cluster] cfg path is empty\n")
+		return nil, errors.New("[cluster] cfg path is empty\n")
 	}
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)
 	if err != nil {
-		return r, err
+		return nil, err
 	}
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
+		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
 	}
 
-	for _, c := range converts {
+	index := -1
+
+	for i, c := range converts {
 		if c.Provider == cluster.Provider && c.Name == cluster.Name {
-			r = append(r, *cluster)
+			index = i
+			//r = append(r, *cluster)
 		}
 	}
 
-	if len(r) == 0 && cluster != nil {
-		r = append(r, *cluster)
+	if index > -1 {
+		converts[index] = *cluster
+	} else {
+		converts = append(converts, *cluster)
 	}
 
-	return r, nil
+	return converts, nil
 }
 
 func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
