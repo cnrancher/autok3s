@@ -26,9 +26,9 @@ const ascIIStr = `
 
 var (
 	cmd = &cobra.Command{
-		Use:   "autok3s",
-		Short: "autok3s is used to manage the lifecycle of K3s on multiple cloud providers",
-		Long:  `autok3s is used to manage the lifecycle of K3s on multiple cloud providers.`,
+		Use:              "autok3s",
+		Short:            "autok3s is used to manage the lifecycle of K3s on multiple cloud providers",
+		Long:             `autok3s is used to manage the lifecycle of K3s on multiple cloud providers.`,
 		TraverseChildren: true,
 	}
 )

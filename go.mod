@@ -48,7 +48,9 @@ require (
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	k8s.io/apimachinery v0.0.0
+	k8s.io/cli-runtime v0.0.0
 	k8s.io/client-go v0.0.0
 	k8s.io/component-base v0.0.0
+	k8s.io/kubectl v0.0.0
 	k8s.io/kubernetes v0.0.0-00010101000000-000000000000
 )

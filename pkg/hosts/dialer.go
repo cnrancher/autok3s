@@ -39,7 +39,7 @@ func SSHDialer(h *Host) (*dialer, error) {
 }
 
 func (d *dialer) OpenTunnel() (*Tunnel, error) {
-	wait.ErrWaitTimeout = errors.New(fmt.Sprintf("[dialer] calling openTunnel error. address=[%s]\n", d.sshAddress))
+	wait.ErrWaitTimeout = fmt.Errorf("[dialer] calling openTunnel error. address=[%s]\n", d.sshAddress)
 
 	var conn *ssh.Client
 	var err error

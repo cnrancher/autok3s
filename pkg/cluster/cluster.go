@@ -1,8 +1,11 @@
 package cluster
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/Jason-ZW/autok3s/pkg/common"
@@ -11,6 +14,11 @@ import (
 	"github.com/Jason-ZW/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
+	"github.com/sirupsen/logrus"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/kubectl/pkg/cmd/config"
+	"k8s.io/kubectl/pkg/scheme"
 )
 
 var (
@@ -91,7 +99,7 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 	r := make([]types.Cluster, 0)
 	v := common.CfgPath
 	if v == "" {
-		return r, errors.New("cfg path is empty\n")
+		return r, errors.New("[cluster] cfg path is empty\n")
 	}
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)
@@ -101,7 +109,7 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return r, errors.New(fmt.Sprintf("failed to unmarshal state file, msg: %s\n", err.Error()))
+		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
 	}
 
 	for _, c := range converts {
@@ -117,7 +125,7 @@ func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 	r := make([]types.Cluster, 0)
 	v := common.CfgPath
 	if v == "" {
-		return r, errors.New("cfg path is empty\n")
+		return r, errors.New("[cluster] cfg path is empty\n")
 	}
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)
@@ -127,7 +135,7 @@ func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return r, errors.New(fmt.Sprintf("failed to unmarshal state file, msg: %s\n", err.Error()))
+		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
 	}
 
 	for _, c := range converts {
@@ -193,7 +201,7 @@ func saveState(cluster *types.Cluster) error {
 
 	v := common.CfgPath
 	if v == "" {
-		return errors.New("cfg path is empty\n")
+		return errors.New("[cluster] cfg path is empty\n")
 	}
 
 	return utils.WriteYaml(r, v, common.StateFile)
@@ -208,10 +216,83 @@ func saveCfg(cfg, ip, context string) error {
 
 	result := replacer.Replace(cfg)
 
-	err := utils.EnsureFileExist(common.CfgPath, common.KubeCfgFile)
+	tempPath := fmt.Sprintf("%s/.kube", common.CfgPath)
+
+	temp, err := ioutil.TempFile(tempPath, common.KubeCfgTempName)
+	if err != nil {
+		return fmt.Errorf("[cluster] generate kubecfg temp file error, msg=%s\n", err.Error())
+	}
+	defer func() {
+		_ = temp.Close()
+	}()
+
+	err = utils.WriteBytesToYaml([]byte(result), tempPath, temp.Name()[strings.Index(temp.Name(), common.KubeCfgTempName):])
+	if err != nil {
+		return fmt.Errorf("[cluster] write content to kubecfg temp file error, msg=%s\n", err.Error())
+	}
+
+	return mergeCfg(context, temp.Name())
+}
+
+func mergeCfg(context, right string) error {
+	defer func() {
+		if err := os.Remove(right); err != nil {
+			logrus.Errorf("[cluster] remove kubecfg temp file error, msg=%s\n", err)
+		}
+	}()
+
+	if err := utils.EnsureFileExist(common.CfgPath, common.KubeCfgFile); err != nil {
+		return fmt.Errorf("[cluster] ensure kubecfg exist error, msg=%s\n", err.Error())
+	}
+
+	if err := overwriteCfg(context); err != nil {
+		return fmt.Errorf("[cluster] overwrite kubecfg error, msg=%s\n", err.Error())
+	}
+
+	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s:%s",
+		fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), right)); err != nil {
+		return fmt.Errorf("[cluster] set env error when merging kubecfg, msg=%s\n", err.Error())
+	}
+
+	out := &bytes.Buffer{}
+	opt := config.ViewOptions{
+		Flatten:      true,
+		PrintFlags:   genericclioptions.NewPrintFlags("").WithTypeSetter(scheme.Scheme).WithDefaultOutput("yaml"),
+		ConfigAccess: clientcmd.NewDefaultPathOptions(),
+		IOStreams:    genericclioptions.IOStreams{Out: out},
+	}
+	_ = opt.Merge.Set("true")
+
+	printer, err := opt.PrintFlags.ToPrinter()
+	if err != nil {
+		return fmt.Errorf("[cluster] generate view options error, msg=%s\n", err.Error())
+	}
+	opt.PrintObject = printer.PrintObj
+
+	if err := opt.Run(); err != nil {
+		return fmt.Errorf("[cluster] merging kubecfg error, msg=%s\n", err.Error())
+	}
+
+	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
+}
+
+func overwriteCfg(context string) error {
+	c, err := clientcmd.LoadFromFile(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 	if err != nil {
 		return err
 	}
 
-	return utils.WriteBytesToYaml([]byte(result), common.CfgPath, common.KubeCfgFile)
+	if _, found := c.Clusters[context]; found {
+		delete(c.Clusters, context)
+	}
+
+	if _, found := c.Contexts[context]; found {
+		delete(c.Contexts, context)
+	}
+
+	if _, found := c.AuthInfos[context]; found {
+		delete(c.AuthInfos, context)
+	}
+
+	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 }

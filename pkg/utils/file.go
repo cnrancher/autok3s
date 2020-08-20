@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,7 +18,7 @@ const (
 
 func EnsureFileExist(path, file string) error {
 	if path == "" {
-		return errors.New(fmt.Sprintf("path %s cannot be empty\n", path))
+		return fmt.Errorf("path %s cannot be empty\n", path)
 	}
 
 	n := fmt.Sprintf("%s/%s", path, file)

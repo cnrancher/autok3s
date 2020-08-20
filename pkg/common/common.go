@@ -16,6 +16,7 @@ const (
 	ConfigFile           = "config.yaml"
 	StateFile            = ".state"
 	KubeCfgFile          = ".kube/config"
+	KubeCfgTempName      = "autok3s-temp"
 )
 
 var (

@@ -1,7 +1,6 @@
 package alibaba
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -178,8 +177,8 @@ func (p *Alibaba) Rollback() error {
 	request.InstanceId = &ids
 	request.Force = requests.NewBoolean(true)
 
-	wait.ErrWaitTimeout = errors.New(fmt.Sprintf("[%s] calling rollback error, please remove the cloud provider instances manually. region=%s, "+
-		"instanceName=%s, message=the maximum number of attempts reached\n", p.GetProviderName(), p.Region, ids))
+	wait.ErrWaitTimeout = fmt.Errorf("[%s] calling rollback error, please remove the cloud provider instances manually. region=%s, "+
+		"instanceName=%s, message=the maximum number of attempts reached\n", p.GetProviderName(), p.Region, ids)
 
 	// retry 5 times, total 120 seconds.
 	backoff := wait.Backoff{
@@ -239,8 +238,8 @@ func (p *Alibaba) runInstances(num, startIndex int, master bool) error {
 
 	response, err := p.c.RunInstances(request)
 	if err != nil || len(response.InstanceIdSets.InstanceIdSet) != num {
-		return errors.New(fmt.Sprintf("[%s] calling runInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, request.InstanceName, err.Error()))
+		return fmt.Errorf("[%s] calling runInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
+			p.GetProviderName(), p.Region, request.InstanceName, err.Error())
 	}
 	for _, id := range response.InstanceIdSets.InstanceIdSet {
 		if master {
@@ -264,8 +263,8 @@ func (p *Alibaba) getInstanceStatus() error {
 	request.Scheme = "https"
 	request.InstanceId = &ids
 
-	wait.ErrWaitTimeout = errors.New(fmt.Sprintf("[%s] calling getInstanceStatus error. region=%s, "+"instanceName=%s, message=not running status\n",
-		p.GetProviderName(), p.Region, ids))
+	wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region=%s, "+"instanceName=%s, message=not running status\n",
+		p.GetProviderName(), p.Region, ids)
 
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		response, err := p.c.DescribeInstanceStatus(request)
@@ -387,8 +386,8 @@ func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 
 	response, err := p.c.DescribeInstances(request)
 	if err == nil && len(response.Instances.Instance) == 0 {
-		return nil, errors.New(fmt.Sprintf("[%s] calling describeInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, request.InstanceName, err.Error()))
+		return nil, fmt.Errorf("[%s] calling describeInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
+			p.GetProviderName(), p.Region, request.InstanceName, err.Error())
 	}
 
 	return response, nil
@@ -415,8 +414,8 @@ func (p *Alibaba) createCheck() error {
 	}
 
 	if exist {
-		return errors.New(fmt.Sprintf("[%s] calling preflight error: cluster name `%s` already exist\n",
-			p.GetProviderName(), p.Name))
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` already exist\n",
+			p.GetProviderName(), p.Name)
 	}
 
 	return nil
@@ -430,8 +429,8 @@ func (p *Alibaba) joinCheck() error {
 	}
 
 	if !exist {
-		return errors.New(fmt.Sprintf("[%s] calling preflight error: cluster name `%s` do not exist\n",
-			p.GetProviderName(), p.Name))
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist\n",
+			p.GetProviderName(), p.Name)
 	}
 
 	return nil

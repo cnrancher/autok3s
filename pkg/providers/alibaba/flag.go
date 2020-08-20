@@ -1,7 +1,6 @@
 package alibaba
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -42,7 +41,7 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			return nil
 		}
 
-		return errors.New(fmt.Sprintf("required flags(s) \"%s\" not set\n", errFlags))
+		return fmt.Errorf("required flags(s) \"%s\" not set\n", errFlags)
 	}
 
 	return cmd.Flags()
@@ -99,7 +98,7 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 			return nil
 		}
 
-		return errors.New(fmt.Sprintf("required flags(s) \"%s\" not set\n", errFlags))
+		return fmt.Errorf("required flags(s) \"%s\" not set\n", errFlags)
 	}
 
 	return cmd.Flags()
@@ -149,7 +148,7 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 			return nil
 		}
 
-		return errors.New(fmt.Sprintf("required flags(s) \"%s\" not set\n", errFlags))
+		return fmt.Errorf("required flags(s) \"%s\" not set\n", errFlags)
 	}
 
 	return cmd.Flags()
