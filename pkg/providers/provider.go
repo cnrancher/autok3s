@@ -42,19 +42,3 @@ func Register(provider string) (Provider, error) {
 
 	return p, nil
 }
-
-func SupportedProviders(provider string) [][]string {
-	providers := [][]string{
-		{"alibaba", "yes"},
-	}
-	if provider == "" {
-		return providers
-	}
-	for _, ss := range providers {
-		if ss[0] == provider {
-			return [][]string{ss}
-		}
-	}
-
-	return [][]string{}
-}
