@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Jason-ZW/autok3s/pkg/cluster"
 	"github.com/Jason-ZW/autok3s/pkg/common"
-	"github.com/Jason-ZW/autok3s/pkg/providers"
 	"github.com/Jason-ZW/autok3s/pkg/utils"
 
 	"github.com/olekukonko/tablewriter"
@@ -13,57 +14,40 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func GetCommand() *cobra.Command {
-	cmd := &cobra.Command{
+var (
+	getCmd = &cobra.Command{
 		Use:       "get",
 		Short:     "Display one or many resources",
-		ValidArgs: []string{"provider", "cluster"},
-		Args:      cobra.RangeArgs(1, 2),
-		Example:   `  autok3s get provider`,
+		ValidArgs: []string{"cluster"},
+		Args:      cobra.ExactArgs(1),
+		Example:   `  autok3s get cluster`,
 	}
 
-	cmd.Run = func(cmd *cobra.Command, args []string) {
+	name, region string
+)
+
+func init() {
+	getCmd.Flags().StringVar(&name, "name", name, "Cluster name")
+	getCmd.Flags().StringVar(&region, "region", region, "Physical locations (data centers) that spread all over the world to reduce the network latency")
+}
+
+func GetCommand() *cobra.Command {
+	getCmd.Run = func(cmd *cobra.Command, args []string) {
 		switch args[0] {
-		case "provider":
-			getProvider(args)
 		case "cluster":
-			getCluster(args)
+			getCluster()
 		}
 	}
-	return cmd
+	return getCmd
 }
 
-func getProvider(args []string) {
+func getCluster() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetHeaderLine(false)
 	table.SetColumnSeparator("")
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetHeader([]string{"Provider", "InTree"})
-
-	input := ""
-	if len(args) > 1 {
-		input = args[1]
-	}
-
-	for _, v := range providers.SupportedProviders(input) {
-		table.Append(v)
-	}
-	table.Render()
-}
-
-func getCluster(args []string) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetHeaderLine(false)
-	table.SetColumnSeparator("")
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetHeader([]string{"Name", "Provider", "Masters", "Workers"})
-
-	input := ""
-	if len(args) > 1 {
-		input = args[1]
-	}
+	table.SetHeader([]string{"Name", "Region", "Provider", "Masters", "Workers"})
 
 	v := common.CfgPath
 	if v == "" {
@@ -81,10 +65,31 @@ func getCluster(args []string) {
 	}
 
 	for _, r := range result {
-		if input != "" {
-			if input == r.Name {
+		if name != "" && region != "" {
+			if fmt.Sprintf("%s.%s", name, region) == r.Name {
 				table.Append([]string{
-					r.Name,
+					name,
+					region,
+					r.Provider,
+					r.Master,
+					r.Worker,
+				})
+			}
+		} else if name != "" {
+			if strings.Contains(r.Name, name) {
+				table.Append([]string{
+					r.Name[:strings.LastIndex(r.Name, ".")],
+					r.Name[strings.LastIndex(r.Name, ".")+1:],
+					r.Provider,
+					r.Master,
+					r.Worker,
+				})
+			}
+		} else if region != "" {
+			if strings.Contains(r.Name, region) {
+				table.Append([]string{
+					r.Name[:strings.LastIndex(r.Name, ".")],
+					r.Name[strings.LastIndex(r.Name, ".")+1:],
 					r.Provider,
 					r.Master,
 					r.Worker,
@@ -92,7 +97,8 @@ func getCluster(args []string) {
 			}
 		} else {
 			table.Append([]string{
-				r.Name,
+				r.Name[:strings.LastIndex(r.Name, ".")],
+				r.Name[strings.LastIndex(r.Name, ".")+1:],
 				r.Provider,
 				r.Master,
 				r.Worker,
