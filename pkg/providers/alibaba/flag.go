@@ -260,6 +260,20 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Usage:    "Number of worker node",
 			Required: true,
 		},
+		{
+			Name:     "ui",
+			P:        &p.UI,
+			V:        p.UI,
+			Usage:    "Specify K3s UI. e.g.(none/dashboard/octopus-ui)",
+			Required: true,
+		},
+		{
+			Name:     "repo",
+			P:        &p.Repo,
+			V:        p.Repo,
+			Usage:    "Specify helm repo",
+			Required: true,
+		},
 	}
 
 	return fs

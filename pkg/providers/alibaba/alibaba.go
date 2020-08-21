@@ -30,6 +30,8 @@ const (
 	diskSize                = "40"
 	master                  = "1"
 	worker                  = "1"
+	ui                      = "none"
+	repo                    = "https://apphub.aliyuncs.com"
 )
 
 type Alibaba struct {
@@ -47,6 +49,8 @@ func NewProvider() *Alibaba {
 			Provider: "alibaba",
 			Master:   master,
 			Worker:   worker,
+			UI:       ui,
+			Repo:     repo,
 		},
 		Options: alibaba.Options{
 			DiskCategory:            diskCategory,
@@ -74,7 +78,12 @@ func (p *Alibaba) GenerateClusterName() {
 func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
 	s := utils.NewSpinner("Generating K3s cluster: ")
 	s.Start()
-	defer s.Stop()
+	defer func() {
+		s.Stop()
+		if p.UI != "none" {
+			fmt.Printf("K3s UI %s URL: https://%s:8999", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+		}
+	}()
 
 	if err := p.generateClientSDK(); err != nil {
 		return err

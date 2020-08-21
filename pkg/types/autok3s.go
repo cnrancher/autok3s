@@ -17,6 +17,8 @@ type Metadata struct {
 	Master   string `json:"master" yaml:"master"`
 	Worker   string `json:"worker" yaml:"worker"`
 	Token    string `json:"token,omitempty" yaml:"token,omitempty"`
+	UI       string `json:"ui,omitempty" yaml:"ui,omitempty"`
+	Repo     string `json:"repo,omitempty" yaml:"repo,omitempty"`
 }
 
 type Status struct {

@@ -17,6 +17,7 @@ const (
 	StateFile            = ".state"
 	KubeCfgFile          = ".kube/config"
 	KubeCfgTempName      = "autok3s-temp"
+	K3sManifestsDir      = "/var/lib/rancher/k3s/server/manifests"
 )
 
 var (

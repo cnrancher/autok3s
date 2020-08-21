@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	masterCommand = "curl -sLS https://docs.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s' sh -\n"
-	workerCommand = "curl -sLS https://docs.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_URL='https://%s:6443' K3S_TOKEN='%s' sh -\n"
-	catCfgCommand = "cat /etc/rancher/k3s/k3s.yaml"
+	masterCommand         = "curl -sLS https://docs.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s' sh -\n"
+	workerCommand         = "curl -sLS https://docs.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_URL='https://%s:6443' K3S_TOKEN='%s' sh -\n"
+	catCfgCommand         = "cat /etc/rancher/k3s/k3s.yaml"
+	deployManifestCommand = "echo \"%s\" > \"%s/ui.yaml\""
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
@@ -65,7 +66,25 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	// write current cluster to state file.
-	return saveState(cluster)
+	if err := saveState(cluster); err != nil {
+		return err
+	}
+
+	// deploy additional manifests. e.g. UI(none/dashboard/octopus-ui).
+	switch cluster.UI {
+	case "dashboard":
+		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
+			fmt.Sprintf(deployManifestCommand, fmt.Sprintf(dashboardTmpl, cluster.Repo), common.K3sManifestsDir), true); err != nil {
+			return err
+		}
+	case "octopus-ui":
+		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
+			fmt.Sprintf(deployManifestCommand, octopusTmpl, common.K3sManifestsDir), true); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func JoinK3sNode(merged, added *types.Cluster) error {
