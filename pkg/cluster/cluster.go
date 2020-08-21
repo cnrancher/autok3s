@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	masterCommand         = "curl -sLS https://docs.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s' sh -\n"
-	workerCommand         = "curl -sLS https://docs.rancher.cn/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_URL='https://%s:6443' K3S_TOKEN='%s' sh -\n"
+	masterCommand         = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s' sh -\n"
+	workerCommand         = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_URL='https://%s:6443' K3S_TOKEN='%s' sh -\n"
 	catCfgCommand         = "cat /etc/rancher/k3s/k3s.yaml"
 	deployManifestCommand = "echo \"%s\" > \"%s/ui.yaml\""
 )
