@@ -14,6 +14,22 @@ import (
 
 func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
+	fs = append(fs, []types.Flag{
+		{
+			Name:     "ui",
+			P:        &p.UI,
+			V:        p.UI,
+			Usage:    "Specify K3s UI. e.g.(none/dashboard/octopus-ui)",
+			Required: true,
+		},
+		{
+			Name:     "repo",
+			P:        &p.Repo,
+			V:        p.Repo,
+			Usage:    "Specify helm repo",
+			Required: true,
+		},
+	}...)
 
 	for _, f := range fs {
 		if f.ShortHand == "" {
@@ -258,20 +274,6 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			P:        &p.Worker,
 			V:        p.Worker,
 			Usage:    "Number of worker node",
-			Required: true,
-		},
-		{
-			Name:     "ui",
-			P:        &p.UI,
-			V:        p.UI,
-			Usage:    "Specify K3s UI. e.g.(none/dashboard/octopus-ui)",
-			Required: true,
-		},
-		{
-			Name:     "repo",
-			P:        &p.Repo,
-			V:        p.Repo,
-			Usage:    "Specify helm repo",
 			Required: true,
 		},
 	}
