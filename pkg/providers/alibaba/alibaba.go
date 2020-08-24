@@ -81,7 +81,8 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
 	defer func() {
 		s.Stop()
 		if p.UI != "none" {
-			fmt.Printf("K3s UI %s URL: https://%s:8999", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+			fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+			fmt.Printf("Use `autok3s kubectl get pods -A` get UI status\n")
 		}
 	}()
 
