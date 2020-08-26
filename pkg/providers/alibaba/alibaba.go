@@ -80,7 +80,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
 	s.Start()
 	defer func() {
 		s.Stop()
-		if p.UI != "none" {
+		if p.UI != "none" && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
 			fmt.Printf("Use `autok3s kubectl get pods -A` get UI status\n")
 		}
@@ -186,29 +186,31 @@ func (p *Alibaba) Rollback() error {
 		return true
 	})
 
-	request := ecs.CreateDeleteInstancesRequest()
-	request.Scheme = "https"
-	request.InstanceId = &ids
-	request.Force = requests.NewBoolean(true)
+	if len(ids) > 0 {
+		request := ecs.CreateDeleteInstancesRequest()
+		request.Scheme = "https"
+		request.InstanceId = &ids
+		request.Force = requests.NewBoolean(true)
 
-	wait.ErrWaitTimeout = fmt.Errorf("[%s] calling rollback error, please remove the cloud provider instances manually. region=%s, "+
-		"instanceName=%s, message=the maximum number of attempts reached\n", p.GetProviderName(), p.Region, ids)
+		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling rollback error, please remove the cloud provider instances manually. region=%s, "+
+			"instanceName=%s, message=the maximum number of attempts reached\n", p.GetProviderName(), p.Region, ids)
 
-	// retry 5 times, total 120 seconds.
-	backoff := wait.Backoff{
-		Duration: 30 * time.Second,
-		Factor:   1,
-		Steps:    5,
-	}
-
-	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
-		response, err := p.c.DeleteInstances(request)
-		if err != nil || !response.IsSuccess() {
-			return false, nil
+		// retry 5 times, total 120 seconds.
+		backoff := wait.Backoff{
+			Duration: 30 * time.Second,
+			Factor:   1,
+			Steps:    5,
 		}
-		return true, nil
-	}); err != nil {
-		return err
+
+		if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+			response, err := p.c.DeleteInstances(request)
+			if err != nil || !response.IsSuccess() {
+				return false, nil
+			}
+			return true, nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -273,34 +275,36 @@ func (p *Alibaba) getInstanceStatus() error {
 		return true
 	})
 
-	request := ecs.CreateDescribeInstanceStatusRequest()
-	request.Scheme = "https"
-	request.InstanceId = &ids
+	if len(ids) > 0 {
+		request := ecs.CreateDescribeInstanceStatusRequest()
+		request.Scheme = "https"
+		request.InstanceId = &ids
 
-	wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region=%s, "+"instanceName=%s, message=not running status\n",
-		p.GetProviderName(), p.Region, ids)
+		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region=%s, "+"instanceName=%s, message=not running status\n",
+			p.GetProviderName(), p.Region, ids)
 
-	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
-		response, err := p.c.DescribeInstanceStatus(request)
-		if err != nil || !response.IsSuccess() || len(response.InstanceStatuses.InstanceStatus) <= 0 {
-			return false, nil
-		}
-
-		for _, status := range response.InstanceStatuses.InstanceStatus {
-			if status.Status == alibaba.StatusRunning {
-				if value, ok := p.m.Load(status.InstanceId); ok {
-					v := value.(types.Node)
-					v.InstanceStatus = alibaba.StatusRunning
-					p.m.Store(status.InstanceId, v)
-				}
-			} else {
+		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
+			response, err := p.c.DescribeInstanceStatus(request)
+			if err != nil || !response.IsSuccess() || len(response.InstanceStatuses.InstanceStatus) <= 0 {
 				return false, nil
 			}
-		}
 
-		return true, nil
-	}); err != nil {
-		return err
+			for _, status := range response.InstanceStatuses.InstanceStatus {
+				if status.Status == alibaba.StatusRunning {
+					if value, ok := p.m.Load(status.InstanceId); ok {
+						v := value.(types.Node)
+						v.InstanceStatus = alibaba.StatusRunning
+						p.m.Store(status.InstanceId, v)
+					}
+				} else {
+					return false, nil
+				}
+			}
+
+			return true, nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	p.m.Range(func(key, value interface{}) bool {
