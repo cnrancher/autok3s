@@ -75,52 +75,55 @@ func (p *Alibaba) GenerateClusterName() {
 	p.Name = fmt.Sprintf("%s.%s", p.Name, p.Region)
 }
 
-func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) error {
+func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	s := utils.NewSpinner("Generating K3s cluster: ")
 	s.Start()
 	defer func() {
 		s.Stop()
-		if p.UI != "none" && len(p.Status.MasterNodes) > 0 {
+		if err == nil && p.UI != "none" && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
 			fmt.Printf("Use `autok3s kubectl get pods -A` get UI status\n")
 		}
 	}()
 
-	if err := p.generateClientSDK(); err != nil {
-		return err
+	if err = p.generateClientSDK(); err != nil {
+		return
 	}
 
-	if err := p.createCheck(); err != nil {
-		return err
+	if err = p.createCheck(); err != nil {
+		return
 	}
 
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 
 	// run ecs master instances.
-	if err := p.runInstances(masterNum, 1, true); err != nil {
-		return err
+	if err = p.runInstances(masterNum, 1, true); err != nil {
+		return
 	}
 
 	// run ecs worker instances.
-	if err := p.runInstances(workerNum, 1, false); err != nil {
-		return err
+	if err = p.runInstances(workerNum, 1, false); err != nil {
+		return
 	}
 
 	// wait ecs instances to be running status.
-	if err := p.getInstanceStatus(); err != nil {
-		return err
+	if err = p.getInstanceStatus(); err != nil {
+		return
 	}
 
 	// assemble instance status.
 	var c *types.Cluster
-	var err error
 	if c, err = p.assembleInstanceStatus(ssh); err != nil {
-		return err
+		return
 	}
 
 	// initialize K3s cluster.
-	return cluster.InitK3sCluster(c)
+	if err = cluster.InitK3sCluster(c); err != nil {
+		return
+	}
+
+	return
 }
 
 func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
