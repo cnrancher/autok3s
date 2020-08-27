@@ -21,9 +21,9 @@ var (
 	jp        providers.Provider
 
 	jSSH = &types.SSH{
-		SSHKey: "~/.ssh/id_rsa",
-		User:   "root",
-		Port:   "22",
+		SSHKeyPath: "~/.ssh/id_rsa",
+		User:       "root",
+		Port:       "22",
 	}
 )
 
