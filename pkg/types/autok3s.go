@@ -40,9 +40,16 @@ type Node struct {
 }
 
 type SSH struct {
-	Port   string `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty"`
-	User   string `json:"user,omitempty" yaml:"user,omitempty"`
-	SSHKey string `json:"ssh-key,omitempty" yaml:"ssh-key,omitempty"`
+	Port             string `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty"`
+	User             string `json:"user,omitempty" yaml:"user,omitempty"`
+	Password         string `json:"password,omitempty" yaml:"password,omitempty"`
+	SSHKey           string `json:"ssh-key,omitempty" yaml:"ssh-key,omitempty"`
+	SSHKeyPath       string `json:"ssh-key-path,omitempty" yaml:"ssh-key-path,omitempty"`
+	SSHCert          string `json:"ssh-cert,omitempty" yaml:"ssh-cert,omitempty"`
+	SSHCertPath      string `json:"ssh-cert-path,omitempty" yaml:"ssh-cert-path,omitempty"`
+	SSHKeyPassphrase string `json:"ssh-key-passphrase,omitempty" yaml:"ssh-key-passphrase,omitempty"`
+
+	SSHAgentAuth bool `json:"ssh-agent-auth,omitempty" yaml:"ssh-agent-auth,omitempty" `
 }
 
 type Flag struct {

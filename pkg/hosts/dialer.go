@@ -25,9 +25,14 @@ type Host struct {
 type dialer struct {
 	signer     ssh.Signer
 	sshKey     string
+	sshCert    string
 	sshAddress string
 	username   string
+	password   string
+	passphrase string
 	netConn    string
+
+	useSSHAgentAuth bool
 }
 
 type DialersOptions struct {
@@ -65,15 +70,27 @@ func newDialer(h *Host, kind string) (*dialer, error) {
 	}
 
 	d = &dialer{
-		sshAddress: fmt.Sprintf("%s:%s", h.PublicIPAddress[0], h.Port),
-		username:   h.User,
+		sshAddress:      fmt.Sprintf("%s:%s", h.PublicIPAddress[0], h.Port),
+		username:        h.User,
+		password:        h.Password,
+		passphrase:      h.SSHKeyPassphrase,
+		useSSHAgentAuth: h.SSHAgentAuth,
+		sshKey:          h.SSHKey,
+		sshCert:         h.SSHCert,
 	}
 
-	if d.sshKey == "" {
+	if d.password == "" && d.sshKey == "" && !d.useSSHAgentAuth {
 		var err error
-		d.sshKey, err = utils.SSHPrivateKeyPath(h.SSHKey)
+		d.sshKey, err = utils.SSHPrivateKeyPath(h.SSHKeyPath)
 		if err != nil {
 			return nil, err
+		}
+
+		if d.sshCert == "" && len(h.SSHCertPath) > 0 {
+			d.sshCert, err = utils.SSHCertificatePath(h.SSHCertPath)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -86,7 +103,7 @@ func newDialer(h *Host, kind string) (*dialer, error) {
 }
 
 func (d *dialer) getSSHTunnelConnection() (*ssh.Client, error) {
-	cfg, err := utils.GetSSHConfig(d.username, d.sshKey)
+	cfg, err := utils.GetSSHConfig(d.username, d.sshKey, d.passphrase, d.sshCert, d.password, d.useSSHAgentAuth)
 	if err != nil {
 		return nil, err
 	}
