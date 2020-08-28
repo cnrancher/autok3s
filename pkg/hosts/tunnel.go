@@ -8,11 +8,6 @@ type Tunnel struct {
 	conn *ssh.Client
 }
 
-type Result struct {
-	StdOut []byte
-	StdErr []byte
-}
-
 func (t *Tunnel) Close() error {
 	return t.conn.Close()
 }
