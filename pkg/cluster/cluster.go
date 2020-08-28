@@ -22,13 +22,26 @@ import (
 )
 
 var (
-	masterCommand   = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s %s' sh -\n"
-	workerCommand   = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
+	masterCommand   = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s %s' sh -\n"
+	workerCommand   = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
 	catCfgCommand   = "cat /etc/rancher/k3s/k3s.yaml"
 	deployUICommand = "echo \"%s\" > \"%s/ui.yaml\""
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
+	var (
+		k3sScript string
+		k3sMirror string
+	)
+
+	switch cluster.Provider {
+	case "alibaba":
+		k3sScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
+		k3sMirror = "INSTALL_K3S_MIRROR=cn"
+	default:
+		k3sScript = "https://get.k3s.io"
+	}
+
 	token, err := utils.RandomToken(16)
 	if err != nil {
 		return err
@@ -45,14 +58,14 @@ func InitK3sCluster(cluster *types.Cluster) error {
 
 	for _, master := range cluster.MasterNodes {
 		if _, err := execute(&hosts.Host{Node: master},
-			fmt.Sprintf(masterCommand, cluster.Token, publicIP, cluster.MasterExtraArgs), true); err != nil {
+			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Token, publicIP, cluster.MasterExtraArgs), true); err != nil {
 			return err
 		}
 	}
 
 	for _, worker := range cluster.WorkerNodes {
 		if _, err := execute(&hosts.Host{Node: worker},
-			fmt.Sprintf(workerCommand, url, cluster.Token, cluster.WorkerExtraArgs), true); err != nil {
+			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, cluster.Token, cluster.WorkerExtraArgs), true); err != nil {
 			return err
 		}
 	}
@@ -90,6 +103,19 @@ func InitK3sCluster(cluster *types.Cluster) error {
 }
 
 func JoinK3sNode(merged, added *types.Cluster) error {
+	var (
+		k3sScript string
+		k3sMirror string
+	)
+
+	switch merged.Provider {
+	case "alibaba":
+		k3sScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
+		k3sMirror = "INSTALL_K3S_MIRROR=cn"
+	default:
+		k3sScript = "https://get.k3s.io"
+	}
+
 	if merged.Token == "" {
 		return errors.New("[cluster] k3s token can not be empty\n")
 	}
@@ -105,7 +131,7 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		for _, full := range merged.WorkerNodes {
 			if added.WorkerNodes[i].InstanceID == full.InstanceID {
 				if _, err := execute(&hosts.Host{Node: full},
-					fmt.Sprintf(workerCommand, url, merged.Token, merged.WorkerExtraArgs), true); err != nil {
+					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, merged.Token, merged.WorkerExtraArgs), true); err != nil {
 					return err
 				}
 				break
