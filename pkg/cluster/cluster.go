@@ -88,7 +88,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	for _, master := range cluster.MasterNodes {
-		if strings.Contains(masterExtraArgs, "--docker") {
+		if strings.Contains(masterExtraArgs, "--docker" ) {
 			if _, err := execute(&hosts.Host{Node: master},
 				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
 				return err
@@ -121,16 +121,6 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
-	// merge current cluster to kube config.
-	if err := saveCfg(cfg, publicIP, cluster.Name); err != nil {
-		return err
-	}
-
-	// write current cluster to state file.
-	if err := saveState(cluster); err != nil {
-		return err
-	}
-
 	// deploy additional Terway manifests.
 	if terway != nil {
 		tmpl := fmt.Sprintf(terwayTmpl, terway.AccessKey, terway.AccessSecret, terway.SecurityGroup, terway.CIDR, terway.VSwitches, terway.MaxPoolSize)
@@ -152,6 +142,16 @@ func InitK3sCluster(cluster *types.Cluster) error {
 			fmt.Sprintf(deployUICommand, octopusTmpl, common.K3sManifestsDir), false); err != nil {
 			return err
 		}
+	}
+
+	// merge current cluster to kube config.
+	if err := saveCfg(cfg, publicIP, cluster.Name); err != nil {
+		return err
+	}
+
+	// write current cluster to state file.
+	if err := saveState(cluster); err != nil {
+		return err
 	}
 
 	return nil
