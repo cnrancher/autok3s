@@ -332,6 +332,9 @@ func saveCfg(cfg, ip, context string) error {
 	result := replacer.Replace(cfg)
 
 	tempPath := fmt.Sprintf("%s/.kube", common.CfgPath)
+	if err := utils.EnsureFolderExist(tempPath); err != nil {
+		return fmt.Errorf("[cluster] generate kubecfg temp folder error, msg=%s\n", err.Error())
+	}
 
 	temp, err := ioutil.TempFile(tempPath, common.KubeCfgTempName)
 	if err != nil {
