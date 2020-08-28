@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/ghodss/yaml"
 )
@@ -16,18 +15,22 @@ const (
 	UserProfileEnv = "USERPROFILE"
 )
 
-func EnsureFileExist(path, file string) error {
+func EnsureFolderExist(path string) error {
 	if path == "" {
 		return fmt.Errorf("path %s cannot be empty\n", path)
 	}
-
-	n := fmt.Sprintf("%s/%s", path, file)
-
-	err := os.MkdirAll(n[0:strings.LastIndex(n, "/")], os.ModePerm)
+	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
+	return nil
+}
 
+func EnsureFileExist(path, file string) error {
+	if err := EnsureFolderExist(path); err != nil {
+		return err
+	}
+	n := fmt.Sprintf("%s/%s", path, file)
 	if _, err := os.Stat(n); os.IsNotExist(err) {
 		_, fileE := os.Create(n)
 		if fileE != nil {
