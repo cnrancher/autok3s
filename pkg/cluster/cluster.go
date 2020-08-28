@@ -22,10 +22,10 @@ import (
 )
 
 var (
-	masterCommand         = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s' sh -\n"
-	workerCommand         = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_URL='https://%s:6443' K3S_TOKEN='%s' sh -\n"
-	catCfgCommand         = "cat /etc/rancher/k3s/k3s.yaml"
-	deployManifestCommand = "echo \"%s\" > \"%s/ui.yaml\""
+	masterCommand   = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s %s' sh -\n"
+	workerCommand   = "curl -sLS http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh | INSTALL_K3S_MIRROR=cn K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
+	catCfgCommand   = "cat /etc/rancher/k3s/k3s.yaml"
+	deployUICommand = "echo \"%s\" > \"%s/ui.yaml\""
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
@@ -44,13 +44,15 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	publicIP := cluster.MasterNodes[0].PublicIPAddress[0]
 
 	for _, master := range cluster.MasterNodes {
-		if _, err := execute(&hosts.Host{Node: master}, fmt.Sprintf(masterCommand, cluster.Token, publicIP), true); err != nil {
+		if _, err := execute(&hosts.Host{Node: master},
+			fmt.Sprintf(masterCommand, cluster.Token, publicIP, cluster.MasterExtraArgs), true); err != nil {
 			return err
 		}
 	}
 
 	for _, worker := range cluster.WorkerNodes {
-		if _, err := execute(&hosts.Host{Node: worker}, fmt.Sprintf(workerCommand, url, cluster.Token), true); err != nil {
+		if _, err := execute(&hosts.Host{Node: worker},
+			fmt.Sprintf(workerCommand, url, cluster.Token, cluster.WorkerExtraArgs), true); err != nil {
 			return err
 		}
 	}
@@ -70,16 +72,16 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
-	// deploy additional manifests. e.g. UI(none/dashboard/octopus-ui).
+	// deploy additional UI manifests. e.g. (none/dashboard/octopus-ui).
 	switch cluster.UI {
 	case "dashboard":
 		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
-			fmt.Sprintf(deployManifestCommand, fmt.Sprintf(dashboardTmpl, cluster.Repo), common.K3sManifestsDir), true); err != nil {
+			fmt.Sprintf(deployUICommand, fmt.Sprintf(dashboardTmpl, cluster.Repo), common.K3sManifestsDir), true); err != nil {
 			return err
 		}
 	case "octopus-ui":
 		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
-			fmt.Sprintf(deployManifestCommand, octopusTmpl, common.K3sManifestsDir), true); err != nil {
+			fmt.Sprintf(deployUICommand, octopusTmpl, common.K3sManifestsDir), true); err != nil {
 			return err
 		}
 	}
@@ -102,7 +104,8 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	for i := 0; i < len(added.WorkerNodes); i++ {
 		for _, full := range merged.WorkerNodes {
 			if added.WorkerNodes[i].InstanceID == full.InstanceID {
-				if _, err := execute(&hosts.Host{Node: full}, fmt.Sprintf(workerCommand, url, merged.Token), true); err != nil {
+				if _, err := execute(&hosts.Host{Node: full},
+					fmt.Sprintf(workerCommand, url, merged.Token, merged.WorkerExtraArgs), true); err != nil {
 					return err
 				}
 				break

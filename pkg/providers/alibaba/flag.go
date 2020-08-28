@@ -263,6 +263,18 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Required: true,
 		},
 		{
+			Name:  "master-extra-args",
+			P:     &p.MasterExtraArgs,
+			V:     p.MasterExtraArgs,
+			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--no-deploy metrics-server')",
+		},
+		{
+			Name:  "worker-extra-args",
+			P:     &p.WorkerExtraArgs,
+			V:     p.WorkerExtraArgs,
+			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute')",
+		},
+		{
 			Name:     "master",
 			P:        &p.Master,
 			V:        p.Master,
