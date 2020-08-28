@@ -11,6 +11,7 @@ import (
 	"github.com/Jason-ZW/autok3s/pkg/common"
 	"github.com/Jason-ZW/autok3s/pkg/hosts"
 	"github.com/Jason-ZW/autok3s/pkg/types"
+	"github.com/Jason-ZW/autok3s/pkg/types/alibaba"
 	"github.com/Jason-ZW/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
@@ -22,22 +23,42 @@ import (
 )
 
 var (
-	masterCommand   = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s %s' sh -\n"
-	workerCommand   = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
-	catCfgCommand   = "cat /etc/rancher/k3s/k3s.yaml"
-	deployUICommand = "echo \"%s\" > \"%s/ui.yaml\""
+	masterCommand       = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s %s' sh -\n"
+	workerCommand       = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
+	catCfgCommand       = "cat /etc/rancher/k3s/k3s.yaml"
+	dockerCommand       = "curl https://get.docker.com | VERSION=19.03 sh -s - %s\n"
+	deployUICommand     = "echo \"%s\" > \"%s/ui.yaml\""
+	deployTerwayCommand = "echo \"%s\" > \"%s/terway.yaml\""
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
 	var (
-		k3sScript string
-		k3sMirror string
+		k3sScript    string
+		k3sMirror    string
+		dockerMirror string
+		noFlannel    bool
+		terway       *alibaba.Terway
 	)
 
 	switch cluster.Provider {
 	case "alibaba":
 		k3sScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 		k3sMirror = "INSTALL_K3S_MIRROR=cn"
+		dockerMirror = "--mirror Aliyun"
+		if option, ok := cluster.Options.(alibaba.Options); ok {
+			if strings.EqualFold(option.Terway.Mode, "eni") {
+				terway = &alibaba.Terway{
+					Mode:          option.Terway.Mode,
+					AccessKey:     option.AccessKey,
+					AccessSecret:  option.AccessSecret,
+					CIDR:          option.Terway.CIDR,
+					SecurityGroup: option.SecurityGroup,
+					VSwitches:     fmt.Sprintf(`{\"%s\":[\"%s\"]}`, option.Region, option.VSwitch),
+					MaxPoolSize:   option.Terway.MaxPoolSize,
+				}
+				noFlannel = true
+			}
+		}
 	default:
 		k3sScript = "https://get.k3s.io"
 	}
@@ -55,17 +76,41 @@ func InitK3sCluster(cluster *types.Cluster) error {
 
 	url := cluster.MasterNodes[0].InternalIPAddress[0]
 	publicIP := cluster.MasterNodes[0].PublicIPAddress[0]
+	masterExtraArgs := cluster.MasterExtraArgs
+	workerExtraArgs := cluster.WorkerExtraArgs
+
+	if noFlannel {
+		masterExtraArgs += " --flannel-backend=none"
+	}
+
+	if cluster.ClusterCIDR != "" {
+		masterExtraArgs += " --cluster-cidr " + cluster.ClusterCIDR
+	}
 
 	for _, master := range cluster.MasterNodes {
+		if strings.Contains(masterExtraArgs, "--docker") {
+			if _, err := execute(&hosts.Host{Node: master},
+				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+				return err
+			}
+		}
+
 		if _, err := execute(&hosts.Host{Node: master},
-			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Token, publicIP, cluster.MasterExtraArgs), true); err != nil {
+			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Token, publicIP, masterExtraArgs), true); err != nil {
 			return err
 		}
 	}
 
 	for _, worker := range cluster.WorkerNodes {
+		if strings.Contains(workerExtraArgs, "--docker") {
+			if _, err := execute(&hosts.Host{Node: worker},
+				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+				return err
+			}
+		}
+
 		if _, err := execute(&hosts.Host{Node: worker},
-			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, cluster.Token, cluster.WorkerExtraArgs), true); err != nil {
+			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, cluster.Token, workerExtraArgs), true); err != nil {
 			return err
 		}
 	}
@@ -76,6 +121,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
+	// merge current cluster to kube config.
 	if err := saveCfg(cfg, publicIP, cluster.Name); err != nil {
 		return err
 	}
@@ -85,16 +131,25 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
+	// deploy additional Terway manifests.
+	if terway != nil {
+		tmpl := fmt.Sprintf(terwayTmpl, terway.AccessKey, terway.AccessSecret, terway.SecurityGroup, terway.CIDR, terway.VSwitches, terway.MaxPoolSize)
+		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
+			fmt.Sprintf(deployTerwayCommand, tmpl, common.K3sManifestsDir), false); err != nil {
+			return err
+		}
+	}
+
 	// deploy additional UI manifests. e.g. (none/dashboard/octopus-ui).
 	switch cluster.UI {
 	case "dashboard":
 		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
-			fmt.Sprintf(deployUICommand, fmt.Sprintf(dashboardTmpl, cluster.Repo), common.K3sManifestsDir), true); err != nil {
+			fmt.Sprintf(deployUICommand, fmt.Sprintf(dashboardTmpl, cluster.Repo), common.K3sManifestsDir), false); err != nil {
 			return err
 		}
 	case "octopus-ui":
 		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
-			fmt.Sprintf(deployUICommand, octopusTmpl, common.K3sManifestsDir), true); err != nil {
+			fmt.Sprintf(deployUICommand, octopusTmpl, common.K3sManifestsDir), false); err != nil {
 			return err
 		}
 	}
@@ -104,14 +159,16 @@ func InitK3sCluster(cluster *types.Cluster) error {
 
 func JoinK3sNode(merged, added *types.Cluster) error {
 	var (
-		k3sScript string
-		k3sMirror string
+		k3sScript    string
+		k3sMirror    string
+		dockerMirror string
 	)
 
 	switch merged.Provider {
 	case "alibaba":
 		k3sScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 		k3sMirror = "INSTALL_K3S_MIRROR=cn"
+		dockerMirror = "--mirror Aliyun"
 	default:
 		k3sScript = "https://get.k3s.io"
 	}
@@ -130,6 +187,13 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	for i := 0; i < len(added.WorkerNodes); i++ {
 		for _, full := range merged.WorkerNodes {
 			if added.WorkerNodes[i].InstanceID == full.InstanceID {
+				if strings.Contains(merged.WorkerExtraArgs, "--docker") {
+					if _, err := execute(&hosts.Host{Node: full},
+						fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+						return err
+					}
+				}
+
 				if _, err := execute(&hosts.Host{Node: full},
 					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, merged.Token, merged.WorkerExtraArgs), true); err != nil {
 					return err
@@ -190,7 +254,6 @@ func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 	for i, c := range converts {
 		if c.Provider == cluster.Provider && c.Name == cluster.Name {
 			index = i
-			//r = append(r, *cluster)
 		}
 	}
 
@@ -239,7 +302,7 @@ func execute(host *hosts.Host, cmd string, print bool) (string, error) {
 	}
 
 	if print {
-		fmt.Printf("[dialer] execute command result: %s\n", result)
+		fmt.Printf("[dialer] execute command result:\n %s\n", result)
 	}
 
 	return result, nil

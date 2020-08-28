@@ -19,6 +19,7 @@ type Metadata struct {
 	Token           string `json:"token,omitempty" yaml:"token,omitempty"`
 	UI              string `json:"ui,omitempty" yaml:"ui,omitempty"`
 	Repo            string `json:"repo,omitempty" yaml:"repo,omitempty"`
+	ClusterCIDR     string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
 	MasterExtraArgs string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
 }

@@ -32,6 +32,8 @@ const (
 	worker                  = "1"
 	ui                      = "none"
 	repo                    = "https://apphub.aliyuncs.com"
+	terway                  = "none"
+	terwayMaxPoolSize       = "100"
 )
 
 type Alibaba struct {
@@ -56,6 +58,7 @@ func NewProvider() *Alibaba {
 			DiskCategory:            diskCategory,
 			DiskSize:                diskSize,
 			Image:                   imageID,
+			Terway:                  alibaba.Terway{Mode: "none", MaxPoolSize: terwayMaxPoolSize},
 			Type:                    instanceType,
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
 		},
@@ -414,6 +417,34 @@ func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 	return response, nil
 }
 
+func (p *Alibaba) getVSwitchCIDR() (string, string, error) {
+	request := ecs.CreateDescribeVSwitchesRequest()
+	request.Scheme = "https"
+	request.VSwitchId = p.VSwitch
+
+	response, err := p.c.DescribeVSwitches(request)
+	if err != nil || !response.IsSuccess() || len(response.VSwitches.VSwitch) != 1 {
+		return "", "", fmt.Errorf("[%s] calling describeVSwitches error. region=%s, "+"instanceName=%s, message=[%s]\n",
+			p.GetProviderName(), p.Region, p.VSwitch, err.Error())
+	}
+
+	return response.VSwitches.VSwitch[0].VpcId, response.VSwitches.VSwitch[0].CidrBlock, nil
+}
+
+func (p *Alibaba) getVpcCIDR() (string, error) {
+	request := ecs.CreateDescribeVpcsRequest()
+	request.Scheme = "https"
+	request.VpcId = p.Vpc
+
+	response, err := p.c.DescribeVpcs(request)
+	if err != nil || !response.IsSuccess() || len(response.Vpcs.Vpc) != 1 {
+		return "", fmt.Errorf("[%s] calling describeVpcs error. region=%s, "+"instanceName=%s, message=[%s]\n",
+			p.GetProviderName(), p.Region, p.Vpc, err.Error())
+	}
+
+	return response.Vpcs.Vpc[0].CidrBlock, nil
+}
+
 func (p *Alibaba) isClusterExist() (bool, error) {
 	request := ecs.CreateDescribeInstancesRequest()
 	request.Scheme = "https"
@@ -429,7 +460,6 @@ func (p *Alibaba) isClusterExist() (bool, error) {
 
 func (p *Alibaba) createCheck() error {
 	exist, err := p.isClusterExist()
-
 	if err != nil {
 		return err
 	}
@@ -437,6 +467,25 @@ func (p *Alibaba) createCheck() error {
 	if exist {
 		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` already exist\n",
 			p.GetProviderName(), p.Name)
+	}
+
+	if p.Terway.Mode != "none" {
+		vpc, vSwitchCIDR, err := p.getVSwitchCIDR()
+		if err != nil {
+			return fmt.Errorf("[%s] calling preflight error: vswitch %s cidr not be found\n",
+				p.GetProviderName(), p.VSwitch)
+		}
+
+		p.Vpc = vpc
+		p.ClusterCIDR = vSwitchCIDR
+
+		vpcCIDR, err := p.getVpcCIDR()
+		if err != nil {
+			return fmt.Errorf("[%s] calling preflight error: vpc %s cidr not be found\n",
+				p.GetProviderName(), p.Vpc)
+		}
+
+		p.Options.Terway.CIDR = vpcCIDR
 	}
 
 	return nil

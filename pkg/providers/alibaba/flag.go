@@ -29,6 +29,20 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Usage:    "Specify helm repo",
 			Required: true,
 		},
+		{
+			Name:     "terway",
+			P:        &p.Terway.Mode,
+			V:        p.Terway.Mode,
+			Usage:    "Enable terway CNI plugin, currently only support ENI mode. e.g.(--terway eni)",
+			Required: true,
+		},
+		{
+			Name:     "terway-max-pool-size",
+			P:        &p.Terway.MaxPoolSize,
+			V:        p.Terway.MaxPoolSize,
+			Usage:    "Max pool size for terway ENI mode",
+			Required: true,
+		},
 	}...)
 
 	for _, f := range fs {
