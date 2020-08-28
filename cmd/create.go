@@ -29,7 +29,7 @@ var (
 
 func init() {
 	createCmd.Flags().StringVarP(&cProvider, "provider", "p", cProvider, "Provider is a module which provides an interface for managing cloud resources")
-	createCmd.Flags().StringVar(&cSSH.User, "user", cSSH.User, "SSH user for host")
+	createCmd.Flags().StringVar(&cSSH.User, "ssh-user", cSSH.User, "SSH user for host")
 	createCmd.Flags().StringVar(&cSSH.Port, "ssh-port", cSSH.Port, "SSH port for host")
 	createCmd.Flags().StringVar(&cSSH.SSHKey, "ssh-key", cSSH.SSHKey, "SSH private key path")
 }

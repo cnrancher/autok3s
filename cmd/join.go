@@ -29,7 +29,7 @@ var (
 
 func init() {
 	joinCmd.Flags().StringVarP(&jProvider, "provider", "p", jProvider, "Provider is a module which provides an interface for managing cloud resources")
-	joinCmd.Flags().StringVar(&jSSH.User, "user", jSSH.User, "SSH user for host")
+	joinCmd.Flags().StringVar(&jSSH.User, "ssh-user", jSSH.User, "SSH user for host")
 	joinCmd.Flags().StringVar(&jSSH.Port, "ssh-port", jSSH.Port, "SSH port for host")
 	joinCmd.Flags().StringVar(&jSSH.SSHKey, "ssh-key", jSSH.SSHKey, "SSH private key path")
 }
