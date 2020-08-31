@@ -51,7 +51,7 @@ func getCluster() {
 
 	v := common.CfgPath
 	if v == "" {
-		logrus.Fatalln("state path is empty\n")
+		logrus.Fatalln("state path is empty")
 	}
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)

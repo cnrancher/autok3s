@@ -23,7 +23,6 @@ type Host struct {
 }
 
 type dialer struct {
-	signer     ssh.Signer
 	sshKey     string
 	sshCert    string
 	sshAddress string

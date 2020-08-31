@@ -400,17 +400,9 @@ func overwriteCfg(context string) error {
 		return err
 	}
 
-	if _, found := c.Clusters[context]; found {
-		delete(c.Clusters, context)
-	}
-
-	if _, found := c.Contexts[context]; found {
-		delete(c.Contexts, context)
-	}
-
-	if _, found := c.AuthInfos[context]; found {
-		delete(c.AuthInfos, context)
-	}
+	delete(c.Clusters, context)
+	delete(c.Contexts, context)
+	delete(c.AuthInfos, context)
 
 	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 }
