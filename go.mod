@@ -1,4 +1,4 @@
-module github.com/Jason-ZW/autok3s
+module github.com/cnrancher/autok3s
 
 go 1.13
 

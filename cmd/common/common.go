@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Jason-ZW/autok3s/pkg/common"
-	"github.com/Jason-ZW/autok3s/pkg/providers"
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/providers"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

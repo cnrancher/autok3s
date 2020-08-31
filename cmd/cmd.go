@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Jason-ZW/autok3s/pkg/common"
-	"github.com/Jason-ZW/autok3s/pkg/utils"
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/morikuni/aec"
 	"github.com/sirupsen/logrus"

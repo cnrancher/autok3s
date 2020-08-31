@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/Jason-ZW/autok3s/cmd/common"
-	"github.com/Jason-ZW/autok3s/pkg/providers"
-	"github.com/Jason-ZW/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/cmd/common"
+	"github.com/cnrancher/autok3s/pkg/providers"
+	"github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

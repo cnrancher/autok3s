@@ -8,11 +8,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Jason-ZW/autok3s/pkg/common"
-	"github.com/Jason-ZW/autok3s/pkg/hosts"
-	"github.com/Jason-ZW/autok3s/pkg/types"
-	"github.com/Jason-ZW/autok3s/pkg/types/alibaba"
-	"github.com/Jason-ZW/autok3s/pkg/utils"
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types/alibaba"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/Jason-ZW/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types"
 
 	exec "github.com/alexellis/go-execute/pkg/v1"
 	. "github.com/onsi/ginkgo"

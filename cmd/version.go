@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/Jason-ZW/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/spf13/cobra"
 )

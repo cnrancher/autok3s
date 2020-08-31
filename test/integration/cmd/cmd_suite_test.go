@@ -3,7 +3,7 @@ package cmd_test
 import (
 	"testing"
 
-	"github.com/Jason-ZW/autok3s/cmd"
+	"github.com/cnrancher/autok3s/cmd"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

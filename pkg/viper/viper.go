@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Jason-ZW/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/common"
 
 	"github.com/spf13/viper"
 )

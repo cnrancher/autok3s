@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Jason-ZW/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/common"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

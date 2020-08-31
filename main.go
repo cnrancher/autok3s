@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Jason-ZW/autok3s/cmd"
-	"github.com/Jason-ZW/autok3s/pkg/cli/kubectl"
+	"github.com/cnrancher/autok3s/cmd"
+	"github.com/cnrancher/autok3s/pkg/cli/kubectl"
 
 	"github.com/docker/docker/pkg/reexec"
 )

@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jason-ZW/autok3s/pkg/cluster"
-	"github.com/Jason-ZW/autok3s/pkg/common"
-	"github.com/Jason-ZW/autok3s/pkg/types"
-	"github.com/Jason-ZW/autok3s/pkg/types/alibaba"
-	"github.com/Jason-ZW/autok3s/pkg/utils"
-	"github.com/Jason-ZW/autok3s/pkg/viper"
+	"github.com/cnrancher/autok3s/pkg/cluster"
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types/alibaba"
+	"github.com/cnrancher/autok3s/pkg/utils"
+	"github.com/cnrancher/autok3s/pkg/viper"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"

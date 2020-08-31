@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Jason-ZW/autok3s/pkg/common"
-	"github.com/Jason-ZW/autok3s/pkg/types"
-	"github.com/Jason-ZW/autok3s/pkg/utils"
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"golang.org/x/crypto/ssh"
 	"k8s.io/apimachinery/pkg/util/wait"

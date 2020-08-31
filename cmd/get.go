@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Jason-ZW/autok3s/pkg/cluster"
-	"github.com/Jason-ZW/autok3s/pkg/common"
-	"github.com/Jason-ZW/autok3s/pkg/utils"
+	"github.com/cnrancher/autok3s/pkg/cluster"
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"

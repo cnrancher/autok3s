@@ -3,8 +3,8 @@ package providers
 import (
 	"errors"
 
-	"github.com/Jason-ZW/autok3s/pkg/providers/alibaba"
-	"github.com/Jason-ZW/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/providers/alibaba"
+	"github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
