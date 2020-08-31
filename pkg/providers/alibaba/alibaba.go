@@ -58,7 +58,7 @@ func NewProvider() *Alibaba {
 			DiskCategory:            diskCategory,
 			DiskSize:                diskSize,
 			Image:                   imageID,
-			Terway:                  alibaba.Terway{Mode: "none", MaxPoolSize: terwayMaxPoolSize},
+			Terway:                  alibaba.Terway{Mode: terway, MaxPoolSize: terwayMaxPoolSize},
 			Type:                    instanceType,
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
 		},

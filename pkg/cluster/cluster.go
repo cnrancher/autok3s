@@ -88,7 +88,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	for _, master := range cluster.MasterNodes {
-		if strings.Contains(masterExtraArgs, "--docker" ) {
+		if strings.Contains(masterExtraArgs, "--docker") {
 			if _, err := execute(&hosts.Host{Node: master},
 				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
 				return err
