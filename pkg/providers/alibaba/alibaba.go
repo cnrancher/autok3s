@@ -184,7 +184,6 @@ func (p *Alibaba) Rollback() error {
 	s := utils.NewSpinner("Executing rollback process: ")
 	s.Start()
 	defer s.Stop()
-
 	ids := make([]string, 0)
 
 	p.m.Range(func(key, value interface{}) bool {
@@ -251,11 +250,11 @@ func (p *Alibaba) runInstances(num, startIndex int, master bool) error {
 	if master {
 		// TODO: HA mode will be added soon, temporary set master number to 1.
 		request.Amount = requests.NewInteger(1)
-		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 1)
-		request.HostName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 1)
+		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 4)
+		request.HostName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 4)
 	} else {
-		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 1)
-		request.HostName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 1)
+		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 4)
+		request.HostName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 4)
 	}
 
 	response, err := p.c.RunInstances(request)
@@ -445,21 +444,25 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 	return response.Vpcs.Vpc[0].CidrBlock, nil
 }
 
-func (p *Alibaba) isClusterExist() (bool, error) {
+func (p *Alibaba) isClusterExist() (bool, []string, error) {
 	request := ecs.CreateDescribeInstancesRequest()
 	request.Scheme = "https"
 	request.InstanceName = strings.ToLower(fmt.Sprintf(common.WildcardInstanceName, p.Name))
 
+	ids := make([]string, 0)
 	response, err := p.c.DescribeInstances(request)
 	if err != nil || len(response.Instances.Instance) > 0 {
-		return true, err
+		for _, instance := range response.Instances.Instance {
+			ids = append(ids, instance.InstanceId)
+		}
+		return true, ids,  err
 	}
 
-	return false, nil
+	return false, ids, nil
 }
 
 func (p *Alibaba) createCheck() error {
-	exist, err := p.isClusterExist()
+	exist, _, err := p.isClusterExist()
 	if err != nil {
 		return err
 	}
@@ -492,7 +495,7 @@ func (p *Alibaba) createCheck() error {
 }
 
 func (p *Alibaba) joinCheck() error {
-	exist, err := p.isClusterExist()
+	exist, ids, err := p.isClusterExist()
 
 	if err != nil {
 		return err
@@ -501,6 +504,18 @@ func (p *Alibaba) joinCheck() error {
 	if !exist {
 		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist\n",
 			p.GetProviderName(), p.Name)
+	} else {
+		// remove invalid worker nodes from .state file.
+		workers := make([]types.Node, 0)
+		for _, w := range p.WorkerNodes {
+			for _, e := range ids {
+				if e == w.InstanceID {
+					workers = append(workers, w)
+					break
+				}
+			}
+		}
+		p.WorkerNodes = workers
 	}
 
 	return nil

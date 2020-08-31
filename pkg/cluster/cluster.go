@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -182,6 +183,7 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	}
 
 	url := merged.MasterNodes[0].InternalIPAddress[0]
+	workerNum := 0
 
 	// TODO: join master node will be added soon.
 	for i := 0; i < len(added.WorkerNodes); i++ {
@@ -198,10 +200,16 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, merged.Token, merged.WorkerExtraArgs), true); err != nil {
 					return err
 				}
+
+				workerNum, _ = strconv.Atoi(merged.Worker)
+				workerNum = workerNum + 1
+
 				break
 			}
 		}
 	}
+
+	merged.Worker = strconv.Itoa(workerNum)
 
 	// write current cluster to state file.
 	return saveState(merged)
@@ -225,7 +233,16 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 	}
 
 	for _, c := range converts {
-		if c.Provider == cluster.Provider && c.Name == cluster.Name {
+		name := cluster.Name
+
+		switch cluster.Provider {
+		case "alibaba":
+			if option, ok := cluster.Options.(alibaba.Options); ok {
+				name = fmt.Sprintf("%s.%s", cluster.Name, option.Region)
+			}
+		}
+
+		if c.Provider == cluster.Provider && c.Name == name {
 			r = append(r, c)
 		}
 	}

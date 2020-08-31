@@ -103,7 +103,7 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 
 		var matched *types.Cluster
 		for _, c := range clusters {
-			if c.Provider == p.Provider && c.Name == p.Name {
+			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
 				matched = &c
 			}
 		}
@@ -195,10 +195,18 @@ func (p *Alibaba) mergeOptions(input types.Cluster) {
 	source := reflect.ValueOf(&p.Options).Elem()
 	target := reflect.Indirect(reflect.ValueOf(&input.Options)).Elem()
 
+	p.mergeValues(source, target)
+}
+
+func (p *Alibaba) mergeValues(source, target reflect.Value) {
 	for i := 0; i < source.NumField(); i++ {
 		for _, k := range target.MapKeys() {
 			if strings.Contains(source.Type().Field(i).Tag.Get("yaml"), k.String()) {
-				source.Field(i).SetString(fmt.Sprintf("%s", target.MapIndex(k)))
+				if source.Field(i).Kind().String() == "struct" {
+					p.mergeValues(source.Field(i), target.MapIndex(k).Elem())
+				} else {
+					source.Field(i).SetString(fmt.Sprintf("%s", target.MapIndex(k)))
+				}
 			}
 		}
 	}

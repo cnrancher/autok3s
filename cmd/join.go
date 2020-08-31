@@ -66,12 +66,12 @@ func JoinCommand() *cobra.Command {
 		}
 
 		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
-		cp.GenerateClusterName()
+		jp.GenerateClusterName()
 
 		// join k3s node to the cluster which named with generated cluster name.
 		if err := jp.JoinK3sNode(jSSH); err != nil {
 			logrus.Errorln(err)
-			if rErr := cp.Rollback(); rErr != nil {
+			if rErr := jp.Rollback(); rErr != nil {
 				logrus.Fatalln(rErr)
 			}
 		}
