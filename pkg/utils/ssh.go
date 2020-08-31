@@ -20,7 +20,7 @@ func SSHPrivateKeyPath(sshKey string) (string, error) {
 	}
 	buff, err := ioutil.ReadFile(sshKey)
 	if err != nil {
-		return "", fmt.Errorf("error while reading SSH key file: %v", err)
+		return "", fmt.Errorf("error while reading SSH key file: %v\n", err)
 	}
 	return string(buff), nil
 }
@@ -31,7 +31,7 @@ func SSHCertificatePath(sshCertPath string) (string, error) {
 	}
 	buff, err := ioutil.ReadFile(sshCertPath)
 	if err != nil {
-		return "", fmt.Errorf("error while reading SSH certificate file: %v", err)
+		return "", fmt.Errorf("error while reading SSH certificate file: %v\n", err)
 	}
 	return string(buff), nil
 }
@@ -46,12 +46,12 @@ func GetSSHConfig(username, sshPrivateKeyString, passphrase, sshCert string, pas
 		if sshAgentSock := os.Getenv(SSHAuthSock); sshAgentSock != "" {
 			sshAgent, err := net.Dial("unix", sshAgentSock)
 			if err != nil {
-				return config, fmt.Errorf("cannot connect to SSH Auth socket %q: %s", sshAgentSock, err)
+				return config, fmt.Errorf("cannot connect to SSH Auth socket %q: %s\n", sshAgentSock, err)
 			}
 
 			config.Auth = append(config.Auth, ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers))
 
-			logrus.Debugf("using %q SSH_AUTH_SOCK", sshAgentSock)
+			logrus.Debugf("using %q SSH_AUTH_SOCK\n", sshAgentSock)
 			return config, nil
 		}
 	} else if sshPrivateKeyString != "" {
@@ -71,11 +71,11 @@ func GetSSHConfig(username, sshPrivateKeyString, passphrase, sshCert string, pas
 		if len(sshCert) > 0 {
 			key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(sshCert))
 			if err != nil {
-				return config, fmt.Errorf("unable to parse SSH certificate: %v", err)
+				return config, fmt.Errorf("unable to parse SSH certificate: %v\n", err)
 			}
 
 			if _, ok := key.(*ssh.Certificate); !ok {
-				return config, fmt.Errorf("unable to cast public key to SSH certificate")
+				return config, fmt.Errorf("unable to cast public key to SSH certificate\n")
 			}
 			signer, err = ssh.NewCertSigner(key.(*ssh.Certificate), signer)
 			if err != nil {
