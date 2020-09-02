@@ -33,7 +33,7 @@ const (
 	ui                      = "none"
 	repo                    = "https://apphub.aliyuncs.com"
 	terway                  = "none"
-	terwayMaxPoolSize       = "100"
+	terwayMaxPoolSize       = "5"
 )
 
 type Alibaba struct {
