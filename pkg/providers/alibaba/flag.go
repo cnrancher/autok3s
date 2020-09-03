@@ -285,6 +285,13 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Required: true,
 		},
 		{
+			Name:     "cloud-controller-manager",
+			P:        &p.CloudControllerManager,
+			V:        p.CloudControllerManager,
+			Usage:    "Enable cloud-controller-manager component",
+			Required: true,
+		},
+		{
 			Name:  "master-extra-args",
 			P:     &p.MasterExtraArgs,
 			V:     p.MasterExtraArgs,

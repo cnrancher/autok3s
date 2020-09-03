@@ -12,16 +12,17 @@ type Cluster struct {
 }
 
 type Metadata struct {
-	Name            string `json:"name" yaml:"name"`
-	Provider        string `json:"provider" yaml:"provider"`
-	Master          string `json:"master" yaml:"master"`
-	Worker          string `json:"worker" yaml:"worker"`
-	Token           string `json:"token,omitempty" yaml:"token,omitempty"`
-	UI              string `json:"ui,omitempty" yaml:"ui,omitempty"`
-	Repo            string `json:"repo,omitempty" yaml:"repo,omitempty"`
-	ClusterCIDR     string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
-	MasterExtraArgs string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
-	WorkerExtraArgs string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
+	Name                   string `json:"name" yaml:"name"`
+	Provider               string `json:"provider" yaml:"provider"`
+	Master                 string `json:"master" yaml:"master"`
+	Worker                 string `json:"worker" yaml:"worker"`
+	Token                  string `json:"token,omitempty" yaml:"token,omitempty"`
+	UI                     string `json:"ui,omitempty" yaml:"ui,omitempty"`
+	Repo                   string `json:"repo,omitempty" yaml:"repo,omitempty"`
+	ClusterCIDR            string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
+	CloudControllerManager string `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
+	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
+	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
 }
 
 type Status struct {

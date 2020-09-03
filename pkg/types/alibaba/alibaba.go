@@ -30,3 +30,9 @@ type Terway struct {
 	SecurityGroup string `json:"security-group,omitempty" yaml:"security-group,omitempty"`
 	MaxPoolSize   string `json:"max-pool-size,omitempty" yaml:"max-pool-size,omitempty"`
 }
+
+type CloudControllerManager struct {
+	Region       string `json:"region,omitempty" yaml:"region,omitempty"`
+	AccessKey    string `json:"access-key,omitempty" yaml:"access-key,omitempty"`
+	AccessSecret string `json:"access-secret,omitempty" yaml:"access-secret,omitempty"`
+}
