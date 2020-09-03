@@ -29,6 +29,7 @@ var (
 	catCfgCommand       = "cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand       = "curl https://get.docker.com | VERSION=19.03 sh -s - %s\n"
 	deployUICommand     = "echo \"%s\" > \"%s/ui.yaml\""
+	deployCCMCommand    = "echo \"%s\" > \"%s/ccm.yaml\""
 	deployTerwayCommand = "echo \"%s\" > \"%s/terway.yaml\""
 )
 
@@ -39,6 +40,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		dockerMirror string
 		noFlannel    bool
 		terway       *alibaba.Terway
+		aliCCM       *alibaba.CloudControllerManager
 	)
 
 	switch cluster.Provider {
@@ -58,6 +60,13 @@ func InitK3sCluster(cluster *types.Cluster) error {
 					MaxPoolSize:   option.Terway.MaxPoolSize,
 				}
 				noFlannel = true
+			}
+			if strings.EqualFold(cluster.CloudControllerManager, "true") {
+				aliCCM = &alibaba.CloudControllerManager{
+					Region:       option.Region,
+					AccessKey:    option.AccessKey,
+					AccessSecret: option.AccessSecret,
+				}
 			}
 		}
 	default:
@@ -88,30 +97,46 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		masterExtraArgs += " --cluster-cidr " + cluster.ClusterCIDR
 	}
 
+	if aliCCM != nil {
+		masterExtraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
+	}
+
 	for _, master := range cluster.MasterNodes {
-		if strings.Contains(masterExtraArgs, "--docker") {
+		extraArgs := masterExtraArgs
+		if strings.Contains(extraArgs, "--docker") {
 			if _, err := execute(&hosts.Host{Node: master},
 				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
 				return err
 			}
 		}
 
+		if aliCCM != nil {
+			extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+				aliCCM.Region, master.InstanceID, aliCCM.Region, master.InstanceID)
+		}
+
 		if _, err := execute(&hosts.Host{Node: master},
-			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Token, publicIP, masterExtraArgs), true); err != nil {
+			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Token, publicIP, extraArgs), true); err != nil {
 			return err
 		}
 	}
 
 	for _, worker := range cluster.WorkerNodes {
-		if strings.Contains(workerExtraArgs, "--docker") {
+		extraArgs := workerExtraArgs
+		if strings.Contains(extraArgs, "--docker") {
 			if _, err := execute(&hosts.Host{Node: worker},
 				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
 				return err
 			}
 		}
 
+		if aliCCM != nil {
+			extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+				aliCCM.Region, worker.InstanceID, aliCCM.Region, worker.InstanceID)
+		}
+
 		if _, err := execute(&hosts.Host{Node: worker},
-			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, cluster.Token, workerExtraArgs), true); err != nil {
+			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, cluster.Token, extraArgs), true); err != nil {
 			return err
 		}
 	}
@@ -120,6 +145,15 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	cfg, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]}, catCfgCommand, false)
 	if err != nil {
 		return err
+	}
+
+	// deploy additional Alibaba cloud-controller-manager manifests.
+	if aliCCM != nil {
+		tmpl := fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret)
+		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
+			fmt.Sprintf(deployCCMCommand, tmpl, common.K3sManifestsDir), false); err != nil {
+			return err
+		}
 	}
 
 	// deploy additional Terway manifests.
@@ -163,6 +197,7 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		k3sScript    string
 		k3sMirror    string
 		dockerMirror string
+		aliCCM       *alibaba.CloudControllerManager
 	)
 
 	switch merged.Provider {
@@ -170,6 +205,15 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		k3sScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 		k3sMirror = "INSTALL_K3S_MIRROR=cn"
 		dockerMirror = "--mirror Aliyun"
+		if option, ok := merged.Options.(alibaba.Options); ok {
+			if strings.EqualFold(merged.CloudControllerManager, "true") {
+				aliCCM = &alibaba.CloudControllerManager{
+					Region:       option.Region,
+					AccessKey:    option.AccessKey,
+					AccessSecret: option.AccessSecret,
+				}
+			}
+		}
 	default:
 		k3sScript = "https://get.k3s.io"
 	}
@@ -188,16 +232,22 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	// TODO: join master node will be added soon.
 	for i := 0; i < len(added.WorkerNodes); i++ {
 		for _, full := range merged.WorkerNodes {
+			extraArgs := merged.WorkerExtraArgs
 			if added.WorkerNodes[i].InstanceID == full.InstanceID {
-				if strings.Contains(merged.WorkerExtraArgs, "--docker") {
+				if strings.Contains(extraArgs, "--docker") {
 					if _, err := execute(&hosts.Host{Node: full},
 						fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
 						return err
 					}
 				}
 
+				if aliCCM != nil && !strings.Contains(extraArgs, "provider-id=alicloud://") {
+					extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+						aliCCM.Region, full.InstanceID, aliCCM.Region, full.InstanceID)
+				}
+
 				if _, err := execute(&hosts.Host{Node: full},
-					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, merged.Token, merged.WorkerExtraArgs), true); err != nil {
+					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, merged.Token, extraArgs), true); err != nil {
 					return err
 				}
 

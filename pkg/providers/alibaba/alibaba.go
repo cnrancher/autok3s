@@ -34,6 +34,7 @@ const (
 	repo                    = "https://apphub.aliyuncs.com"
 	terway                  = "none"
 	terwayMaxPoolSize       = "5"
+	cloudControllerManager  = "false"
 )
 
 type Alibaba struct {
@@ -48,11 +49,12 @@ type Alibaba struct {
 func NewProvider() *Alibaba {
 	return &Alibaba{
 		Metadata: types.Metadata{
-			Provider: "alibaba",
-			Master:   master,
-			Worker:   worker,
-			UI:       ui,
-			Repo:     repo,
+			Provider:               "alibaba",
+			Master:                 master,
+			Worker:                 worker,
+			UI:                     ui,
+			Repo:                   repo,
+			CloudControllerManager: cloudControllerManager,
 		},
 		Options: alibaba.Options{
 			DiskCategory:            diskCategory,
@@ -455,7 +457,7 @@ func (p *Alibaba) isClusterExist() (bool, []string, error) {
 		for _, instance := range response.Instances.Instance {
 			ids = append(ids, instance.InstanceId)
 		}
-		return true, ids,  err
+		return true, ids, err
 	}
 
 	return false, ids, nil

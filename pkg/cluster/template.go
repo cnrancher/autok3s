@@ -33,6 +33,25 @@ spec:
       port: 8999
 `
 
+const alibabaCCMTmpl = `
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: alibaba-ccm
+  namespace: kube-system
+spec:
+  chart: alibaba-ccm
+  repo: http://charts.cnrancher.com/alibaba-ccm
+  targetNamespace: kube-system
+  valuesContent: |-
+    accessKey: %s
+    accessSecret: %s
+    rbac:
+      create: true
+    serviceAccount:
+      create: true
+`
+
 const terwayTmpl = `
 ---
 apiVersion: v1
