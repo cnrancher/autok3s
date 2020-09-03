@@ -22,3 +22,7 @@
 dist/
 bin/
 main
+
+## Dapper temporary files
+**/Dockerfile.dapper*
+!**/Dockerfile.dapper

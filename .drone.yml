@@ -1,0 +1,305 @@
+---
+kind: pipeline
+name: lint
+platform:
+  os: linux
+  arch: amd64
+steps:
+  - name: commit-message
+    image: outillage/commitsar
+    commands:
+      - commitsar -d /drone/src -v
+  - name: code
+    image: maiwj/drone-dapper:v0.4.2
+    privileged: true
+    environment:
+      BY: dapper
+      DIRTY_CHECK: true
+    commands:
+      - make autok3s lint
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+trigger:
+  event:
+    include:
+      - push
+      - pull_request
+node:
+  instance: agent-amd64
+---
+kind: pipeline
+name: integration-test
+platform:
+  os: linux
+  arch: amd64
+steps:
+  - name: verify
+    image: maiwj/drone-dapper:v0.4.2
+    privileged: true
+    environment:
+      BY: dapper
+    commands:
+      - make autok3s unit
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+trigger:
+  event:
+    include:
+      - push
+      - pull_request
+node:
+  instance: agent-amd64
+depends_on:
+  - lint
+---
+kind: pipeline
+name: build-linux-amd64
+platform:
+  os: linux
+  arch: amd64
+steps:
+  - name: build
+    image: maiwj/drone-dapper:v0.4.2
+    privileged: true
+    environment:
+      BY: dapper
+    commands:
+      - make autok3s build only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+  - name: package
+    image: maiwj/drone-dapper:v0.4.2
+    environment:
+      BY: dapper
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+      REPO: cnrancher
+      WITHOUT_MANIFEST: true
+    commands:
+      - make autok3s package only
+      - make autok3s deploy only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+    when:
+      ref:
+        include:
+          - "refs/heads/master"
+          - "refs/heads/release/v*"
+          - "refs/tags/v*"
+      event:
+        exculde:
+          - pull_request
+    depends_on:
+      - build
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+trigger:
+  event:
+    include:
+      - push
+      - pull_request
+      - tag
+node:
+  instance: agent-amd64
+depends_on:
+  - integration-test
+---
+kind: pipeline
+name: build-linux-arm64
+platform:
+  os: linux
+  arch: arm64
+steps:
+  - name: build
+    image: maiwj/drone-dapper:v0.4.2
+    privileged: true
+    environment:
+      BY: dapper
+    commands:
+      - make autok3s build only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+  - name: package
+    image: maiwj/drone-dapper:v0.4.2
+    environment:
+      BY: dapper
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+      REPO: cnrancher
+      WITHOUT_MANIFEST: true
+    commands:
+      - make autok3s package only
+      - make autok3s deploy only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+    when:
+      ref:
+        include:
+          - "refs/heads/master"
+          - "refs/heads/release/v*"
+          - "refs/tags/v*"
+      event:
+        exculde:
+          - pull_request
+    depends_on:
+      - build
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+trigger:
+  event:
+    include:
+      - push
+      - pull_request
+      - tag
+node:
+  instance: agent-arm64
+depends_on:
+  - integration-test
+---
+kind: pipeline
+name: build-linux-arm
+platform:
+  os: linux
+  arch: arm
+steps:
+  - name: build
+    image: maiwj/drone-dapper:v0.4.2
+    privileged: true
+    environment:
+      BY: dapper
+      REPO: cnrancher
+    commands:
+      - make autok3s build only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+  - name: package
+    image: maiwj/drone-dapper:v0.4.2
+    environment:
+      BY: dapper
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+      REPO: cnrancher
+      WITHOUT_MANIFEST: true
+    commands:
+      - make autok3s package only
+      - make autok3s deploy only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+    when:
+      ref:
+        include:
+          - "refs/heads/master"
+          - "refs/heads/release/v*"
+          - "refs/tags/v*"
+      event:
+        exculde:
+          - pull_request
+    depends_on:
+      - build
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+trigger:
+  event:
+    include:
+      - push
+      - pull_request
+      - tag
+node:
+  instance: agent-arm
+depends_on:
+  - integration-test
+---
+kind: pipeline
+name: manifest
+platform:
+  os: linux
+  arch: amd64
+steps:
+  - name: push
+    image: maiwj/drone-dapper:v0.4.2
+    environment:
+      BY: dapper
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+      REPO: cnrancher
+      ONLY_MANIFEST: true
+      CROSS: true
+    commands:
+      - make autok3s deploy only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+  - name: release-note
+    image: maiwj/drone-releaser:v0.1.0
+    commands:
+      - /changelog.sh
+    volumes:
+      - name: release-note
+        path: /release-note
+  - name: release
+    image: maiwj/drone-releaser:v0.1.0
+    settings:
+      api_key:
+        from_secret: github_token
+      files:
+        - "dist/autok3s_*.yaml"
+      prerelease: true
+    volumes:
+      - name: release-note
+        path: /release-note
+    when:
+      event:
+        exclude:
+          - push
+volumes:
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+  - name: release-note
+    temp: {}
+trigger:
+  ref:
+    include:
+      - "refs/heads/master"
+      - "refs/heads/release/v*"
+      - "refs/tags/v*"
+  event:
+    include:
+      - push
+      - tag
+node:
+  instance: agent-amd64
+depends_on:
+  - build-linux-amd64
+  - build-linux-arm64
+  - build-linux-arm

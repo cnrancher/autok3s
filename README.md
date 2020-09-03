@@ -1,4 +1,6 @@
 # autok3s
+[![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
+
 Manage the lifecycle of K3s on multiple cloud providers.
 
 # License
