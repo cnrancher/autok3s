@@ -224,8 +224,15 @@ func (p *Alibaba) Rollback() error {
 }
 
 func (p *Alibaba) generateClientSDK() error {
-	client, err := ecs.NewClientWithAccessKey(p.Region, viper.GetString(p.GetProviderName(), accessKeyID),
-		viper.GetString(p.GetProviderName(), accessKeySecret))
+	if p.AccessKey == "" {
+		p.AccessKey = viper.GetString(p.GetProviderName(), accessKeyID)
+	}
+
+	if p.AccessSecret == "" {
+		p.AccessSecret = viper.GetString(p.GetProviderName(), accessKeySecret)
+	}
+
+	client, err := ecs.NewClientWithAccessKey(p.Region, p.AccessKey, p.AccessSecret)
 	if err != nil {
 		return err
 	}

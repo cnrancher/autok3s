@@ -46,6 +46,7 @@ spec:
   valuesContent: |-
     accessKey: %s
     accessSecret: %s
+    clusterCIDR: %s
     rbac:
       create: true
     serviceAccount:

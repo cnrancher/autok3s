@@ -149,7 +149,13 @@ func InitK3sCluster(cluster *types.Cluster) error {
 
 	// deploy additional Alibaba cloud-controller-manager manifests.
 	if aliCCM != nil {
-		tmpl := fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret)
+		var tmpl string
+		if cluster.ClusterCIDR == "" {
+			tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, "10.42.0.0/16")
+		} else {
+			tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, cluster.ClusterCIDR)
+		}
+
 		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]},
 			fmt.Sprintf(deployCCMCommand, tmpl, common.K3sManifestsDir), false); err != nil {
 			return err
