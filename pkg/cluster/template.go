@@ -41,7 +41,7 @@ metadata:
   namespace: kube-system
 spec:
   chart: alibaba-ccm
-  repo: http://charts.cnrancher.com/alibaba-ccm
+  repo: http://charts.cnrancher.com/autok3s
   targetNamespace: kube-system
   valuesContent: |-
     accessKey: %s
