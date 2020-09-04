@@ -86,7 +86,11 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	defer func() {
 		s.Stop()
 		if err == nil && p.UI != "none" && len(p.Status.MasterNodes) > 0 {
-			fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+			if strings.EqualFold(p.CloudControllerManager, "true") {
+				fmt.Printf("K3s UI %s URL: https://<using `kubectl get svc -A` get UI address>:8999\n", p.UI)
+			} else {
+				fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+			}
 			fmt.Printf("Use `autok3s kubectl get pods -A` get UI status\n")
 		}
 	}()
