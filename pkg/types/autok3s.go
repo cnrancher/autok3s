@@ -39,6 +39,7 @@ type Node struct {
 	InstanceStatus    string   `json:"instance-status,omitempty" yaml:"instance-status,omitempty"`
 	PublicIPAddress   []string `json:"public-ip-address,omitempty" yaml:"public-ip-address,omitempty"`
 	InternalIPAddress []string `json:"internal-ip-address,omitempty" yaml:"internal-ip-address,omitempty"`
+	RollBack          bool     `json:"-" yaml:"-"`
 }
 
 type SSH struct {
