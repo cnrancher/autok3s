@@ -107,12 +107,12 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	workerNum, _ := strconv.Atoi(p.Worker)
 
 	// run ecs master instances.
-	if err = p.runInstances(masterNum, 1, true); err != nil {
+	if err = p.runInstances(masterNum, true); err != nil {
 		return
 	}
 
 	// run ecs worker instances.
-	if err = p.runInstances(workerNum, 1, false); err != nil {
+	if err = p.runInstances(workerNum, false); err != nil {
 		return
 	}
 
@@ -152,7 +152,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	workerNum, _ := strconv.Atoi(p.Worker)
 
 	// run ecs worker instances.
-	if err := p.runInstances(workerNum, len(p.WorkerNodes)+1, false); err != nil {
+	if err := p.runInstances(workerNum, false); err != nil {
 		return err
 	}
 
@@ -246,7 +246,7 @@ func (p *Alibaba) generateClientSDK() error {
 	return nil
 }
 
-func (p *Alibaba) runInstances(num, startIndex int, master bool) error {
+func (p *Alibaba) runInstances(num int, master bool) error {
 	request := ecs.CreateRunInstancesRequest()
 	request.Scheme = "https"
 	request.InstanceType = p.Type
@@ -259,15 +259,14 @@ func (p *Alibaba) runInstances(num, startIndex int, master bool) error {
 	outBandWidth, _ := strconv.Atoi(p.InternetMaxBandwidthOut)
 	request.InternetMaxBandwidthOut = requests.NewInteger(outBandWidth)
 	request.Amount = requests.NewInteger(num)
+	request.UniqueSuffix = requests.NewBoolean(true)
 
 	if master {
 		// TODO: HA mode will be added soon, temporary set master number to 1.
 		request.Amount = requests.NewInteger(1)
-		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 4)
-		request.HostName = fmt.Sprintf(common.MasterInstanceName, p.Name, startIndex, 4)
+		request.InstanceName = fmt.Sprintf(common.MasterInstancePrefix, p.Name)
 	} else {
-		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 4)
-		request.HostName = fmt.Sprintf(common.WorkerInstanceName, p.Name, startIndex, 4)
+		request.InstanceName = fmt.Sprintf(common.WorkerInstancePrefix, p.Name)
 	}
 
 	response, err := p.c.RunInstances(request)
