@@ -80,6 +80,16 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
 
+	fs = append(fs, []types.Flag{
+		{
+			Name:     "url",
+			P:        &p.URL,
+			V:        p.URL,
+			Usage:    "Specify K3s master URL",
+			Required: true,
+		},
+	}...)
+
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
@@ -112,6 +122,7 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 			// join command need merge status & token value.
 			p.Status = matched.Status
 			p.Token = matched.Token
+			p.URL = matched.URL
 			p.mergeOptions(*matched)
 		}
 

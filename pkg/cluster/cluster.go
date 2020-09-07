@@ -85,7 +85,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return errors.New("[cluster] master node internal ip address can not be empty\n")
 	}
 
-	url := cluster.MasterNodes[0].InternalIPAddress[0]
+	cluster.URL = cluster.MasterNodes[0].InternalIPAddress[0]
 	publicIP := cluster.MasterNodes[0].PublicIPAddress[0]
 	masterExtraArgs := cluster.MasterExtraArgs
 	workerExtraArgs := cluster.WorkerExtraArgs
@@ -137,7 +137,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		}
 
 		if _, err := execute(&hosts.Host{Node: worker},
-			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, cluster.Token, extraArgs), true); err != nil {
+			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, cluster.URL, cluster.Token, extraArgs), true); err != nil {
 			return err
 		}
 	}
@@ -229,11 +229,13 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		return errors.New("[cluster] k3s token can not be empty\n")
 	}
 
-	if len(merged.MasterNodes) <= 0 || len(merged.MasterNodes[0].InternalIPAddress) <= 0 {
-		return errors.New("[cluster] master node internal ip address can not be empty\n")
+	if merged.URL == "" {
+		if len(merged.MasterNodes) <= 0 || len(merged.MasterNodes[0].InternalIPAddress) <= 0 {
+			return errors.New("[cluster] master node internal ip address can not be empty\n")
+		}
+		merged.URL = merged.MasterNodes[0].InternalIPAddress[0]
 	}
 
-	url := merged.MasterNodes[0].InternalIPAddress[0]
 	workerNum := 0
 
 	// TODO: join master node will be added soon.
@@ -254,7 +256,7 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 				}
 
 				if _, err := execute(&hosts.Host{Node: full},
-					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, url, merged.Token, extraArgs), true); err != nil {
+					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.URL, merged.Token, extraArgs), true); err != nil {
 					return err
 				}
 

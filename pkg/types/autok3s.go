@@ -18,6 +18,7 @@ type Metadata struct {
 	Worker                 string `json:"worker" yaml:"worker"`
 	Token                  string `json:"token,omitempty" yaml:"token,omitempty"`
 	UI                     string `json:"ui,omitempty" yaml:"ui,omitempty"`
+	URL                    string `json:"url,omitempty" yaml:"url,omitempty"`
 	Repo                   string `json:"repo,omitempty" yaml:"repo,omitempty"`
 	ClusterCIDR            string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
 	CloudControllerManager string `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
