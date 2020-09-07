@@ -7,15 +7,12 @@ import (
 )
 
 const (
-	MasterInstancePrefix = "autok3s.%s.m." // autok3s.<cluster.region>.m
-	WorkerInstancePrefix = "autok3s.%s.w." // autok3s.<cluster.region>.w
-	WildcardInstanceName = "autok3s.%s.*"  // autok3s.<cluster.region>.*
-	BindPrefix           = "autok3s.providers.%s.%s"
-	ConfigFile           = "config.yaml"
-	StateFile            = ".state"
-	KubeCfgFile          = ".kube/config"
-	KubeCfgTempName      = "autok3s-temp"
-	K3sManifestsDir      = "/var/lib/rancher/k3s/server/manifests"
+	BindPrefix      = "autok3s.providers.%s.%s"
+	ConfigFile      = "config.yaml"
+	StateFile       = ".state"
+	KubeCfgFile     = ".kube/config"
+	KubeCfgTempName = "autok3s-temp"
+	K3sManifestsDir = "/var/lib/rancher/k3s/server/manifests"
 )
 
 var (
