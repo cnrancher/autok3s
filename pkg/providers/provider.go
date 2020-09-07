@@ -26,6 +26,8 @@ type Provider interface {
 	CreateK3sCluster(ssh *types.SSH) error
 	// K3s join node interface.
 	JoinK3sNode(ssh *types.SSH) error
+	// K3s check cluster exist.
+	IsClusterExist() (bool, []string, error)
 	// Rollback when error occurs.
 	Rollback() error
 }

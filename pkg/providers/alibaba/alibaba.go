@@ -186,6 +186,31 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	return cluster.JoinK3sNode(merged, added)
 }
 
+func (p *Alibaba) IsClusterExist() (bool, []string, error) {
+	ids := make([]string, 0)
+
+	if p.c == nil {
+		if err := p.generateClientSDK(); err != nil {
+			return false, ids, err
+		}
+	}
+
+	request := ecs.CreateListTagResourcesRequest()
+	request.Scheme = "https"
+	request.ResourceType = "instance"
+	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
+
+	response, err := p.c.ListTagResources(request)
+	if err != nil || len(response.TagResources.TagResource) > 0 {
+		for _, resource := range response.TagResources.TagResource {
+			ids = append(ids, resource.ResourceId)
+		}
+		return true, ids, err
+	}
+
+	return false, ids, nil
+}
+
 func (p *Alibaba) Rollback() error {
 	s := utils.NewSpinner("Executing rollback process: ")
 	s.Start()
@@ -264,13 +289,15 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	request.Amount = requests.NewInteger(num)
 	request.UniqueSuffix = requests.NewBoolean(true)
 
+	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
 	if master {
 		// TODO: HA mode will be added soon, temporary set master number to 1.
 		request.Amount = requests.NewInteger(1)
-		request.InstanceName = fmt.Sprintf(common.MasterInstancePrefix, p.Name)
+		tag = append(tag, ecs.RunInstancesTag{Key: "master", Value: "true"})
 	} else {
-		request.InstanceName = fmt.Sprintf(common.WorkerInstancePrefix, p.Name)
+		tag = append(tag, ecs.RunInstancesTag{Key: "worker", Value: "true"})
 	}
+	request.Tag = &tag
 
 	response, err := p.c.RunInstances(request)
 	if err != nil || len(response.InstanceIdSets.InstanceIdSet) != num {
@@ -377,22 +404,30 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 			continue
 		}
 
-		if strings.Contains(status.InstanceName, ".m.") {
+		master := false
+		for _, tag := range status.Tags.Tag {
+			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
+				master = true
+				break
+			}
+		}
+
+		if master {
 			p.m.Store(status.InstanceId, types.Node{
-				Master: true,
-				RollBack: false,
-				InstanceID: status.InstanceId,
-				InstanceStatus: alibaba.StatusRunning,
+				Master:            true,
+				RollBack:          false,
+				InstanceID:        status.InstanceId,
+				InstanceStatus:    alibaba.StatusRunning,
 				InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
-				PublicIPAddress: status.PublicIpAddress.IpAddress})
+				PublicIPAddress:   status.PublicIpAddress.IpAddress})
 		} else {
 			p.m.Store(status.InstanceId, types.Node{
-				Master: false,
-				RollBack: false,
-				InstanceID: status.InstanceId,
-				InstanceStatus: alibaba.StatusRunning,
+				Master:            false,
+				RollBack:          false,
+				InstanceID:        status.InstanceId,
+				InstanceStatus:    alibaba.StatusRunning,
 				InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
-				PublicIPAddress: status.PublicIpAddress.IpAddress})
+				PublicIPAddress:   status.PublicIpAddress.IpAddress})
 		}
 	}
 
@@ -439,7 +474,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 	request := ecs.CreateDescribeInstancesRequest()
 	request.Scheme = "https"
-	request.InstanceName = strings.ToLower(fmt.Sprintf(common.WildcardInstanceName, p.Name))
+	request.Tag = &[]ecs.DescribeInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
 
 	response, err := p.c.DescribeInstances(request)
 	if err == nil && len(response.Instances.Instance) == 0 {
@@ -478,25 +513,8 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 	return response.Vpcs.Vpc[0].CidrBlock, nil
 }
 
-func (p *Alibaba) isClusterExist() (bool, []string, error) {
-	request := ecs.CreateDescribeInstancesRequest()
-	request.Scheme = "https"
-	request.InstanceName = strings.ToLower(fmt.Sprintf(common.WildcardInstanceName, p.Name))
-
-	ids := make([]string, 0)
-	response, err := p.c.DescribeInstances(request)
-	if err != nil || len(response.Instances.Instance) > 0 {
-		for _, instance := range response.Instances.Instance {
-			ids = append(ids, instance.InstanceId)
-		}
-		return true, ids, err
-	}
-
-	return false, ids, nil
-}
-
 func (p *Alibaba) createCheck() error {
-	exist, _, err := p.isClusterExist()
+	exist, _, err := p.IsClusterExist()
 	if err != nil {
 		return err
 	}
@@ -529,7 +547,7 @@ func (p *Alibaba) createCheck() error {
 }
 
 func (p *Alibaba) joinCheck() error {
-	exist, ids, err := p.isClusterExist()
+	exist, ids, err := p.IsClusterExist()
 
 	if err != nil {
 		return err

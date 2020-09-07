@@ -187,12 +187,12 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	// merge current cluster to kube config.
-	if err := saveCfg(cfg, publicIP, cluster.Name); err != nil {
+	if err := SaveCfg(cfg, publicIP, cluster.Name); err != nil {
 		return err
 	}
 
 	// write current cluster to state file.
-	if err := saveState(cluster); err != nil {
+	if err := SaveState(cluster); err != nil {
 		return err
 	}
 
@@ -236,8 +236,6 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		merged.URL = merged.MasterNodes[0].InternalIPAddress[0]
 	}
 
-	workerNum := 0
-
 	// TODO: join master node will be added soon.
 	for i := 0; i < len(added.WorkerNodes); i++ {
 		for _, full := range merged.WorkerNodes {
@@ -260,18 +258,15 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 					return err
 				}
 
-				workerNum, _ = strconv.Atoi(merged.Worker)
-				workerNum = workerNum + 1
-
 				break
 			}
 		}
 	}
 
-	merged.Worker = strconv.Itoa(workerNum)
+	merged.Worker = strconv.Itoa(len(merged.WorkerNodes))
 
 	// write current cluster to state file.
-	return saveState(merged)
+	return SaveState(merged)
 }
 
 func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
@@ -358,33 +353,7 @@ func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
 	return result, nil
 }
 
-func execute(host *hosts.Host, cmd string, print bool) (string, error) {
-	dialer, err := hosts.SSHDialer(host)
-	if err != nil {
-		return "", err
-	}
-
-	tunnel, err := dialer.OpenTunnel()
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_ = tunnel.Close()
-	}()
-
-	result, err := tunnel.ExecuteCommand(cmd)
-	if err != nil {
-		return "", err
-	}
-
-	if print {
-		fmt.Printf("[dialer] execute command result:\n %s\n", result)
-	}
-
-	return result, nil
-}
-
-func saveState(cluster *types.Cluster) error {
+func SaveState(cluster *types.Cluster) error {
 	r, err := AppendToState(cluster)
 	if err != nil {
 		return err
@@ -398,7 +367,16 @@ func saveState(cluster *types.Cluster) error {
 	return utils.WriteYaml(r, v, common.StateFile)
 }
 
-func saveCfg(cfg, ip, context string) error {
+func FilterState(r []*types.Cluster) error {
+	v := common.CfgPath
+	if v == "" {
+		return errors.New("[cluster] cfg path is empty\n")
+	}
+
+	return utils.WriteYaml(r, v, common.StateFile)
+}
+
+func SaveCfg(cfg, ip, context string) error {
 	replacer := strings.NewReplacer(
 		"127.0.0.1", ip,
 		"localhost", ip,
@@ -428,6 +406,45 @@ func saveCfg(cfg, ip, context string) error {
 	return mergeCfg(context, temp.Name())
 }
 
+func OverwriteCfg(context string) error {
+	c, err := clientcmd.LoadFromFile(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+	if err != nil {
+		return err
+	}
+
+	delete(c.Clusters, context)
+	delete(c.Contexts, context)
+	delete(c.AuthInfos, context)
+
+	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+}
+
+func execute(host *hosts.Host, cmd string, print bool) (string, error) {
+	dialer, err := hosts.SSHDialer(host)
+	if err != nil {
+		return "", err
+	}
+
+	tunnel, err := dialer.OpenTunnel()
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = tunnel.Close()
+	}()
+
+	result, err := tunnel.ExecuteCommand(cmd)
+	if err != nil {
+		return "", err
+	}
+
+	if print {
+		fmt.Printf("[dialer] execute command result:\n %s\n", result)
+	}
+
+	return result, nil
+}
+
 func mergeCfg(context, right string) error {
 	defer func() {
 		if err := os.Remove(right); err != nil {
@@ -439,7 +456,7 @@ func mergeCfg(context, right string) error {
 		return fmt.Errorf("[cluster] ensure kubecfg exist error, msg=%s\n", err.Error())
 	}
 
-	if err := overwriteCfg(context); err != nil {
+	if err := OverwriteCfg(context); err != nil {
 		return fmt.Errorf("[cluster] overwrite kubecfg error, msg=%s\n", err.Error())
 	}
 
@@ -468,17 +485,4 @@ func mergeCfg(context, right string) error {
 	}
 
 	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
-}
-
-func overwriteCfg(context string) error {
-	c, err := clientcmd.LoadFromFile(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
-	if err != nil {
-		return err
-	}
-
-	delete(c.Clusters, context)
-	delete(c.Contexts, context)
-	delete(c.AuthInfos, context)
-
-	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 }

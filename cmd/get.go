@@ -1,14 +1,18 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/providers"
+	"github.com/cnrancher/autok3s/pkg/providers/alibaba"
+	"github.com/cnrancher/autok3s/pkg/types"
+	typesAli "github.com/cnrancher/autok3s/pkg/types/alibaba"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
+	"github.com/ghodss/yaml"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -22,14 +26,7 @@ var (
 		Args:      cobra.ExactArgs(1),
 		Example:   `  autok3s get cluster`,
 	}
-
-	name, region string
 )
-
-func init() {
-	getCmd.Flags().StringVar(&name, "name", name, "Cluster name")
-	getCmd.Flags().StringVar(&region, "region", region, "Physical locations (data centers) that spread all over the world to reduce the network latency")
-}
 
 func GetCommand() *cobra.Command {
 	getCmd.Run = func(cmd *cobra.Command, args []string) {
@@ -64,46 +61,71 @@ func getCluster() {
 		logrus.Fatalf("failed to unmarshal state file, msg: %s\n", err.Error())
 	}
 
+	var (
+		p         providers.Provider
+		filters   []*types.Cluster
+		removeCtx []string
+	)
+
+	// filter useless clusters & contexts.
 	for _, r := range result {
-		if name != "" && region != "" {
-			if fmt.Sprintf("%s.%s", name, region) == r.Name {
-				table.Append([]string{
-					name,
-					region,
-					r.Provider,
-					r.Master,
-					r.Worker,
-				})
+		switch r.Provider {
+		case "alibaba":
+			region := r.Name[strings.LastIndex(r.Name, ".")+1:]
+
+			b, err := yaml.Marshal(r.Options)
+			if err != nil {
+				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
+				removeCtx = append(removeCtx, r.Name)
+				continue
 			}
-		} else if name != "" {
-			if strings.Contains(r.Name, name) {
-				table.Append([]string{
-					r.Name[:strings.LastIndex(r.Name, ".")],
-					r.Name[strings.LastIndex(r.Name, ".")+1:],
-					r.Provider,
-					r.Master,
-					r.Worker,
-				})
+
+			option := &typesAli.Options{}
+			if err := yaml.Unmarshal(b, option); err != nil {
+				removeCtx = append(removeCtx, r.Name)
+				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
+				continue
 			}
-		} else if region != "" {
-			if strings.Contains(r.Name, region) {
-				table.Append([]string{
-					r.Name[:strings.LastIndex(r.Name, ".")],
-					r.Name[strings.LastIndex(r.Name, ".")+1:],
-					r.Provider,
-					r.Master,
-					r.Worker,
-				})
+			option.Region = region
+
+			p = &alibaba.Alibaba{
+				Metadata: r.Metadata,
+				Options:  *option,
 			}
-		} else {
-			table.Append([]string{
-				r.Name[:strings.LastIndex(r.Name, ".")],
-				r.Name[strings.LastIndex(r.Name, ".")+1:],
-				r.Provider,
-				r.Master,
-				r.Worker,
-			})
+
+			isExist, ids, err := p.IsClusterExist()
+			if err != nil {
+				logrus.Fatalln(err)
+			}
+
+			if isExist && len(ids) > 0 {
+				filters = append(filters, &r)
+			} else {
+				removeCtx = append(removeCtx, r.Name)
+			}
 		}
+	}
+
+	// remove useless clusters from .state.
+	if err := cluster.FilterState(filters); err != nil {
+		logrus.Fatalf("failed to remove useless clusters\n")
+	}
+
+	// remove useless contexts from kubeCfg.
+	for _, r := range removeCtx {
+		if err := cluster.OverwriteCfg(r); err != nil {
+			logrus.Fatalf("failed to remove useless contexts\n")
+		}
+	}
+
+	for _, f := range filters {
+		table.Append([]string{
+			f.Name[:strings.LastIndex(f.Name, ".")],
+			f.Name[strings.LastIndex(f.Name, ".")+1:],
+			f.Provider,
+			f.Master,
+			f.Worker,
+		})
 	}
 
 	table.Render()
