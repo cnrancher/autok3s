@@ -193,7 +193,10 @@ func (p *Alibaba) Rollback() error {
 	ids := make([]string, 0)
 
 	p.m.Range(func(key, value interface{}) bool {
-		ids = append(ids, key.(string))
+		v := value.(types.Node)
+		if v.RollBack {
+			ids = append(ids, key.(string))
+		}
 		return true
 	})
 
@@ -276,9 +279,9 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	}
 	for _, id := range response.InstanceIdSets.InstanceIdSet {
 		if master {
-			p.m.Store(id, types.Node{Master: true, InstanceID: id, InstanceStatus: alibaba.StatusPending})
+			p.m.Store(id, types.Node{Master: true, RollBack: true, InstanceID: id, InstanceStatus: alibaba.StatusPending})
 		} else {
-			p.m.Store(id, types.Node{Master: false, InstanceID: id, InstanceStatus: alibaba.StatusPending})
+			p.m.Store(id, types.Node{Master: false, RollBack: true, InstanceID: id, InstanceStatus: alibaba.StatusPending})
 		}
 	}
 
@@ -371,6 +374,25 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 			v.InternalIPAddress = status.VpcAttributes.PrivateIpAddress.IpAddress
 			v.PublicIPAddress = status.PublicIpAddress.IpAddress
 			p.m.Store(status.InstanceId, v)
+			continue
+		}
+
+		if strings.Contains(status.InstanceName, ".m.") {
+			p.m.Store(status.InstanceId, types.Node{
+				Master: true,
+				RollBack: false,
+				InstanceID: status.InstanceId,
+				InstanceStatus: alibaba.StatusRunning,
+				InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
+				PublicIPAddress: status.PublicIpAddress.IpAddress})
+		} else {
+			p.m.Store(status.InstanceId, types.Node{
+				Master: false,
+				RollBack: false,
+				InstanceID: status.InstanceId,
+				InstanceStatus: alibaba.StatusRunning,
+				InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
+				PublicIPAddress: status.PublicIpAddress.IpAddress})
 		}
 	}
 
