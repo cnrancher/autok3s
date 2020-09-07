@@ -73,12 +73,13 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		k3sScript = "https://get.k3s.io"
 	}
 
-	token, err := utils.RandomToken(16)
-	if err != nil {
-		return err
+	if cluster.Token == "" {
+		token, err := utils.RandomToken(16)
+		if err != nil {
+			return err
+		}
+		cluster.Token = token
 	}
-
-	cluster.Token = token
 
 	if len(cluster.MasterNodes) <= 0 || len(cluster.MasterNodes[0].InternalIPAddress) <= 0 {
 		return errors.New("[cluster] master node internal ip address can not be empty\n")
