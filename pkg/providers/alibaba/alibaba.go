@@ -16,6 +16,7 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -36,6 +37,8 @@ const (
 	terway                  = "none"
 	terwayMaxPoolSize       = "5"
 	cloudControllerManager  = "false"
+	resourceTypeEip         = "EIP"
+	eipStatusAvailable      = "Available"
 	usageInfo               = `=========================== Prompt Info ===========================
 Use 'autok3s kubectl config use-context %s'
 Use 'autok3s kubectl get pods -A' get POD status`
@@ -47,6 +50,7 @@ type Alibaba struct {
 	types.Status    `json:"status"`
 
 	c      *ecs.Client
+	v      *vpc.Client
 	m      *sync.Map
 	logger *logrus.Logger
 }
@@ -115,6 +119,21 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 
 	p.logger.Debugf("[%s] executing create logic: %d master and %d workers will be created\n", p.GetProviderName(), masterNum, workerNum)
 
+	var (
+		masterEips []vpc.EipAddress
+		workerEips []vpc.EipAddress
+	)
+
+	if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
+		return err
+	}
+
+	if workerNum > 0 {
+		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
+			return err
+		}
+	}
+
 	// run ecs master instances.
 	if err = p.runInstances(masterNum, true); err != nil {
 		return
@@ -130,6 +149,30 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	// wait ecs instances to be running status.
 	if err = p.getInstanceStatus(); err != nil {
 		return
+	}
+
+	// associate master eip
+	if masterEips != nil {
+		for i, master := range p.Status.MasterNodes {
+			err := p.associateEipAddress(master.InstanceID, masterEips[i].AllocationId)
+			if err != nil {
+				return err
+			}
+			p.Status.MasterNodes[i].EipAllocationIds = append(p.Status.MasterNodes[i].EipAllocationIds, masterEips[i].AllocationId)
+			p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[i].IpAddress)
+		}
+	}
+
+	// associate worker eip
+	if workerEips != nil {
+		for i, worker := range p.Status.WorkerNodes {
+			err := p.associateEipAddress(worker.InstanceID, workerEips[i].AllocationId)
+			if err != nil {
+				return err
+			}
+			p.Status.WorkerNodes[i].EipAllocationIds = append(p.Status.WorkerNodes[i].EipAllocationIds, workerEips[i].AllocationId)
+			p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[i].IpAddress)
+		}
 	}
 
 	// assemble instance status.
@@ -165,6 +208,16 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 
 	p.logger.Debugf("[%s] executing join logic: %d workers will be joined\n", p.GetProviderName(), workerNum)
 
+	var (
+		workerEips []vpc.EipAddress
+		err        error
+	)
+	if workerNum > 0 {
+		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
+			return err
+		}
+	}
+
 	// run ecs worker instances.
 	if err := p.runInstances(workerNum, false); err != nil {
 		return err
@@ -175,9 +228,24 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 		return err
 	}
 
+	// associate worker eip
+	if workerEips != nil {
+		j := 0
+		for i, worker := range p.Status.WorkerNodes {
+			if p.Status.WorkerNodes[i].PublicIPAddress == nil {
+				err := p.associateEipAddress(worker.InstanceID, workerEips[j].AllocationId)
+				if err != nil {
+					return err
+				}
+				p.Status.WorkerNodes[i].EipAllocationIds = append(p.Status.WorkerNodes[i].EipAllocationIds, workerEips[j].AllocationId)
+				p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[j].IpAddress)
+				j++
+			}
+		}
+	}
+
 	// assemble instance status.
 	var merged *types.Cluster
-	var err error
 	if merged, err = p.assembleInstanceStatus(ssh); err != nil {
 		return err
 	}
@@ -246,6 +314,8 @@ func (p *Alibaba) Rollback() error {
 	p.logger.Debugf("[%s] executing rollback logic: instances %s will be rollback\n", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
+		p.releaseEipAddresses()
+
 		request := ecs.CreateDeleteInstancesRequest()
 		request.Scheme = "https"
 		request.InstanceId = &ids
@@ -310,6 +380,12 @@ func (p *Alibaba) generateClientSDK() error {
 	client.EnableAsync(5, 1000)
 	p.c = client
 
+	vpcClient, err := vpc.NewClientWithAccessKey(p.Region, p.AccessKey, p.AccessSecret)
+	if err != nil {
+		return err
+	}
+	p.v = vpcClient
+
 	return nil
 }
 
@@ -323,8 +399,6 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	request.SystemDiskCategory = p.DiskCategory
 	request.SystemDiskSize = p.DiskSize
 	request.SecurityGroupId = p.SecurityGroup
-	outBandWidth, _ := strconv.Atoi(p.InternetMaxBandwidthOut)
-	request.InternetMaxBandwidthOut = requests.NewInteger(outBandWidth)
 	request.Amount = requests.NewInteger(num)
 	request.UniqueSuffix = requests.NewBoolean(true)
 	if p.Zone != "" {
@@ -376,6 +450,7 @@ func (p *Alibaba) deleteCluster(f bool) error {
 		request.TerminateSubscription = "true"
 
 		_, err := p.c.DeleteInstances(request)
+		p.releaseEipAddresses()
 
 		if err != nil {
 			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%s]",
@@ -492,7 +567,8 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 		if value, ok := p.m.Load(status.InstanceId); ok {
 			v := value.(types.Node)
 			v.InternalIPAddress = status.VpcAttributes.PrivateIpAddress.IpAddress
-			v.PublicIPAddress = status.PublicIpAddress.IpAddress
+			v.PublicIPAddress = []string{status.EipAddress.IpAddress}
+			v.EipAllocationIds = []string{status.EipAddress.AllocationId}
 			p.m.Store(status.InstanceId, v)
 			continue
 		}
@@ -512,7 +588,8 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 				InstanceID:        status.InstanceId,
 				InstanceStatus:    alibaba.StatusRunning,
 				InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
-				PublicIPAddress:   status.PublicIpAddress.IpAddress})
+				EipAllocationIds:  []string{status.EipAddress.AllocationId},
+				PublicIPAddress:   []string{status.EipAddress.IpAddress}})
 		} else {
 			p.m.Store(status.InstanceId, types.Node{
 				Master:            false,
@@ -520,7 +597,8 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 				InstanceID:        status.InstanceId,
 				InstanceStatus:    alibaba.StatusRunning,
 				InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
-				PublicIPAddress:   status.PublicIpAddress.IpAddress})
+				EipAllocationIds:  []string{status.EipAddress.AllocationId},
+				PublicIPAddress:   []string{status.EipAddress.IpAddress}})
 		}
 	}
 
@@ -681,5 +759,186 @@ func (p *Alibaba) joinCheck() error {
 	}
 	p.WorkerNodes = workers
 
+	return nil
+}
+
+func (p *Alibaba) describeEipAddresses(allocationID string) (vpc.EipAddress, error) {
+	request := vpc.CreateDescribeEipAddressesRequest()
+	request.Scheme = "https"
+
+	request.PageSize = requests.NewInteger(50)
+	request.AllocationId = allocationID
+
+	response, err := p.v.DescribeEipAddresses(request)
+	if err != nil {
+		return vpc.EipAddress{}, err
+	}
+	return response.EipAddresses.EipAddress[0], nil
+}
+
+func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
+	var eips []vpc.EipAddress
+	for i := 0; i < num; i++ {
+		eip, err := p.allocateEipAddress()
+		if err != nil {
+			for _, eip := range eips {
+				_ = p.releaseEipAddress(eip.AllocationId)
+			}
+			return nil, fmt.Errorf("error when allocate eip addresses")
+		}
+		eips = append(eips, vpc.EipAddress{
+			IpAddress:    eip.EipAddress,
+			AllocationId: eip.AllocationId,
+		})
+	}
+
+	// add tags for eips
+	var eipIds []string
+	for _, eip := range eips {
+		eipIds = append(eipIds, eip.AllocationId)
+	}
+	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
+	if err := p.tagVpcResources(resourceTypeEip, eipIds, tag); err != nil {
+		p.logger.Errorf("[%s] error when tag eips: %s\n", p.GetProviderName(), err)
+	}
+
+	return eips, nil
+}
+
+func (p *Alibaba) associateEipAddress(instanceID, allocationID string) error {
+	request := vpc.CreateAssociateEipAddressRequest()
+	request.Scheme = "https"
+
+	request.InstanceId = instanceID
+	request.AllocationId = allocationID
+
+	if _, err := p.v.AssociateEipAddress(request); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Alibaba) unassociateEipAddress(allocationID string) error {
+	request := vpc.CreateUnassociateEipAddressRequest()
+	request.Scheme = "https"
+
+	request.AllocationId = allocationID
+
+	if _, err := p.v.UnassociateEipAddress(request); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Alibaba) allocateEipAddress() (*vpc.AllocateEipAddressResponse, error) {
+	request := vpc.CreateAllocateEipAddressRequest()
+	request.Scheme = "https"
+
+	response, err := p.v.AllocateEipAddress(request)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func (p *Alibaba) releaseEipAddress(allocationID string) error {
+	request := vpc.CreateReleaseEipAddressRequest()
+	request.Scheme = "https"
+
+	request.AllocationId = allocationID
+
+	if _, err := p.v.ReleaseEipAddress(request); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Alibaba) releaseEipAddresses() {
+	// unassociate master eip address
+	for _, master := range p.MasterNodes {
+		for _, allocationID := range master.EipAllocationIds {
+			if err := p.unassociateEipAddress(allocationID); err != nil {
+				p.logger.Errorf("[%s] error when unassociate eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+			}
+		}
+	}
+	// unassociate worker eip address
+	for _, worker := range p.WorkerNodes {
+		for _, allocationID := range worker.EipAllocationIds {
+			if err := p.unassociateEipAddress(allocationID); err != nil {
+				p.logger.Errorf("[%s] error when unassociate eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+			}
+		}
+	}
+
+	// release eips with tags
+	tags := []vpc.ListTagResourcesTag{
+		{Key: "autok3s", Value: "true"},
+		{Key: "cluster", Value: p.Name},
+	}
+	allocationIds, err := p.listVpcTagResources(resourceTypeEip, nil, tags)
+	if err != nil {
+		p.logger.Errorf("[%s] error when query eip address: %s\n", p.GetProviderName(), err)
+	}
+	// retry 5 times, total 120 seconds.
+	backoff := wait.Backoff{
+		Duration: 30 * time.Second,
+		Factor:   1,
+		Steps:    5,
+	}
+	for _, allocationID := range allocationIds {
+		// eip can be released only when status is `Available`
+		if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+			response, err := p.describeEipAddresses(allocationID)
+			if err != nil || response.Status != eipStatusAvailable {
+				return false, nil
+			}
+			return true, nil
+		}); err != nil {
+			p.logger.Errorf("[%s] error when release eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+			continue
+		}
+		if err := p.releaseEipAddress(allocationID); err != nil {
+			p.logger.Errorf("[%s] error when release eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+		}
+	}
+}
+
+func (p *Alibaba) listVpcTagResources(resourceType string, resourceID []string, tag []vpc.ListTagResourcesTag) ([]string, error) {
+	request := vpc.CreateListTagResourcesRequest()
+	request.Scheme = "https"
+
+	request.ResourceType = resourceType
+	if resourceID != nil {
+		request.ResourceId = &resourceID
+	}
+	if tag != nil {
+		request.Tag = &tag
+	}
+
+	response, err := p.v.ListTagResources(request)
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, resource := range response.TagResources.TagResource {
+		ids = append(ids, resource.ResourceId)
+	}
+
+	return utils.UniqueArray(ids), nil
+
+}
+
+func (p *Alibaba) tagVpcResources(resourceType string, resourceIds []string, tag []vpc.TagResourcesTag) error {
+	request := vpc.CreateTagResourcesRequest()
+	request.Scheme = "https"
+
+	request.ResourceType = resourceType
+	request.ResourceId = &resourceIds
+	request.Tag = &tag
+
+	if _, err := p.v.TagResources(request); err != nil {
+		return err
+	}
 	return nil
 }
