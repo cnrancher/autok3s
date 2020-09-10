@@ -35,6 +35,9 @@ const (
 	terway                  = "none"
 	terwayMaxPoolSize       = "5"
 	cloudControllerManager  = "false"
+	usageInfo               = `================ Prompt Info ================
+Use 'autok3s kubectl config use-context %s'
+Use 'autok3s kubectl get pods -A' get POD status`
 )
 
 type Alibaba struct {
@@ -85,13 +88,15 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	s.Start()
 	defer func() {
 		s.Stop()
-		if err == nil && p.UI != "none" && len(p.Status.MasterNodes) > 0 {
-			if strings.EqualFold(p.CloudControllerManager, "true") {
-				fmt.Printf("K3s UI %s URL: https://<using `kubectl get svc -A` get UI address>:8999\n", p.UI)
-			} else {
-				fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+		if err == nil && len(p.Status.MasterNodes) > 0 {
+			fmt.Printf(usageInfo, p.Name)
+			if p.UI != "none" {
+				if strings.EqualFold(p.CloudControllerManager, "true") {
+					fmt.Printf("K3s UI %s URL: https://<using `kubectl get svc -A` get UI address>:8999\n", p.UI)
+				} else {
+					fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+				}
 			}
-			fmt.Printf("Use `autok3s kubectl get pods -A` get UI status\n")
 		}
 	}()
 
