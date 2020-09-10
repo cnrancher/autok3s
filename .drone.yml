@@ -273,6 +273,7 @@ steps:
         from_secret: github_token
       files:
         - "dist/autok3s_*.yaml"
+        - "bin/autok3s_*"
       prerelease: true
     volumes:
       - name: release-note
