@@ -70,8 +70,8 @@ autok3s kubectl <sub-commands> <flags>
 
 In the scenario of multiple clusters, the access to different clusters can be completed by switching context.
 ```
-autok3s kubectl config context get-contexts
-autok3s kubectl config context use-context <context>
+autok3s kubectl config get-contexts
+autok3s kubectl config use-context <context>
 ```
 
 ## Developers' Guide
