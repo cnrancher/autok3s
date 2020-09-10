@@ -33,12 +33,12 @@ The user can get the commands available for different providers according to the
 ### Setup K3s Cluster
 If already have access information in `/var/lib/rancher/autok3s/config.yaml` you can use the simplified command.
 ```
-autok3s create --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path>
+sudo autok3s create --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path>
 ```
 
 Generic commands can be used anywhere.
 ```
-autok3s create --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --access-key <access-key> --access-secret <access-secret>
+sudo autok3s create --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --access-key <access-key> --access-secret <access-secret>
 ```
 
 By default, one master and one worker will be created, and the number can be changed by `--worker`.
@@ -46,12 +46,12 @@ By default, one master and one worker will be created, and the number can be cha
 ### Join K3s Nodes
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```
-autok3s join --provider alibaba --name <cluster name>
+sudo autok3s join --provider alibaba --name <cluster name>
 ```
 
 Generic commands can be used anywhere.
 ```
-autok3s join --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --token <k3s token> --url <k3s master ip>
+sudo autok3s join --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --token <k3s token> --url <k3s master ip>
 ```
 
 By default, one worker will be created, and the number can be changed by `--worker`.
@@ -59,19 +59,19 @@ By default, one worker will be created, and the number can be changed by `--work
 ### List K3s Clusters
 This command will list the clusters that you have created on this machine.
 ```
-autok3s get cluster
+sudo autok3s get cluster
 ```
 
 ### Access K3s Cluster
 After cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 ```
-autok3s kubectl <sub-commands> <flags>
+sudo autok3s kubectl <sub-commands> <flags>
 ```
 
 In the scenario of multiple clusters, the access to different clusters can be completed by switching context.
 ```
-autok3s kubectl config get-contexts
-autok3s kubectl config use-context <context>
+sudo autok3s kubectl config get-contexts
+sudo autok3s kubectl config use-context <context>
 ```
 
 ## Developers' Guide
