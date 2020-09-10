@@ -78,6 +78,23 @@ steps:
     volumes:
       - name: docker
         path: /var/run/docker.sock
+  - name: github_binary_release
+    image: ibuildthecloud/github-release:v0.0.1
+    settings:
+      api_key:
+        from_secret: github_token
+      prerelease: true
+      checksum:
+        - sha256
+      checksum_file: CHECKSUMsum-amd64.txt
+      checksum_flatten: true
+      files:
+        - "dist/autok3s_*"
+    when:
+      event:
+        - tag
+    depends_on:
+      - build
   - name: package
     image: maiwj/drone-dapper:v0.4.2
     environment:
@@ -136,6 +153,23 @@ steps:
     volumes:
       - name: docker
         path: /var/run/docker.sock
+  - name: github_binary_release
+    image: ibuildthecloud/github-release:v0.0.1
+    settings:
+      api_key:
+        from_secret: github_token
+      prerelease: true
+      checksum:
+        - sha256
+      checksum_file: CHECKSUMsum-arm64.txt
+      checksum_flatten: true
+      files:
+        - "dist/autok3s_*"
+    when:
+      event:
+        - tag
+    depends_on:
+      - build
   - name: package
     image: maiwj/drone-dapper:v0.4.2
     environment:
@@ -195,6 +229,23 @@ steps:
     volumes:
       - name: docker
         path: /var/run/docker.sock
+  - name: github_binary_release
+    image: ibuildthecloud/github-release:v0.0.1
+    settings:
+      api_key:
+        from_secret: github_token
+      prerelease: true
+      checksum:
+        - sha256
+      checksum_file: CHECKSUMsum-arm.txt
+      checksum_flatten: true
+      files:
+        - "dist/autok3s_*"
+    when:
+      event:
+        - tag
+    depends_on:
+      - build
   - name: package
     image: maiwj/drone-dapper:v0.4.2
     environment:
@@ -267,13 +318,13 @@ steps:
       - name: release-note
         path: /release-note
   - name: release
-    image: maiwj/drone-releaser:v0.1.0
+    image: plugins/github-release
     settings:
       api_key:
         from_secret: github_token
-      files:
-        - "dist/autok3s_*.yaml"
       prerelease: true
+      overwrite: true
+      note: /release-note/CHANGELOG.md
     volumes:
       - name: release-note
         path: /release-note

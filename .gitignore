@@ -21,6 +21,7 @@
 # Compile the resulting file
 dist/
 bin/
+sha256sum*
 main
 
 ## Dapper temporary files
