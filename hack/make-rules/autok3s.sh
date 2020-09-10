@@ -91,6 +91,7 @@ function build() {
       -ldflags "${version_flags} ${flags} ${ext_flags}" \
       -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
       "${CURR_DIR}/main.go"
+    cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
   done
 
   autok3s::log::info "...done"
@@ -100,7 +101,7 @@ function package() {
   [[ "${1:-}" != "only" ]] && build
   autok3s::log::info "packaging autok3s..."
 
-  local repo=${REPO:-zhenyangzhao}
+  local repo=${REPO:-cnrancher}
   local image_name=${IMAGE_NAME:-autok3s}
   local tag=${TAG:-${GIT_VERSION}}
 
@@ -135,7 +136,7 @@ function deploy() {
   [[ "${1:-}" != "only" ]] && package
   autok3s::log::info "deploying autok3s..."
 
-  local repo=${REPO:-zhenyangzhao}
+  local repo=${REPO:-cnrancher}
   local image_name=${IMAGE_NAME:-autok3s}
   local tag=${TAG:-${GIT_VERSION}}
 
