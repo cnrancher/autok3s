@@ -22,7 +22,7 @@ var _ = BeforeSuite(func() {
 	rootCmd.AddCommand(
 		cmd.CompletionCommand(),
 		cmd.VersionCommand("", "", "", ""),
-		cmd.GetCommand(),
+		cmd.ListCommand(),
 		cmd.CreateCommand())
 
 	Expect(rootCmd).NotTo(BeNil())
