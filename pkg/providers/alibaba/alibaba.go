@@ -295,6 +295,9 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	request.InternetMaxBandwidthOut = requests.NewInteger(outBandWidth)
 	request.Amount = requests.NewInteger(num)
 	request.UniqueSuffix = requests.NewBoolean(true)
+	if p.Zone != "" {
+		request.ZoneId = p.Zone
+	}
 
 	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
 	if master {
@@ -308,8 +311,8 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 
 	response, err := p.c.RunInstances(request)
 	if err != nil || len(response.InstanceIdSets.InstanceIdSet) != num {
-		return fmt.Errorf("[%s] calling runInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, request.InstanceName, err)
+		return fmt.Errorf("[%s] calling runInstances error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]\n",
+			p.GetProviderName(), p.Region, p.Zone, request.InstanceName, err)
 	}
 	for _, id := range response.InstanceIdSets.InstanceIdSet {
 		if master {
@@ -333,9 +336,12 @@ func (p *Alibaba) getInstanceStatus() error {
 		request := ecs.CreateDescribeInstanceStatusRequest()
 		request.Scheme = "https"
 		request.InstanceId = &ids
+		if p.Zone != "" {
+			request.ZoneId = p.Zone
+		}
 
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region=%s, "+"instanceName=%s, message=not running status\n",
-			p.GetProviderName(), p.Region, ids)
+		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region=%s, zone=%s, "+"instanceName=%s, message=not running status\n",
+			p.GetProviderName(), p.Region, p.Zone, ids)
 
 		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 			response, err := p.c.DescribeInstanceStatus(request)
@@ -482,11 +488,14 @@ func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 	request := ecs.CreateDescribeInstancesRequest()
 	request.Scheme = "https"
 	request.Tag = &[]ecs.DescribeInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
+	if p.Zone != "" {
+		request.ZoneId = p.Zone
+	}
 
 	response, err := p.c.DescribeInstances(request)
 	if err == nil && len(response.Instances.Instance) == 0 {
-		return nil, fmt.Errorf("[%s] calling describeInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, request.InstanceName, err)
+		return nil, fmt.Errorf("[%s] calling describeInstances error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]\n",
+			p.GetProviderName(), p.Region, p.Zone, request.InstanceName, err)
 	}
 
 	return response, nil
@@ -496,11 +505,14 @@ func (p *Alibaba) getVSwitchCIDR() (string, string, error) {
 	request := ecs.CreateDescribeVSwitchesRequest()
 	request.Scheme = "https"
 	request.VSwitchId = p.VSwitch
+	if p.Zone != "" {
+		request.ZoneId = p.Zone
+	}
 
 	response, err := p.c.DescribeVSwitches(request)
 	if err != nil || !response.IsSuccess() || len(response.VSwitches.VSwitch) < 1 {
-		return "", "", fmt.Errorf("[%s] calling describeVSwitches error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, p.VSwitch, err)
+		return "", "", fmt.Errorf("[%s] calling describeVSwitches error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]\n",
+			p.GetProviderName(), p.Region, p.Zone, p.VSwitch, err)
 	}
 
 	return response.VSwitches.VSwitch[0].VpcId, response.VSwitches.VSwitch[0].CidrBlock, nil
