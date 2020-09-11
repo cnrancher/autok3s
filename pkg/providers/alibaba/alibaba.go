@@ -117,8 +117,10 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	}
 
 	// run ecs worker instances.
-	if err = p.runInstances(workerNum, false); err != nil {
-		return
+	if workerNum != 0 {
+		if err = p.runInstances(workerNum, false); err != nil {
+			return
+		}
 	}
 
 	// wait ecs instances to be running status.
@@ -519,6 +521,12 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 }
 
 func (p *Alibaba) createCheck() error {
+	masterNum, _ := strconv.Atoi(p.Master)
+	if masterNum != 1 {
+		return fmt.Errorf("[%s] calling preflight error: currently `--master` number only support 1\n",
+			p.GetProviderName())
+	}
+
 	exist, _, err := p.IsClusterExist()
 	if err != nil {
 		return err
@@ -552,6 +560,12 @@ func (p *Alibaba) createCheck() error {
 }
 
 func (p *Alibaba) joinCheck() error {
+	workerNum, _ := strconv.Atoi(p.Worker)
+	if workerNum < 1 {
+		return fmt.Errorf("[%s] calling preflight error: currently `--worker` must greater than 1\n",
+			p.GetProviderName())
+	}
+
 	exist, ids, err := p.IsClusterExist()
 
 	if err != nil {
