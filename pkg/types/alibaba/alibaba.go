@@ -15,6 +15,7 @@ type Options struct {
 	Type                    string `json:"type,omitempty" yaml:"type,omitempty"`
 	KeyPair                 string `json:"key-pair,omitempty" yaml:"key-pair,omitempty"`
 	Region                  string `json:"region,omitempty" yaml:"region,omitempty"`
+	Zone                    string `json:"zone,omitempty" yaml:"zone,omitempty"`
 	Vpc                     string `json:"vpc,omitempty" yaml:"vpc,omitempty"`
 	VSwitch                 string `json:"v-switch,omitempty" yaml:"v-switch,omitempty"`
 	SecurityGroup           string `json:"security-group,omitempty" yaml:"security-group,omitempty"`

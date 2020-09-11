@@ -229,15 +229,21 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Name:     "name",
 			P:        &p.Name,
 			V:        p.Name,
-			Usage:    "Cluster name.",
+			Usage:    "Cluster name",
 			Required: true,
 		},
 		{
 			Name:     "region",
 			P:        &p.Region,
 			V:        p.Region,
-			Usage:    "Physical locations (data centers) that spread all over the world to reduce the network latency",
+			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
 			Required: true,
+		},
+		{
+			Name:  "zone",
+			P:     &p.Zone,
+			V:     p.Zone,
+			Usage: "Zone is physical areas with independent power grids and networks within one region. e.g.(cn-hangzhou-i)",
 		},
 		{
 			Name:     "key-pair",
