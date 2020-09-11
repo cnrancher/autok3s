@@ -309,7 +309,7 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	response, err := p.c.RunInstances(request)
 	if err != nil || len(response.InstanceIdSets.InstanceIdSet) != num {
 		return fmt.Errorf("[%s] calling runInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, request.InstanceName, err.Error())
+			p.GetProviderName(), p.Region, request.InstanceName, err)
 	}
 	for _, id := range response.InstanceIdSets.InstanceIdSet {
 		if master {
@@ -486,7 +486,7 @@ func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 	response, err := p.c.DescribeInstances(request)
 	if err == nil && len(response.Instances.Instance) == 0 {
 		return nil, fmt.Errorf("[%s] calling describeInstances error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, request.InstanceName, err.Error())
+			p.GetProviderName(), p.Region, request.InstanceName, err)
 	}
 
 	return response, nil
@@ -498,9 +498,9 @@ func (p *Alibaba) getVSwitchCIDR() (string, string, error) {
 	request.VSwitchId = p.VSwitch
 
 	response, err := p.c.DescribeVSwitches(request)
-	if err != nil || !response.IsSuccess() || len(response.VSwitches.VSwitch) != 1 {
+	if err != nil || !response.IsSuccess() || len(response.VSwitches.VSwitch) < 1 {
 		return "", "", fmt.Errorf("[%s] calling describeVSwitches error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, p.VSwitch, err.Error())
+			p.GetProviderName(), p.Region, p.VSwitch, err)
 	}
 
 	return response.VSwitches.VSwitch[0].VpcId, response.VSwitches.VSwitch[0].CidrBlock, nil
@@ -514,7 +514,7 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 	response, err := p.c.DescribeVpcs(request)
 	if err != nil || !response.IsSuccess() || len(response.Vpcs.Vpc) != 1 {
 		return "", fmt.Errorf("[%s] calling describeVpcs error. region=%s, "+"instanceName=%s, message=[%s]\n",
-			p.GetProviderName(), p.Region, p.Vpc, err.Error())
+			p.GetProviderName(), p.Region, p.Vpc, err)
 	}
 
 	return response.Vpcs.Vpc[0].CidrBlock, nil
