@@ -46,7 +46,7 @@ By default, one master and one worker will be created, and the number can be cha
 ### Join K3s Nodes
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```
-sudo autok3s join --provider alibaba --name <cluster name>
+sudo autok3s join --provider alibaba --region cn-hangzhou --name <cluster name>
 ```
 
 Generic commands can be used anywhere.
