@@ -112,3 +112,20 @@ func ReadYaml(path, name string) (i []interface{}, err error) {
 
 	return i, nil
 }
+
+func TruncateYaml(path, name string) error {
+	n := fmt.Sprintf("%s/%s", path, name)
+
+	if _, err := os.Stat(n); os.IsNotExist(err) {
+		f, err := os.Create(n)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			_ = f.Close()
+		}()
+	}
+
+	return os.Truncate(n, 0)
+}

@@ -337,6 +337,46 @@ func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 	return converts, nil
 }
 
+func DeleteState(name string, provider string) error {
+	r, err := deleteClusterFromState(name, provider)
+	if err != nil {
+		return err
+	}
+
+	v := common.CfgPath
+	if v == "" {
+		return errors.New("[cluster] cfg path is empty\n")
+	}
+
+	if len(r) > 0 {
+		return utils.WriteYaml(r, v, common.StateFile)
+	} else {
+		return utils.TruncateYaml(v, common.StateFile)
+	}
+
+}
+
+func DeleteCfg(name string) error {
+	c, err := clientcmd.LoadFromFile(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+	if err != nil {
+		return err
+	}
+
+	if _, found := c.Clusters[name]; found {
+		delete(c.Clusters, name)
+	}
+
+	if _, found := c.Contexts[name]; found {
+		delete(c.Contexts, name)
+	}
+
+	if _, found := c.AuthInfos[name]; found {
+		delete(c.AuthInfos, name)
+	}
+
+	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+}
+
 func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
 	result := make([]types.Cluster, 0)
 
@@ -486,3 +526,38 @@ func mergeCfg(context, right string) error {
 
 	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
 }
+
+func deleteClusterFromState(name string, provider string) ([]types.Cluster, error) {
+	v := common.CfgPath
+	if v == "" {
+		return nil, errors.New("[cluster] cfg path is empty\n")
+	}
+
+	clusters, err := utils.ReadYaml(v, common.StateFile)
+	if err != nil {
+		return  nil, err
+	}
+
+	converts, err := ConvertToClusters(clusters)
+	if err != nil {
+		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
+	}
+
+	index := -1
+
+	for i, c := range converts {
+		if c.Provider == provider && c.Name == name {
+			index = i
+			//r = append(r, *cluster)
+		}
+	}
+
+	if index > -1 {
+		converts = append(converts[:index], converts[index+1:]...)
+	} else {
+		return nil, fmt.Errorf("[cluster] was not found in the .state file")
+	}
+
+	return converts, nil
+}
+

@@ -77,6 +77,41 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return cmd.Flags()
 }
 
+func (p *Alibaba) GetDeleteNodeFlags(cmd *cobra.Command) *pflag.FlagSet {
+	fs := p.sharedFlags()
+
+	for _, f := range fs {
+		if f.ShortHand == "" {
+			if cmd.Flags().Lookup(f.Name) == nil {
+				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+			}
+		} else {
+			if cmd.Flags().Lookup(f.Name) == nil {
+				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+			}
+		}
+	}
+
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		errFlags := make([]string, 0)
+		for _, f := range fs {
+			if f.Required && f.Name == "name" {
+				if *f.P == "" && f.V == "" {
+					errFlags = append(errFlags, f.Name)
+				}
+			}
+		}
+
+		if len(errFlags) == 0 {
+			return nil
+		}
+
+		return fmt.Errorf("required flags(s) \"%s\" not set\n", errFlags)
+	}
+
+	return cmd.Flags()
+}
+
 func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
 

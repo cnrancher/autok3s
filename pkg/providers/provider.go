@@ -16,6 +16,8 @@ type Provider interface {
 	GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Join command flags.
 	GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet
+	// Delete command flags.
+	GetDeleteNodeFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Credential flags.
 	GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Use this method to bind Viper, although it is somewhat repetitive.
@@ -30,6 +32,8 @@ type Provider interface {
 	IsClusterExist() (bool, []string, error)
 	// Rollback when error occurs.
 	Rollback() error
+	// K3s delete node interface.
+	DeleteK3sNode(r bool) error
 }
 
 func Register(provider string) (Provider, error) {

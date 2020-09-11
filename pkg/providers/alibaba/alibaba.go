@@ -262,6 +262,21 @@ func (p *Alibaba) Rollback() error {
 	return nil
 }
 
+func (p *Alibaba) DeleteK3sNode(r bool) error {
+	s := utils.NewSpinner("Deleteing K3s node: ")
+	s.Start()
+	defer s.Stop()
+	if err := p.generateClientSDK(); err != nil {
+		return err
+	}
+
+	if err := p.deleteCluster(r); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (p *Alibaba) generateClientSDK() error {
 	if p.AccessKey == "" {
 		p.AccessKey = viper.GetString(p.GetProviderName(), accessKeyID)
@@ -320,6 +335,63 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	}
 
 	return nil
+}
+
+
+func (p *Alibaba) deleteCluster(r bool) error {
+	ids, err := p.getInstanceNames()
+
+	if err == nil && len(ids) > 0 {
+		request := ecs.CreateDeleteInstancesRequest()
+		request.Scheme = "https"
+		request.RegionId = p.Region
+		request.InstanceId = &ids
+		request.Force = "true"
+		request.TerminateSubscription = "true"
+
+		_, err := p.c.DeleteInstances(request)
+
+		if err != nil {
+			return fmt.Errorf("[%s] calling deleteInstance error, "+"message=[%s]\n",
+				p.GetProviderName(), err.Error())
+		}
+	}
+
+	if err != nil && !r {
+		return fmt.Errorf("[%s] calling deleteInstance error, "+"message=[%s]\n",
+			p.GetProviderName(), err.Error())
+	}
+
+	err = cluster.DeleteCfg(p.Name)
+
+	if err != nil && !r {
+		return fmt.Errorf("[%s] Synchronizing .cfg file error, "+"message=[%s]\n",
+			p.GetProviderName(), err.Error())
+	}
+
+	err = cluster.DeleteState(p.Name, p.Provider)
+
+	if err != nil && !r {
+		return fmt.Errorf("[%s] Synchronizing .state file error, "+"message=[%s]\n",
+			p.GetProviderName(), err.Error())
+	}
+
+	return nil
+}
+
+func (p *Alibaba) getInstanceNames() ([]string, error) {
+	exist, ids, err  := p.IsClusterExist()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !exist {
+		return nil, fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist\n",
+			p.GetProviderName(), p.Name)
+	}
+
+	return ids, nil
 }
 
 func (p *Alibaba) getInstanceStatus() error {
