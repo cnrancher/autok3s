@@ -19,26 +19,21 @@ import (
 )
 
 var (
-	getCmd = &cobra.Command{
-		Use:       "get",
-		Short:     "Display one or many resources",
-		ValidArgs: []string{"cluster"},
-		Args:      cobra.ExactArgs(1),
-		Example:   `  autok3s get cluster`,
+	listCmd = &cobra.Command{
+		Use:     "list",
+		Short:   "List K3s clusters",
+		Example: `  autok3s list`,
 	}
 )
 
-func GetCommand() *cobra.Command {
-	getCmd.Run = func(cmd *cobra.Command, args []string) {
-		switch args[0] {
-		case "cluster":
-			getCluster()
-		}
+func ListCommand() *cobra.Command {
+	listCmd.Run = func(cmd *cobra.Command, args []string) {
+		listCluster()
 	}
-	return getCmd
+	return listCmd
 }
 
-func getCluster() {
+func listCluster() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetHeaderLine(false)
