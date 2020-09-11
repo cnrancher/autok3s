@@ -219,11 +219,7 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 }
 
 func (p *Alibaba) Rollback() error {
-	s := utils.NewSpinner("Executing rollback process: ")
-	s.Start()
-	defer s.Stop()
 	ids := make([]string, 0)
-
 	p.m.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		if v.RollBack {
@@ -231,6 +227,10 @@ func (p *Alibaba) Rollback() error {
 		}
 		return true
 	})
+
+	s := utils.NewSpinner(fmt.Sprintf("Executing rollback process, rollback instances: %s", ids))
+	s.Start()
+	defer s.Stop()
 
 	if len(ids) > 0 {
 		request := ecs.CreateDeleteInstancesRequest()
