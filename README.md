@@ -59,7 +59,7 @@ By default, one worker will be created, and the number can be changed by `--work
 ### List K3s Clusters
 This command will list the clusters that you have created on this machine.
 ```
-sudo autok3s get cluster
+sudo autok3s list
 ```
 
 ### Access K3s Cluster
