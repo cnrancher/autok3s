@@ -11,11 +11,11 @@ import (
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
-	"github.com/cnrancher/autok3s/pkg/utils"
 	"github.com/cnrancher/autok3s/pkg/viper"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -35,7 +35,7 @@ const (
 	terway                  = "none"
 	terwayMaxPoolSize       = "5"
 	cloudControllerManager  = "false"
-	usageInfo               = `================ Prompt Info ================
+	usageInfo               = `=========================== Prompt Info ===========================
 Use 'autok3s kubectl config use-context %s'
 Use 'autok3s kubectl get pods -A' get POD status`
 )
@@ -45,8 +45,9 @@ type Alibaba struct {
 	alibaba.Options `json:",inline"`
 	types.Status    `json:"status"`
 
-	c *ecs.Client
-	m *sync.Map
+	c      *ecs.Client
+	m      *sync.Map
+	logger *logrus.Logger
 }
 
 func NewProvider() *Alibaba {
@@ -84,10 +85,10 @@ func (p *Alibaba) GenerateClusterName() {
 }
 
 func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
-	s := utils.NewSpinner("Generating K3s cluster: ")
-	s.Start()
+	p.logger = common.NewLogger(common.Debug)
+	p.logger.Infof("[%s] Executing create logic...\n", p.GetProviderName())
+
 	defer func() {
-		s.Stop()
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(usageInfo, p.Name)
 			if p.UI != "none" {
@@ -110,6 +111,8 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
+
+	p.logger.Debugf("[%s] Executing create logic: %d master and %d workers will be created\n", p.GetProviderName(), masterNum, workerNum)
 
 	// run ecs master instances.
 	if err = p.runInstances(masterNum, true); err != nil {
@@ -139,13 +142,14 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 		return
 	}
 
+	p.logger.Infof("[%s] Successfully executing create logic\n", p.GetProviderName())
+
 	return
 }
 
 func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
-	s := utils.NewSpinner("Joining K3s node: ")
-	s.Start()
-	defer s.Stop()
+	p.logger = common.NewLogger(common.Debug)
+	p.logger.Infof("[%s] Executing join logic...\n", p.GetProviderName())
 
 	if err := p.generateClientSDK(); err != nil {
 		return err
@@ -157,6 +161,8 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 
 	// TODO: join master node will be added soon.
 	workerNum, _ := strconv.Atoi(p.Worker)
+
+	p.logger.Debugf("[%s] Executing join logic: %d workers will be joined\n", p.GetProviderName(), workerNum)
 
 	// run ecs worker instances.
 	if err := p.runInstances(workerNum, false); err != nil {
@@ -190,7 +196,13 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	})
 
 	// join K3s node.
-	return cluster.JoinK3sNode(merged, added)
+	if err := cluster.JoinK3sNode(merged, added); err != nil {
+		return err
+	}
+
+	p.logger.Infof("[%s] Successfully executing join logic\n", p.GetProviderName())
+
+	return nil
 }
 
 func (p *Alibaba) IsClusterExist() (bool, []string, error) {
@@ -219,6 +231,8 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 }
 
 func (p *Alibaba) Rollback() error {
+	p.logger.Infof("[%s] Executing rollback logic...\n", p.GetProviderName())
+
 	ids := make([]string, 0)
 	p.m.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
@@ -228,9 +242,7 @@ func (p *Alibaba) Rollback() error {
 		return true
 	})
 
-	s := utils.NewSpinner(fmt.Sprintf("Executing rollback process, rollback instances: %s", ids))
-	s.Start()
-	defer s.Stop()
+	p.logger.Debugf("[%s] Executing rollback logic: instances %s will be rollback\n", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
 		request := ecs.CreateDeleteInstancesRequest()
@@ -258,6 +270,8 @@ func (p *Alibaba) Rollback() error {
 			return err
 		}
 	}
+
+	p.logger.Infof("[%s] Successfully executing rollback logic\n", p.GetProviderName())
 
 	return nil
 }
@@ -302,9 +316,11 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
 	if master {
 		// TODO: HA mode will be added soon, temporary set master number to 1.
+		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name)
 		request.Amount = requests.NewInteger(1)
 		tag = append(tag, ecs.RunInstancesTag{Key: "master", Value: "true"})
 	} else {
+		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.Name)
 		tag = append(tag, ecs.RunInstancesTag{Key: "worker", Value: "true"})
 	}
 	request.Tag = &tag
