@@ -87,11 +87,19 @@ function build() {
 
     local os=${os_arch[0]}
     local arch=${os_arch[1]}
-    GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
-      -ldflags "${version_flags} ${flags} ${ext_flags}" \
-      -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
-      "${CURR_DIR}/main.go"
-    cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+    if [[ "$os" == "windows" ]]; then
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+          -ldflags "${version_flags} ${flags} ${ext_flags}" \
+          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" \
+          "${CURR_DIR}/main.go"
+        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" "${CURR_DIR}/dist/autok3s_${os}_${arch}.exe"
+    else
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+          -ldflags "${version_flags} ${flags} ${ext_flags}" \
+          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+          "${CURR_DIR}/main.go"
+        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+    fi
   done
 
   autok3s::log::info "...done"
@@ -117,8 +125,9 @@ function package() {
 
   pushd "${CURR_DIR}" >/dev/null 2>&1
   for platform in "${platforms[@]}"; do
-    if [[ "${platform}" =~ darwin/* ]]; then
-      autok3s::log::fatal "package into Darwin OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
+    if [[ "${platform}" =~ darwin/* || "${platform}" =~ windows/* ]]; then
+     autok3s::log::warn "package into Darwin/Windows OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
+     continue
     fi
 
     local image_tag="${repo}/${image_name}:${tag}-${platform////-}"
@@ -151,11 +160,11 @@ function deploy() {
   fi
   local images=()
   for platform in "${platforms[@]}"; do
-    if [[ "${platform}" =~ darwin/* ]]; then
-      autok3s::log::fatal "package into Darwin OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
+    if [[ "${platform}" =~ darwin/* || "${platform}" =~ windows/* ]]; then
+      autok3s::log::warn "package into Darwin/Windows OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
+    else
+      images+=("${repo}/${image_name}:${tag}-${platform////-}")
     fi
-
-    images+=("${repo}/${image_name}:${tag}-${platform////-}")
   done
 
   local only_manifest=${ONLY_MANIFEST:-false}
@@ -274,3 +283,5 @@ if [[ ${BY:-} == "dapper" ]]; then
 else
   entry "$@"
 fi
+
+

@@ -39,7 +39,8 @@ function autok3s::manifest_tool::push() {
   if [[ $(autok3s::util::get_os) == "darwin" ]]; then
     if [[ -z ${DOCKER_USERNAME} ]] && [[ -z ${DOCKER_PASSWORD} ]]; then
       # NB(thxCode): since 17.03, Docker for Mac stores credentials in the OSX/macOS keychain and not in config.json, which means the above variables need to specify if using on Mac.
-      autok3s::log::fatal "must set 'DOCKER_USERNAME' & 'DOCKER_PASSWORD' environment variables in Darwin platform"
+      autok3s::log::warn "must set 'DOCKER_USERNAME' & 'DOCKER_PASSWORD' environment variables in Darwin platform"
+      continue
     fi
   fi
 
