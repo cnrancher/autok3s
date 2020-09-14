@@ -7,15 +7,18 @@ import (
 )
 
 const (
-	BindPrefix      = "autok3s.providers.%s.%s"
-	ConfigFile      = "config.yaml"
-	StateFile       = ".state"
-	KubeCfgFile     = ".kube/config"
-	KubeCfgTempName = "autok3s-temp"
-	K3sManifestsDir = "/var/lib/rancher/k3s/server/manifests"
+	BindPrefix         = "autok3s.providers.%s.%s"
+	ConfigFile         = "config.yaml"
+	StateFile          = ".state"
+	KubeCfgFile        = ".kube/config"
+	KubeCfgTempName    = "autok3s-temp"
+	K3sManifestsDir    = "/var/lib/rancher/k3s/server/manifests"
+	MasterInstanceName = "autok3s.%s.master"
+	WorkerInstanceName = "autok3s.%s.worker"
 )
 
 var (
+	Debug   = false
 	CfgPath = "/var/lib/rancher/autok3s"
 	// retry 5 times, total 120 seconds.
 	Backoff = wait.Backoff{
