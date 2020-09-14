@@ -161,7 +161,8 @@ function deploy() {
   local images=()
   for platform in "${platforms[@]}"; do
     if [[ "${platform}" =~ darwin/* ]]; then
-      autok3s::log::fatal "package into Darwin OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
+      autok3s::log::warn "package into Darwin OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
+      continue
     fi
 
     images+=("${repo}/${image_name}:${tag}-${platform////-}")
