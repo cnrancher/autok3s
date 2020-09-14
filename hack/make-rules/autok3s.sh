@@ -87,11 +87,19 @@ function build() {
 
     local os=${os_arch[0]}
     local arch=${os_arch[1]}
-    GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
-      -ldflags "${version_flags} ${flags} ${ext_flags}" \
-      -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
-      "${CURR_DIR}/main.go"
-    cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+    if [[ "$os" == "windows" ]]; then
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+          -ldflags "${version_flags} ${flags} ${ext_flags}" \
+          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" \
+          "${CURR_DIR}/main.go"
+        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" "${CURR_DIR}/dist/autok3s_${os}_${arch}.exe"
+    else
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+          -ldflags "${version_flags} ${flags} ${ext_flags}" \
+          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+          "${CURR_DIR}/main.go"
+        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+    fi
   done
 
   autok3s::log::info "...done"
