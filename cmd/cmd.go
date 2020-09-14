@@ -35,6 +35,7 @@ var (
 
 func init() {
 	cobra.OnInitialize(initCfg)
+	cmd.PersistentFlags().BoolVarP(&common.Debug, "debug", "d", common.Debug, "Enable log debug level")
 	cmd.Flags().StringVarP(&common.CfgPath, "cfg", "c", common.CfgPath, "Path to the cfg file to use for CLI requests")
 	cmd.Flags().IntVarP(&common.Backoff.Steps, "retry", "r", common.Backoff.Steps, "The number of retries waiting for the desired state")
 }
@@ -58,6 +59,11 @@ func Command() *cobra.Command {
 }
 
 func initCfg() {
+	if os.Getuid() != 0 {
+		logrus.Errorf("%s: need to be root", os.Args[0])
+		os.Exit(1)
+	}
+
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(fmt.Sprintf("%s/%s", common.CfgPath, common.ConfigFile))
 	viper.AutomaticEnv()
