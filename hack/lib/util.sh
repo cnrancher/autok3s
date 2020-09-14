@@ -75,31 +75,3 @@ function autok3s::util::get_arch() {
 
   echo -n "${arch}"
 }
-
-function autok3s::util::get_random_port_start() {
-  local offset="${1:-1}"
-  if [[ ${offset} -le 0 ]]; then
-    offset=1
-  fi
-
-  while true; do
-    random_port=$((RANDOM % 10000 + 50000))
-    for ((i = 0; i < offset; i++)); do
-      if nc -z 127.0.0.1 $((random_port + i)); then
-        random_port=0
-        break
-      fi
-    done
-
-    if [[ ${random_port} -ne 0 ]]; then
-      echo -n "${random_port}"
-      break
-    fi
-  done
-}
-
-# Unset Proxy
-function autok3s::util::unsetproxy() {
-    unset {http,https,ftp}_proxy
-    unset {HTTP,HTTPS,FTP}_PROXY
-}
