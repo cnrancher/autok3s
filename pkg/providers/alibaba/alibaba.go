@@ -11,6 +11,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
+	"github.com/cnrancher/autok3s/pkg/utils"
 	"github.com/cnrancher/autok3s/pkg/viper"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
@@ -224,10 +225,10 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 		for _, resource := range response.TagResources.TagResource {
 			ids = append(ids, resource.ResourceId)
 		}
-		return true, ids, err
+		// ecs will return multiple instance ids based on the value of tag key.n by n, so duplicate items need to be removed.
+		return true, utils.UniqueArray(ids), err
 	}
-
-	return false, ids, nil
+	return false, utils.UniqueArray(ids), nil
 }
 
 func (p *Alibaba) Rollback() error {
