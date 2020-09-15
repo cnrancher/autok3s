@@ -337,6 +337,20 @@ func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 	return converts, nil
 }
 
+func DeleteState(name string, provider string) error {
+	r, err := deleteClusterFromState(name, provider)
+	if err != nil {
+		return err
+	}
+
+	v := common.CfgPath
+	if v == "" {
+		return errors.New("[cluster] cfg path is empty\n")
+	}
+
+	return utils.WriteYaml(r, v, common.StateFile)
+}
+
 func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
 	result := make([]types.Cluster, 0)
 
@@ -486,3 +500,38 @@ func mergeCfg(context, right string) error {
 
 	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
 }
+
+func deleteClusterFromState(name string, provider string) ([]types.Cluster, error) {
+	v := common.CfgPath
+	if v == "" {
+		return nil, errors.New("[cluster] cfg path is empty\n")
+	}
+
+	clusters, err := utils.ReadYaml(v, common.StateFile)
+	if err != nil {
+		return  nil, err
+	}
+
+	converts, err := ConvertToClusters(clusters)
+	if err != nil {
+		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
+	}
+
+	index := -1
+
+	for i, c := range converts {
+		if c.Provider == provider && c.Name == name {
+			index = i
+			//r = append(r, *cluster)
+		}
+	}
+
+	if index > -1 {
+		converts = append(converts[:index], converts[index+1:]...)
+	} else {
+		return nil, fmt.Errorf("[cluster] was not found in the .state file")
+	}
+
+	return converts, nil
+}
+

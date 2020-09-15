@@ -277,6 +277,22 @@ func (p *Alibaba) Rollback() error {
 	return nil
 }
 
+func (p *Alibaba) DeleteK3sNode(f bool) error {
+	p.logger = common.NewLogger(common.Debug)
+	p.logger.Infof("[%s] Executing delete logic...\n", p.GetProviderName())
+	if err := p.generateClientSDK(); err != nil {
+		return err
+	}
+
+	if err := p.deleteCluster(f); err != nil {
+		return err
+	}
+
+	p.logger.Infof("[%s] Successfully executing delete logic\n", p.GetProviderName())
+
+	return nil
+}
+
 func (p *Alibaba) generateClientSDK() error {
 	if p.AccessKey == "" {
 		p.AccessKey = viper.GetString(p.GetProviderName(), accessKeyID)
@@ -337,6 +353,53 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 		} else {
 			p.m.Store(id, types.Node{Master: false, RollBack: true, InstanceID: id, InstanceStatus: alibaba.StatusPending})
 		}
+	}
+
+	return nil
+}
+
+
+func (p *Alibaba) deleteCluster(f bool) error {
+	exist, ids, err := p.IsClusterExist()
+
+	if !exist && !f {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist\n",
+			p.GetProviderName(), p.Name)
+	}
+
+	if err == nil && len(ids) > 0 {
+		request := ecs.CreateDeleteInstancesRequest()
+		request.Scheme = "https"
+		request.RegionId = p.Region
+		request.InstanceId = &ids
+		request.Force = "true"
+		request.TerminateSubscription = "true"
+
+		_, err := p.c.DeleteInstances(request)
+
+		if err != nil {
+			return fmt.Errorf("[%s] calling deleteInstance error, message:[%s]\n",
+				p.GetProviderName(), err.Error())
+		}
+	}
+
+	if err != nil && !f {
+		return fmt.Errorf("[%s] calling deleteInstance error, message:[%s]\n",
+			p.GetProviderName(), err.Error())
+	}
+
+	err = cluster.OverwriteCfg(p.Name)
+
+	if err != nil && !f {
+		return fmt.Errorf("[%s] Synchronizing .cfg file error, message:[%s]\n",
+			p.GetProviderName(), err.Error())
+	}
+
+	err = cluster.DeleteState(p.Name, p.Provider)
+
+	if err != nil && !f {
+		return fmt.Errorf("[%s] Synchronizing .state file error, message:[%s]\n",
+			p.GetProviderName(), err.Error())
 	}
 
 	return nil
