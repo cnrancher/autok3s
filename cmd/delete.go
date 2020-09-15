@@ -16,7 +16,7 @@ var (
 		Example: `  autok3s delete --name cluster`,
 	}
 	dProvider = ""
-	force    = false
+	force     = false
 	dp        providers.Provider
 )
 
