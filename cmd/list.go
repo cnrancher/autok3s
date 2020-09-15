@@ -48,12 +48,12 @@ func listCluster() {
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)
 	if err != nil {
-		logrus.Fatalf("read state file error, msg: %s\n", err.Error())
+		logrus.Fatalf("read state file error, msg: %s\n", err)
 	}
 
 	result, err := cluster.ConvertToClusters(clusters)
 	if err != nil {
-		logrus.Fatalf("failed to unmarshal state file, msg: %s\n", err.Error())
+		logrus.Fatalf("failed to unmarshal state file, msg: %s\n", err)
 	}
 
 	var (
