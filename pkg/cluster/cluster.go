@@ -283,7 +283,7 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
+		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err)
 	}
 
 	for _, c := range converts {
@@ -401,12 +401,12 @@ func SaveCfg(cfg, ip, context string) error {
 
 	tempPath := fmt.Sprintf("%s/.kube", common.CfgPath)
 	if err := utils.EnsureFolderExist(tempPath); err != nil {
-		return fmt.Errorf("[cluster] generate kubecfg temp folder error, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] generate kubecfg temp folder error, msg: %s\n", err)
 	}
 
 	temp, err := ioutil.TempFile(tempPath, common.KubeCfgTempName)
 	if err != nil {
-		return fmt.Errorf("[cluster] generate kubecfg temp file error, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s\n", err)
 	}
 	defer func() {
 		_ = temp.Close()
@@ -414,7 +414,7 @@ func SaveCfg(cfg, ip, context string) error {
 
 	err = utils.WriteBytesToYaml([]byte(result), tempPath, temp.Name()[strings.Index(temp.Name(), common.KubeCfgTempName):])
 	if err != nil {
-		return fmt.Errorf("[cluster] write content to kubecfg temp file error, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] write content to kubecfg temp file error, msg: %s\n", err)
 	}
 
 	return mergeCfg(context, temp.Name())
@@ -462,21 +462,21 @@ func execute(host *hosts.Host, cmd string, print bool) (string, error) {
 func mergeCfg(context, right string) error {
 	defer func() {
 		if err := os.Remove(right); err != nil {
-			logrus.Errorf("[cluster] remove kubecfg temp file error, msg=%s\n", err)
+			logrus.Errorf("[cluster] remove kubecfg temp file error, msg: %s\n", err)
 		}
 	}()
 
 	if err := utils.EnsureFileExist(common.CfgPath, common.KubeCfgFile); err != nil {
-		return fmt.Errorf("[cluster] ensure kubecfg exist error, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] ensure kubecfg exist error, msg: %s\n", err)
 	}
 
 	if err := OverwriteCfg(context); err != nil {
-		return fmt.Errorf("[cluster] overwrite kubecfg error, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] overwrite kubecfg error, msg: %s\n", err)
 	}
 
 	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s:%s",
 		fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), right)); err != nil {
-		return fmt.Errorf("[cluster] set env error when merging kubecfg, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] set env error when merging kubecfg, msg: %s\n", err)
 	}
 
 	out := &bytes.Buffer{}
@@ -490,12 +490,12 @@ func mergeCfg(context, right string) error {
 
 	printer, err := opt.PrintFlags.ToPrinter()
 	if err != nil {
-		return fmt.Errorf("[cluster] generate view options error, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] generate view options error, msg: %s\n", err)
 	}
 	opt.PrintObject = printer.PrintObj
 
 	if err := opt.Run(); err != nil {
-		return fmt.Errorf("[cluster] merging kubecfg error, msg=%s\n", err.Error())
+		return fmt.Errorf("[cluster] merging kubecfg error, msg: %s\n", err)
 	}
 
 	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
@@ -514,7 +514,7 @@ func deleteClusterFromState(name string, provider string) ([]types.Cluster, erro
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
+		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err)
 	}
 
 	index := -1
@@ -522,14 +522,13 @@ func deleteClusterFromState(name string, provider string) ([]types.Cluster, erro
 	for i, c := range converts {
 		if c.Provider == provider && c.Name == name {
 			index = i
-			//r = append(r, *cluster)
 		}
 	}
 
 	if index > -1 {
 		converts = append(converts[:index], converts[index+1:]...)
 	} else {
-		return nil, fmt.Errorf("[cluster] was not found in the .state file")
+		return nil, fmt.Errorf("[cluster] was not found in the .state file\n")
 	}
 
 	return converts, nil
