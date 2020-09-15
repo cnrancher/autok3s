@@ -79,6 +79,7 @@ Use `Makefile` to manage project compilation, testing and packaging.
 Of course, you can also choose to compile using `dapper`.
 Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project. PRs are welcome.
 
+- vendor: `GO111MODULE=on go mod vendor`
 - compilation: `BY=dapper make autok3s`
 - testing: `BY=dapper make autok3s unit`
 - packing: `BY=dapper make autok3s package only`
