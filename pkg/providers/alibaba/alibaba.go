@@ -252,7 +252,7 @@ func (p *Alibaba) Rollback() error {
 		request.Force = requests.NewBoolean(true)
 
 		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling rollback error, please remove the cloud provider instances manually. region=%s, "+
-			"instanceName=%s, message=the maximum number of attempts reached\n", p.GetProviderName(), p.Region, ids)
+			"instanceName=%s, message=the maximum number of attempts reached", p.GetProviderName(), p.Region, ids)
 
 		// retry 5 times, total 120 seconds.
 		backoff := wait.Backoff{
@@ -345,7 +345,7 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 
 	response, err := p.c.RunInstances(request)
 	if err != nil || len(response.InstanceIdSets.InstanceIdSet) != num {
-		return fmt.Errorf("[%s] calling runInstances error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]\n",
+		return fmt.Errorf("[%s] calling runInstances error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]",
 			p.GetProviderName(), p.Region, p.Zone, request.InstanceName, err)
 	}
 	for _, id := range response.InstanceIdSets.InstanceIdSet {
@@ -359,12 +359,11 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 	return nil
 }
 
-
 func (p *Alibaba) deleteCluster(f bool) error {
 	exist, ids, err := p.IsClusterExist()
 
 	if !exist && !f {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist\n",
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
 			p.GetProviderName(), p.Name)
 	}
 
@@ -379,27 +378,27 @@ func (p *Alibaba) deleteCluster(f bool) error {
 		_, err := p.c.DeleteInstances(request)
 
 		if err != nil {
-			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%s]\n",
+			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%s]",
 				p.GetProviderName(), err)
 		}
 	}
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteInstance error, msg: [%s]\n",
+		return fmt.Errorf("[%s] calling deleteInstance error, msg: [%s]",
 			p.GetProviderName(), err)
 	}
 
 	err = cluster.OverwriteCfg(p.Name)
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: [%s]\n",
+		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: [%s]",
 			p.GetProviderName(), err)
 	}
 
 	err = cluster.DeleteState(p.Name, p.Provider)
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%s]\n",
+		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%s]",
 			p.GetProviderName(), err)
 	}
 
@@ -421,7 +420,7 @@ func (p *Alibaba) getInstanceStatus() error {
 			request.ZoneId = p.Zone
 		}
 
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region=%s, zone=%s, "+"instanceName=%s, message=not running status\n",
+		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not running status",
 			p.GetProviderName(), p.Region, p.Zone, ids)
 
 		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
@@ -575,7 +574,7 @@ func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 
 	response, err := p.c.DescribeInstances(request)
 	if err == nil && len(response.Instances.Instance) == 0 {
-		return nil, fmt.Errorf("[%s] calling describeInstances error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]\n",
+		return nil, fmt.Errorf("[%s] calling describeInstances error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]",
 			p.GetProviderName(), p.Region, p.Zone, request.InstanceName, err)
 	}
 
@@ -592,7 +591,7 @@ func (p *Alibaba) getVSwitchCIDR() (string, string, error) {
 
 	response, err := p.c.DescribeVSwitches(request)
 	if err != nil || !response.IsSuccess() || len(response.VSwitches.VSwitch) < 1 {
-		return "", "", fmt.Errorf("[%s] calling describeVSwitches error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]\n",
+		return "", "", fmt.Errorf("[%s] calling describeVSwitches error. region=%s, zone=%s, "+"instanceName=%s, message=[%s]",
 			p.GetProviderName(), p.Region, p.Zone, p.VSwitch, err)
 	}
 
@@ -606,7 +605,7 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 
 	response, err := p.c.DescribeVpcs(request)
 	if err != nil || !response.IsSuccess() || len(response.Vpcs.Vpc) != 1 {
-		return "", fmt.Errorf("[%s] calling describeVpcs error. region=%s, "+"instanceName=%s, message=[%s]\n",
+		return "", fmt.Errorf("[%s] calling describeVpcs error. region=%s, "+"instanceName=%s, message=[%s]",
 			p.GetProviderName(), p.Region, p.Vpc, err)
 	}
 
@@ -616,7 +615,7 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 func (p *Alibaba) createCheck() error {
 	masterNum, _ := strconv.Atoi(p.Master)
 	if masterNum != 1 {
-		return fmt.Errorf("[%s] calling preflight error: currently `--master` number only support 1\n",
+		return fmt.Errorf("[%s] calling preflight error: currently `--master` number only support 1",
 			p.GetProviderName())
 	}
 
@@ -626,14 +625,14 @@ func (p *Alibaba) createCheck() error {
 	}
 
 	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` already exist\n",
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` already exist",
 			p.GetProviderName(), p.Name)
 	}
 
 	if p.Terway.Mode != "none" {
 		vpc, vSwitchCIDR, err := p.getVSwitchCIDR()
 		if err != nil {
-			return fmt.Errorf("[%s] calling preflight error: vswitch %s cidr not be found\n",
+			return fmt.Errorf("[%s] calling preflight error: vswitch %s cidr not be found",
 				p.GetProviderName(), p.VSwitch)
 		}
 
@@ -642,7 +641,7 @@ func (p *Alibaba) createCheck() error {
 
 		vpcCIDR, err := p.getVpcCIDR()
 		if err != nil {
-			return fmt.Errorf("[%s] calling preflight error: vpc %s cidr not be found\n",
+			return fmt.Errorf("[%s] calling preflight error: vpc %s cidr not be found",
 				p.GetProviderName(), p.Vpc)
 		}
 
@@ -655,7 +654,7 @@ func (p *Alibaba) createCheck() error {
 func (p *Alibaba) joinCheck() error {
 	workerNum, _ := strconv.Atoi(p.Worker)
 	if workerNum < 1 {
-		return fmt.Errorf("[%s] calling preflight error: currently `--worker` must greater than 1\n",
+		return fmt.Errorf("[%s] calling preflight error: currently `--worker` must greater than 1",
 			p.GetProviderName())
 	}
 
@@ -666,21 +665,21 @@ func (p *Alibaba) joinCheck() error {
 	}
 
 	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist\n",
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
 			p.GetProviderName(), p.Name)
-	} else {
-		// remove invalid worker nodes from .state file.
-		workers := make([]types.Node, 0)
-		for _, w := range p.WorkerNodes {
-			for _, e := range ids {
-				if e == w.InstanceID {
-					workers = append(workers, w)
-					break
-				}
+	}
+
+	// remove invalid worker nodes from .state file.
+	workers := make([]types.Node, 0)
+	for _, w := range p.WorkerNodes {
+		for _, e := range ids {
+			if e == w.InstanceID {
+				workers = append(workers, w)
+				break
 			}
 		}
-		p.WorkerNodes = workers
 	}
+	p.WorkerNodes = workers
 
 	return nil
 }
