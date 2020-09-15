@@ -17,7 +17,7 @@ const (
 
 func EnsureFolderExist(path string) error {
 	if path == "" {
-		return fmt.Errorf("path %s cannot be empty\n", path)
+		return fmt.Errorf("path %s cannot be empty", path)
 	}
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil && !os.IsExist(err) {

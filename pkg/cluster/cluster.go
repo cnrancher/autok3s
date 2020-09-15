@@ -82,7 +82,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	if len(cluster.MasterNodes) <= 0 || len(cluster.MasterNodes[0].InternalIPAddress) <= 0 {
-		return errors.New("[cluster] master node internal ip address can not be empty\n")
+		return errors.New("[cluster] master node internal ip address can not be empty")
 	}
 
 	cluster.URL = cluster.MasterNodes[0].InternalIPAddress[0]
@@ -226,12 +226,12 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	}
 
 	if merged.Token == "" {
-		return errors.New("[cluster] k3s token can not be empty\n")
+		return errors.New("[cluster] k3s token can not be empty")
 	}
 
 	if merged.URL == "" {
 		if len(merged.MasterNodes) <= 0 || len(merged.MasterNodes[0].InternalIPAddress) <= 0 {
-			return errors.New("[cluster] master node internal ip address can not be empty\n")
+			return errors.New("[cluster] master node internal ip address can not be empty")
 		}
 		merged.URL = merged.MasterNodes[0].InternalIPAddress[0]
 	}
@@ -273,7 +273,7 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 	r := make([]types.Cluster, 0)
 	v := common.CfgPath
 	if v == "" {
-		return r, errors.New("[cluster] cfg path is empty\n")
+		return r, errors.New("[cluster] cfg path is empty")
 	}
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)
@@ -283,7 +283,7 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err)
+		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
 	}
 
 	for _, c := range converts {
@@ -307,7 +307,7 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 	v := common.CfgPath
 	if v == "" {
-		return nil, errors.New("[cluster] cfg path is empty\n")
+		return nil, errors.New("[cluster] cfg path is empty")
 	}
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)
@@ -317,7 +317,7 @@ func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err.Error())
+		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
 	}
 
 	index := -1
@@ -345,7 +345,7 @@ func DeleteState(name string, provider string) error {
 
 	v := common.CfgPath
 	if v == "" {
-		return errors.New("[cluster] cfg path is empty\n")
+		return errors.New("[cluster] cfg path is empty")
 	}
 
 	return utils.WriteYaml(r, v, common.StateFile)
@@ -375,7 +375,7 @@ func SaveState(cluster *types.Cluster) error {
 
 	v := common.CfgPath
 	if v == "" {
-		return errors.New("[cluster] cfg path is empty\n")
+		return errors.New("[cluster] cfg path is empty")
 	}
 
 	return utils.WriteYaml(r, v, common.StateFile)
@@ -384,7 +384,7 @@ func SaveState(cluster *types.Cluster) error {
 func FilterState(r []*types.Cluster) error {
 	v := common.CfgPath
 	if v == "" {
-		return errors.New("[cluster] cfg path is empty\n")
+		return errors.New("[cluster] cfg path is empty")
 	}
 
 	return utils.WriteYaml(r, v, common.StateFile)
@@ -401,12 +401,12 @@ func SaveCfg(cfg, ip, context string) error {
 
 	tempPath := fmt.Sprintf("%s/.kube", common.CfgPath)
 	if err := utils.EnsureFolderExist(tempPath); err != nil {
-		return fmt.Errorf("[cluster] generate kubecfg temp folder error, msg: %s\n", err)
+		return fmt.Errorf("[cluster] generate kubecfg temp folder error, msg: %s", err)
 	}
 
 	temp, err := ioutil.TempFile(tempPath, common.KubeCfgTempName)
 	if err != nil {
-		return fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s\n", err)
+		return fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s", err)
 	}
 	defer func() {
 		_ = temp.Close()
@@ -414,7 +414,7 @@ func SaveCfg(cfg, ip, context string) error {
 
 	err = utils.WriteBytesToYaml([]byte(result), tempPath, temp.Name()[strings.Index(temp.Name(), common.KubeCfgTempName):])
 	if err != nil {
-		return fmt.Errorf("[cluster] write content to kubecfg temp file error, msg: %s\n", err)
+		return fmt.Errorf("[cluster] write content to kubecfg temp file error, msg: %s", err)
 	}
 
 	return mergeCfg(context, temp.Name())
@@ -462,21 +462,21 @@ func execute(host *hosts.Host, cmd string, print bool) (string, error) {
 func mergeCfg(context, right string) error {
 	defer func() {
 		if err := os.Remove(right); err != nil {
-			logrus.Errorf("[cluster] remove kubecfg temp file error, msg: %s\n", err)
+			logrus.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
 		}
 	}()
 
 	if err := utils.EnsureFileExist(common.CfgPath, common.KubeCfgFile); err != nil {
-		return fmt.Errorf("[cluster] ensure kubecfg exist error, msg: %s\n", err)
+		return fmt.Errorf("[cluster] ensure kubecfg exist error, msg: %s", err)
 	}
 
 	if err := OverwriteCfg(context); err != nil {
-		return fmt.Errorf("[cluster] overwrite kubecfg error, msg: %s\n", err)
+		return fmt.Errorf("[cluster] overwrite kubecfg error, msg: %s", err)
 	}
 
 	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s:%s",
 		fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), right)); err != nil {
-		return fmt.Errorf("[cluster] set env error when merging kubecfg, msg: %s\n", err)
+		return fmt.Errorf("[cluster] set env error when merging kubecfg, msg: %s", err)
 	}
 
 	out := &bytes.Buffer{}
@@ -490,12 +490,12 @@ func mergeCfg(context, right string) error {
 
 	printer, err := opt.PrintFlags.ToPrinter()
 	if err != nil {
-		return fmt.Errorf("[cluster] generate view options error, msg: %s\n", err)
+		return fmt.Errorf("[cluster] generate view options error, msg: %s", err)
 	}
 	opt.PrintObject = printer.PrintObj
 
 	if err := opt.Run(); err != nil {
-		return fmt.Errorf("[cluster] merging kubecfg error, msg: %s\n", err)
+		return fmt.Errorf("[cluster] merging kubecfg error, msg: %s", err)
 	}
 
 	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
@@ -504,17 +504,17 @@ func mergeCfg(context, right string) error {
 func deleteClusterFromState(name string, provider string) ([]types.Cluster, error) {
 	v := common.CfgPath
 	if v == "" {
-		return nil, errors.New("[cluster] cfg path is empty\n")
+		return nil, errors.New("[cluster] cfg path is empty")
 	}
 
 	clusters, err := utils.ReadYaml(v, common.StateFile)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	converts, err := ConvertToClusters(clusters)
 	if err != nil {
-		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s\n", err)
+		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
 	}
 
 	index := -1
@@ -528,9 +528,8 @@ func deleteClusterFromState(name string, provider string) ([]types.Cluster, erro
 	if index > -1 {
 		converts = append(converts[:index], converts[index+1:]...)
 	} else {
-		return nil, fmt.Errorf("[cluster] was not found in the .state file\n")
+		return nil, fmt.Errorf("[cluster] was not found in the .state file")
 	}
 
 	return converts, nil
 }
-

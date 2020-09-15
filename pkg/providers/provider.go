@@ -43,7 +43,7 @@ func Register(provider string) (Provider, error) {
 	case "alibaba":
 		p = alibaba.NewProvider()
 	default:
-		return p, errors.New("not a valid provider, please run `autok3s get provider` display valid providers\n")
+		return p, errors.New("not a valid provider, please run `autok3s get provider` display valid providers")
 	}
 
 	return p, nil
