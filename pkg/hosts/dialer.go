@@ -22,7 +22,7 @@ type Host struct {
 	types.Node `json:",inline"`
 }
 
-type dialer struct {
+type Dialer struct {
 	sshKey     string
 	sshCert    string
 	sshAddress string
@@ -38,12 +38,12 @@ type DialersOptions struct {
 	K8sWrapTransport transport.WrapperFunc
 }
 
-func SSHDialer(h *Host) (*dialer, error) {
+func SSHDialer(h *Host) (*Dialer, error) {
 	return newDialer(h, networkKind)
 }
 
-func (d *dialer) OpenTunnel() (*Tunnel, error) {
-	wait.ErrWaitTimeout = fmt.Errorf("[dialer] calling openTunnel error. address=[%s]\n", d.sshAddress)
+func (d *Dialer) OpenTunnel() (*Tunnel, error) {
+	wait.ErrWaitTimeout = fmt.Errorf("[dialer] calling openTunnel error. address [%s]", d.sshAddress)
 
 	var conn *ssh.Client
 	var err error
@@ -55,20 +55,20 @@ func (d *dialer) OpenTunnel() (*Tunnel, error) {
 		}
 		return true, nil
 	}); err != nil {
-		return nil, fmt.Errorf("[dialer] failed to open ssh tunnel using address [%s]: %v\n", d.sshAddress, err)
+		return nil, fmt.Errorf("[dialer] failed to open ssh tunnel using address [%s]: %v", d.sshAddress, err)
 	}
 
 	return &Tunnel{conn: conn}, nil
 }
 
-func newDialer(h *Host, kind string) (*dialer, error) {
-	var d *dialer
+func newDialer(h *Host, kind string) (*Dialer, error) {
+	var d *Dialer
 
 	if len(h.PublicIPAddress) <= 0 {
-		return nil, errors.New("[dialer] no node IP is specified\n")
+		return nil, errors.New("[dialer] no node IP is specified")
 	}
 
-	d = &dialer{
+	d = &Dialer{
 		sshAddress:      fmt.Sprintf("%s:%s", h.PublicIPAddress[0], h.Port),
 		username:        h.User,
 		password:        h.Password,
@@ -101,7 +101,7 @@ func newDialer(h *Host, kind string) (*dialer, error) {
 	return d, nil
 }
 
-func (d *dialer) getSSHTunnelConnection() (*ssh.Client, error) {
+func (d *Dialer) getSSHTunnelConnection() (*ssh.Client, error) {
 	cfg, err := utils.GetSSHConfig(d.username, d.sshKey, d.passphrase, d.sshCert, d.password, d.useSSHAgentAuth)
 	if err != nil {
 		return nil, err
