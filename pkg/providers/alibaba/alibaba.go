@@ -286,7 +286,7 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 	request := ecs.CreateListTagResourcesRequest()
 	request.Scheme = "https"
 	request.ResourceType = "instance"
-	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
+	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 
 	response, err := p.c.ListTagResources(request)
 	if err != nil || len(response.TagResources.TagResource) > 0 {
@@ -405,7 +405,7 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 		request.ZoneId = p.Zone
 	}
 
-	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
+	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 	if master {
 		// TODO: HA mode will be added soon, temporary set master number to 1.
 		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name)
@@ -645,7 +645,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error)
 func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 	request := ecs.CreateDescribeInstancesRequest()
 	request.Scheme = "https"
-	request.Tag = &[]ecs.DescribeInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
+	request.Tag = &[]ecs.DescribeInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 	if p.Zone != "" {
 		request.ZoneId = p.Zone
 	}
@@ -797,7 +797,7 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 	for _, eip := range eips {
 		eipIds = append(eipIds, eip.AllocationId)
 	}
-	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: p.Name}}
+	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 	if err := p.tagVpcResources(resourceTypeEip, eipIds, tag); err != nil {
 		p.logger.Errorf("[%s] error when tag eips: %s\n", p.GetProviderName(), err)
 	}
@@ -872,10 +872,7 @@ func (p *Alibaba) releaseEipAddresses() {
 	}
 
 	// release eips with tags
-	tags := []vpc.ListTagResourcesTag{
-		{Key: "autok3s", Value: "true"},
-		{Key: "cluster", Value: p.Name},
-	}
+	tags := []vpc.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 	allocationIds, err := p.listVpcTagResources(resourceTypeEip, nil, tags)
 	if err != nil {
 		p.logger.Errorf("[%s] error when query eip address: %s\n", p.GetProviderName(), err)
