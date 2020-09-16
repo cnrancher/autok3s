@@ -371,6 +371,12 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute')",
 		},
 		{
+			Name:  "registries",
+			P:     &p.Registries,
+			V:     p.Registries,
+			Usage: "K3s registries, use commas to separate multiple entries",
+		},
+		{
 			Name:  "token",
 			P:     &p.Token,
 			V:     p.Token,
