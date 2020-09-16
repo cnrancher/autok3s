@@ -103,6 +103,22 @@ sudo autok3s ... \
     --k3s-version="v1.18.9-k3s1"
 ```
 
+### Start K3s Cluster
+```bash
+sudo autok3s start \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name>
+```
+
+### Stop K3s Cluster
+```bash
+sudo autok3s stop \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name>
+```
+
 ### Delete K3s Cluster
 ```bash
 sudo autok3s delete \

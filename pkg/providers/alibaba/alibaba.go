@@ -127,14 +127,18 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 		workerEips []vpc.EipAddress
 	)
 
+	p.logger.Debugf("[%s] start to allocate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 	if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
 		return err
 	}
+	p.logger.Debugf("[%s] successfully allocated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 
 	if workerNum > 0 {
+		p.logger.Debugf("[%s] start to allocate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
 			return err
 		}
+		p.logger.Debugf("[%s] successfully allocated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 	}
 
 	// run ecs master instances.
@@ -150,7 +154,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	}
 
 	// wait ecs instances to be running status.
-	if err = p.getInstanceStatus(); err != nil {
+	if err = p.getInstanceStatus(alibaba.StatusRunning); err != nil {
 		return
 	}
 
@@ -158,6 +162,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 
 	// associate master eip
 	if masterEips != nil {
+		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 		for i, master := range p.Status.MasterNodes {
 			err := p.associateEipAddress(master.InstanceID, masterEips[i].AllocationId)
 			if err != nil {
@@ -167,10 +172,12 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[i].IpAddress)
 			associatedEipIds = append(associatedEipIds, masterEips[i].AllocationId)
 		}
+		p.logger.Debugf("[%s] successfully associated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 	}
 
 	// associate worker eip
 	if workerEips != nil {
+		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 		for i, worker := range p.Status.WorkerNodes {
 			err := p.associateEipAddress(worker.InstanceID, workerEips[i].AllocationId)
 			if err != nil {
@@ -180,6 +187,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[i].IpAddress)
 			associatedEipIds = append(associatedEipIds, workerEips[i].AllocationId)
 		}
+		p.logger.Debugf("[%s] successfully associated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 	}
 
 	// wait eip to be InUse status.
@@ -227,15 +235,19 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	)
 
 	if masterNum > 0 {
+		p.logger.Debugf("[%s] start to allocate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 		if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
 			return err
 		}
+		p.logger.Debugf("[%s] successfully allocated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 	}
 
 	if workerNum > 0 {
+		p.logger.Debugf("[%s] start to allocate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
 			return err
 		}
+		p.logger.Debugf("[%s] successfully allocated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 	}
 
 	// run ecs master instances.
@@ -253,7 +265,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	}
 
 	// wait ecs instances to be running status.
-	if err := p.getInstanceStatus(); err != nil {
+	if err := p.getInstanceStatus(alibaba.StatusRunning); err != nil {
 		return err
 	}
 
@@ -262,6 +274,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	// associate master eip
 	if masterEips != nil {
 		j := 0
+		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 		for i, master := range p.Status.MasterNodes {
 			if p.Status.MasterNodes[i].PublicIPAddress == nil {
 				err := p.associateEipAddress(master.InstanceID, masterEips[j].AllocationId)
@@ -274,11 +287,13 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 				j++
 			}
 		}
+		p.logger.Debugf("[%s] successfully associated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 	}
 
 	// associate worker eip
 	if workerEips != nil {
 		j := 0
+		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 		for i, worker := range p.Status.WorkerNodes {
 			if p.Status.WorkerNodes[i].PublicIPAddress == nil {
 				err := p.associateEipAddress(worker.InstanceID, workerEips[j].AllocationId)
@@ -291,6 +306,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 				j++
 			}
 		}
+		p.logger.Debugf("[%s] successfully associated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 	}
 
 	// wait eip to be InUse status.
@@ -423,6 +439,40 @@ func (p *Alibaba) DeleteK3sNode(f bool) error {
 	return nil
 }
 
+func (p *Alibaba) StartK3sCluster() error {
+	p.logger = common.NewLogger(common.Debug)
+	p.logger.Infof("[%s] executing start logic...\n", p.GetProviderName())
+
+	if err := p.generateClientSDK(); err != nil {
+		return err
+	}
+
+	if err := p.startCluster(); err != nil {
+		return err
+	}
+
+	p.logger.Infof("[%s] successfully executed start logic\n", p.GetProviderName())
+
+	return nil
+}
+
+func (p *Alibaba) StopK3sCluster(f bool) error {
+	p.logger = common.NewLogger(common.Debug)
+	p.logger.Infof("[%s] executing stop logic...\n", p.GetProviderName())
+
+	if err := p.generateClientSDK(); err != nil {
+		return err
+	}
+
+	if err := p.stopCluster(f); err != nil {
+		return err
+	}
+
+	p.logger.Infof("[%s] successfully executed stop logic\n", p.GetProviderName())
+
+	return nil
+}
+
 func (p *Alibaba) generateClientSDK() error {
 	if p.AccessKey == "" {
 		p.AccessKey = viper.GetString(p.GetProviderName(), accessKeyID)
@@ -548,7 +598,105 @@ func (p *Alibaba) deleteCluster(f bool) error {
 	return nil
 }
 
-func (p *Alibaba) getInstanceStatus() error {
+func (p *Alibaba) startCluster() error {
+	exist, ids, err := p.IsClusterExist()
+
+	if !exist {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
+			p.GetProviderName(), p.Name)
+	}
+
+	if err == nil && len(ids) > 0 {
+		// ensure that the status of all instances is stopped.
+		if err := p.startAndStopCheck(alibaba.StatusStopped); err != nil {
+			return err
+		}
+		request := ecs.CreateStartInstancesRequest()
+		request.Scheme = "https"
+		request.InstanceId = &ids
+
+		if _, err := p.c.StartInstances(request); err != nil {
+			return fmt.Errorf("[%s] calling startInstance error, msg: [%v]", p.GetProviderName(), err)
+		}
+	}
+
+	for _, masterNode := range p.MasterNodes {
+		p.m.Store(masterNode.InstanceID, masterNode)
+	}
+	for _, workerNode := range p.WorkerNodes {
+		p.m.Store(workerNode.InstanceID, workerNode)
+	}
+
+	// wait ecs instances to be running status.
+	if err = p.getInstanceStatus(alibaba.StatusRunning); err != nil {
+		return err
+	}
+
+	err = cluster.SaveState(&types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	})
+
+	if err != nil {
+		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
+	}
+	return nil
+}
+
+func (p *Alibaba) stopCluster(f bool) error {
+	exist, ids, err := p.IsClusterExist()
+
+	if !exist {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+	}
+
+	if err == nil && len(ids) > 0 {
+		// ensure that the status of all instances is running.
+		if err := p.startAndStopCheck(alibaba.StatusRunning); err != nil {
+			return err
+		}
+		request := ecs.CreateStopInstancesRequest()
+		request.Scheme = "https"
+		request.InstanceId = &ids
+
+		if f {
+			// similar to power-off operation.
+			// all cached data not written to the storage device will be lost.
+			request.ForceStop = requests.NewBoolean(f)
+		}
+
+		if _, err := p.c.StopInstances(request); err != nil {
+			return fmt.Errorf("[%s] calling stopInstance error, msg: [%v]", p.GetProviderName(), err)
+		}
+	}
+
+	for _, masterNode := range p.MasterNodes {
+		p.m.Store(masterNode.InstanceID, masterNode)
+	}
+	for _, workerNode := range p.WorkerNodes {
+		p.m.Store(workerNode.InstanceID, workerNode)
+	}
+
+	// wait ecs instances to be stopped status.
+	if err = p.getInstanceStatus(alibaba.StatusStopped); err != nil {
+		return err
+	}
+
+	err = cluster.SaveState(&types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	})
+
+	if err != nil {
+		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
+	}
+
+	return nil
+}
+
+func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 	ids := make([]string, 0)
 	p.m.Range(func(key, value interface{}) bool {
 		ids = append(ids, key.(string))
@@ -574,10 +722,10 @@ func (p *Alibaba) getInstanceStatus() error {
 			}
 
 			for _, status := range response.InstanceStatuses.InstanceStatus {
-				if status.Status == alibaba.StatusRunning {
+				if status.Status == aimStatus {
 					if value, ok := p.m.Load(status.InstanceId); ok {
 						v := value.(types.Node)
-						v.InstanceStatus = alibaba.StatusRunning
+						v.InstanceStatus = aimStatus
 						p.m.Store(status.InstanceId, v)
 					}
 				} else {
@@ -839,6 +987,28 @@ func (p *Alibaba) joinCheck() error {
 	return nil
 }
 
+func (p *Alibaba) startAndStopCheck(aimStatus string) error {
+	response, err := p.describeInstances()
+	if err != nil {
+		return err
+	}
+	if response.IsSuccess() && len(response.Instances.Instance) > 0 {
+		unexpectedStatusCnt := 0
+		for _, instance := range response.Instances.Instance {
+			if instance.Status != aimStatus {
+				unexpectedStatusCnt++
+				p.logger.Warnf("[%s] instance [%s] status is %s, but it is expected to be %s\n",
+					p.GetProviderName(), instance.InstanceId, instance.Status, aimStatus)
+			}
+		}
+		if unexpectedStatusCnt > 0 {
+			return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
+		}
+		return nil
+	}
+	return fmt.Errorf("[%s] unable to confirm the current status of instance(s)", p.GetProviderName())
+}
+
 func (p *Alibaba) describeEipAddresses(allocationIds []string) (*vpc.DescribeEipAddressesResponse, error) {
 	if allocationIds == nil {
 		return nil, fmt.Errorf("[%s] allocationID can not be empty", p.GetProviderName())
@@ -875,10 +1045,11 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 		eipIds = append(eipIds, eip.AllocationId)
 	}
 	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
+	p.logger.Debugf("[%s] start to tag eip(s):[%s]\n", p.GetProviderName(), eipIds)
 	if err := p.tagVpcResources(resourceTypeEip, eipIds, tag); err != nil {
 		p.logger.Errorf("[%s] error when tag eips: %s\n", p.GetProviderName(), err)
 	}
-
+	p.logger.Debugf("[%s] tagged eips\n", p.GetProviderName())
 	return eips, nil
 }
 
@@ -942,24 +1113,28 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	// unassociate master eip address.
 	for _, master := range p.MasterNodes {
 		if master.RollBack == rollBack {
+			p.logger.Debugf("[%s] start to unassociate eip address for %d master(s)\n", p.GetProviderName(), len(p.MasterNodes))
 			for _, allocationID := range master.EipAllocationIds {
 				if err := p.unassociateEipAddress(allocationID); err != nil {
 					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 				}
 				releaseEipIds = append(releaseEipIds, allocationID)
 			}
+			p.logger.Debugf("[%s] unassociated eip address for master(s)\n", p.GetProviderName())
 		}
 	}
 
 	// unassociate worker eip address.
 	for _, worker := range p.WorkerNodes {
 		if worker.RollBack == rollBack {
+			p.logger.Debugf("[%s] start to unassociate eip address for %d worker(s)\n", p.GetProviderName(), len(p.WorkerNodes))
 			for _, allocationID := range worker.EipAllocationIds {
 				if err := p.unassociateEipAddress(allocationID); err != nil {
 					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 				}
 				releaseEipIds = append(releaseEipIds, allocationID)
 			}
+			p.logger.Debugf("[%s] unassociated eip address for worker(s)\n", p.GetProviderName())
 		}
 	}
 
@@ -978,8 +1153,11 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 
 	// release eips.
 	for _, allocationID := range allocationIds {
+		p.logger.Debugf("[%s] start to release eip: %s\n", p.GetProviderName(), allocationID)
 		if err := p.releaseEipAddress(allocationID); err != nil {
 			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+		} else {
+			p.logger.Debugf("[%s] successfully released eip: %s\n", p.GetProviderName(), allocationID)
 		}
 	}
 }
@@ -988,20 +1166,23 @@ func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
 	if allocationIds == nil {
 		return fmt.Errorf("[%s] allocationIds can not be empty", p.GetProviderName())
 	}
+	p.logger.Debugf("[%s] start to query eip status\n", p.GetProviderName())
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		response, err := p.describeEipAddresses(allocationIds)
 		if err != nil || !response.IsSuccess() || len(response.EipAddresses.EipAddress) <= 0 {
 			return false, nil
 		}
 		for _, eip := range response.EipAddresses.EipAddress {
+			p.logger.Debugf("[%s] status of eip [%s]:%s\n", p.GetProviderName(), eip.AllocationId, eip.Status)
 			if eip.Status != aimStatus {
 				return false, nil
 			}
 		}
 		return true, nil
 	}); err != nil {
-		return fmt.Errorf("[%s] error in querying eip %s status of [%s]: %v", p.GetProviderName(), aimStatus, strings.Join(allocationIds, ","), err)
+		return fmt.Errorf("[%s] error in querying eip %s status of [%s], msg: [%v]", p.GetProviderName(), aimStatus, allocationIds, err)
 	}
+	p.logger.Debugf("[%s] successfully query eip status\n", p.GetProviderName())
 	return nil
 }
 
