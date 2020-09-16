@@ -24,6 +24,7 @@ type Metadata struct {
 	CloudControllerManager string `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
 	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
+	Registries             string `json:"registries,omitempty" yaml:"yaml:registries,omitempty"`
 }
 
 type Status struct {
