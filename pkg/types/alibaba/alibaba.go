@@ -1,8 +1,10 @@
 package alibaba
 
 var (
-	StatusPending = "Pending"
-	StatusRunning = "Running"
+	StatusPending  = "Pending"
+	StatusRunning  = "Running"
+	StatusStopping = "Stopping"
+	StatusStopped  = "Stopped"
 )
 
 type Options struct {

@@ -77,6 +77,148 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return cmd.Flags()
 }
 
+func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
+	fs := []types.Flag{
+		{
+			Name:     "name",
+			P:        &p.Name,
+			V:        p.Name,
+			Usage:    "Cluster name",
+			Required: true,
+		},
+		{
+			Name:     "region",
+			P:        &p.Region,
+			V:        p.Region,
+			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
+			Required: true,
+		},
+	}
+
+	for _, f := range fs {
+		if f.ShortHand == "" {
+			if cmd.Flags().Lookup(f.Name) == nil {
+				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+			}
+		} else {
+			if cmd.Flags().Lookup(f.Name) == nil {
+				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+			}
+		}
+	}
+
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		clusters, err := cluster.ReadFromState(&types.Cluster{
+			Metadata: p.Metadata,
+			Options:  p.Options,
+		})
+		if err != nil {
+			return err
+		}
+
+		var matched *types.Cluster
+		for _, c := range clusters {
+			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
+				matched = &c
+			}
+		}
+
+		if matched != nil {
+			// start command need merge status value.
+			p.Status = matched.Status
+			p.mergeOptions(*matched)
+		}
+
+		errFlags := make([]string, 0)
+		for _, f := range fs {
+			if f.Required && f.Name == "name" {
+				if *f.P == "" && f.V == "" {
+					errFlags = append(errFlags, f.Name)
+				}
+			}
+		}
+
+		if len(errFlags) == 0 {
+			return nil
+		}
+
+		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
+	}
+
+	return cmd.Flags()
+}
+
+func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
+	fs := []types.Flag{
+		{
+			Name:     "name",
+			P:        &p.Name,
+			V:        p.Name,
+			Usage:    "Cluster name",
+			Required: true,
+		},
+		{
+			Name:     "region",
+			P:        &p.Region,
+			V:        p.Region,
+			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
+			Required: true,
+		},
+	}
+
+	for _, f := range fs {
+		if f.ShortHand == "" {
+			if cmd.Flags().Lookup(f.Name) == nil {
+				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+			}
+		} else {
+			if cmd.Flags().Lookup(f.Name) == nil {
+				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+			}
+		}
+	}
+
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		clusters, err := cluster.ReadFromState(&types.Cluster{
+			Metadata: p.Metadata,
+			Options:  p.Options,
+		})
+		if err != nil {
+			return err
+		}
+
+		var matched *types.Cluster
+		for _, c := range clusters {
+			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
+				matched = &c
+			}
+		}
+
+		if matched != nil {
+			// stop command need merge status value.
+			p.Status = matched.Status
+			p.mergeOptions(*matched)
+		}
+
+		errFlags := make([]string, 0)
+		for _, f := range fs {
+			if f.Required && f.Name == "name" {
+				if *f.P == "" && f.V == "" {
+					errFlags = append(errFlags, f.Name)
+				}
+			}
+		}
+
+		if len(errFlags) == 0 {
+			return nil
+		}
+
+		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
+	}
+
+	return cmd.Flags()
+}
+
 func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{

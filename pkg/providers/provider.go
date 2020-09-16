@@ -16,6 +16,10 @@ type Provider interface {
 	GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Join command flags.
 	GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet
+	// Stop command flags.
+	GetStopFlags(cmd *cobra.Command) *pflag.FlagSet
+	// Start command flags.
+	GetStartFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Delete command flags.
 	GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Credential flags.
@@ -34,6 +38,10 @@ type Provider interface {
 	Rollback() error
 	// K3s delete node interface.
 	DeleteK3sNode(f bool) error
+	// K3s start cluster interface.
+	StartK3sCluster() error
+	// K3s stop cluster interface.
+	StopK3sCluster(f bool) error
 }
 
 func Register(provider string) (Provider, error) {
