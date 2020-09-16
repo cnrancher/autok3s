@@ -24,8 +24,8 @@ import (
 )
 
 var (
-	masterCommand       = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s %s' sh -\n"
-	workerCommand       = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
+	masterCommand       = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='--tls-san %s %s' sh -\n"
+	workerCommand       = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
 	catCfgCommand       = "cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand       = "curl https://get.docker.com | VERSION=19.03 sh -s - %s\n"
 	deployUICommand     = "echo \"%s\" > \"%s/ui.yaml\""
@@ -73,6 +73,12 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		k3sScript = "https://get.k3s.io"
 	}
 
+	if cluster.Registries != "" {
+		if !strings.Contains(cluster.Registries, "https://registry-1.docker.io") {
+			cluster.Registries += ",https://registry-1.docker.io"
+		}
+	}
+
 	if cluster.Token == "" {
 		token, err := utils.RandomToken(16)
 		if err != nil {
@@ -117,7 +123,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		}
 
 		if _, err := execute(&hosts.Host{Node: master},
-			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Token, publicIP, extraArgs), true); err != nil {
+			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, publicIP, extraArgs), true); err != nil {
 			return err
 		}
 	}
@@ -137,7 +143,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		}
 
 		if _, err := execute(&hosts.Host{Node: worker},
-			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, cluster.URL, cluster.Token, extraArgs), true); err != nil {
+			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, cluster.Registries, cluster.URL, cluster.Token, extraArgs), true); err != nil {
 			return err
 		}
 	}
@@ -225,6 +231,12 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		k3sScript = "https://get.k3s.io"
 	}
 
+	if merged.Registries != "" {
+		if !strings.Contains(merged.Registries, "https://registry-1.docker.io") {
+			merged.Registries += ",https://registry-1.docker.io"
+		}
+	}
+
 	if merged.Token == "" {
 		return errors.New("[cluster] k3s token can not be empty")
 	}
@@ -254,7 +266,7 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 				}
 
 				if _, err := execute(&hosts.Host{Node: full},
-					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.URL, merged.Token, extraArgs), true); err != nil {
+					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, extraArgs), true); err != nil {
 					return err
 				}
 
