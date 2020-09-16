@@ -35,7 +35,8 @@ func main() {
 
 	rootCmd := cmd.Command()
 	rootCmd.AddCommand(cmd.CompletionCommand(), cmd.VersionCommand(gitVersion, gitCommit, gitTreeState, buildDate),
-		cmd.ListCommand(), cmd.CreateCommand(), cmd.JoinCommand(), cmd.KubectlCommand(), cmd.DeleteCommand())
+		cmd.ListCommand(), cmd.CreateCommand(), cmd.JoinCommand(), cmd.KubectlCommand(), cmd.DeleteCommand(),
+		cmd.StartCommand(), cmd.StopCommand())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
