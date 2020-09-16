@@ -21,11 +21,7 @@ autok3s:
 It's also generated a state file `/var/lib/rancher/autok3s/.state` to record the clusters' information created on this host.
 
 ## Providers
-- alibaba - currently supported
-  - accelerate the image pull speed
-  - support enable terway eni mode
-  - support enable alibaba cloud-controller-manager
-  - support enable ui components(octopus/kubernetes dashboard)
+- alibaba
 
 ## Usage
 The user can get the commands available for different providers according to the `--help` flag.
@@ -55,6 +51,11 @@ sudo autok3s join --provider alibaba --region cn-hangzhou --name <cluster name> 
 ```
 
 By default, one worker will be created, and the number can be changed by `--worker`.
+
+### Delete K3s Cluster
+```
+sudo autok3s delete --provider alibaba --region cn-hangzhou --name <cluster name>
+```
 
 ### List K3s Clusters
 This command will list the clusters that you have created on this machine.
