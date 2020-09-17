@@ -1,5 +1,7 @@
 # autok3s
 [![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
+[![License: apache-2.0](https://img.shields.io/badge/License-apache2-default.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://github.com/cnrancher/autok3s/pulls)
 
 AutoK3s is a lightweight tool for quickly creating and managing K3s clusters on multiple cloud providers.
 It can help users quickly complete the personalized configuration of the K3s cluster, while providing convenient kubectl access capabilities.
@@ -78,7 +80,7 @@ sudo autok3s kubectl config use-context <context>
 ## Developers' Guide
 Use `Makefile` to manage project compilation, testing and packaging.
 Of course, you can also choose to compile using `dapper`.
-Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project. PRs are welcome.
+Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
 
 - vendor: `GO111MODULE=on go mod vendor`
 - compilation: `BY=dapper make autok3s`
