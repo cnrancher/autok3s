@@ -108,6 +108,27 @@ func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	}
 
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		clusters, err := cluster.ReadFromState(&types.Cluster{
+			Metadata: p.Metadata,
+			Options:  p.Options,
+		})
+		if err != nil {
+			return err
+		}
+
+		var matched *types.Cluster
+		for _, c := range clusters {
+			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
+				matched = &c
+			}
+		}
+
+		if matched != nil {
+			// delete command need merge status value.
+			p.Status = matched.Status
+			p.mergeOptions(*matched)
+		}
+
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {

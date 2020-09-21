@@ -39,6 +39,7 @@ const (
 	cloudControllerManager  = "false"
 	resourceTypeEip         = "EIP"
 	eipStatusAvailable      = "Available"
+	eipStatusInUse          = "InUse"
 	usageInfo               = `=========================== Prompt Info ===========================
 Use 'autok3s kubectl config use-context %s'
 Use 'autok3s kubectl get pods -A' get POD status`
@@ -352,7 +353,7 @@ func (p *Alibaba) Rollback() error {
 	p.logger.Debugf("[%s] executing rollback logic: instances %s will be rollback\n", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
-		p.releaseEipAddresses()
+		p.releaseEipAddresses(true)
 
 		request := ecs.CreateDeleteInstancesRequest()
 		request.Scheme = "https"
@@ -478,15 +479,16 @@ func (p *Alibaba) deleteCluster(f bool) error {
 	}
 
 	if err == nil && len(ids) > 0 {
+		p.releaseEipAddresses(false)
+
 		request := ecs.CreateDeleteInstancesRequest()
 		request.Scheme = "https"
 		request.RegionId = p.Region
 		request.InstanceId = &ids
-		request.Force = "true"
-		request.TerminateSubscription = "true"
+		request.Force = requests.NewBoolean(true)
+		request.TerminateSubscription = requests.NewBoolean(true)
 
 		_, err := p.c.DeleteInstances(request)
-		p.releaseEipAddresses()
 
 		if err != nil {
 			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]",
@@ -816,6 +818,9 @@ func (p *Alibaba) joinCheck() error {
 }
 
 func (p *Alibaba) describeEipAddresses(allocationID string) (vpc.EipAddress, error) {
+	if allocationID == "" {
+		return vpc.EipAddress{}, fmt.Errorf("[%s] allocationID can not be empty", p.GetProviderName())
+	}
 	request := vpc.CreateDescribeEipAddressesRequest()
 	request.Scheme = "https"
 
@@ -834,10 +839,7 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 	for i := 0; i < num; i++ {
 		eip, err := p.allocateEipAddress()
 		if err != nil {
-			for _, eip := range eips {
-				_ = p.releaseEipAddress(eip.AllocationId)
-			}
-			return nil, fmt.Errorf("error when allocate eip addresses")
+			return nil, fmt.Errorf("error when allocate eip addresses %v", err)
 		}
 		eips = append(eips, vpc.EipAddress{
 			IpAddress:    eip.EipAddress,
@@ -868,10 +870,23 @@ func (p *Alibaba) associateEipAddress(instanceID, allocationID string) error {
 	if _, err := p.v.AssociateEipAddress(request); err != nil {
 		return err
 	}
+	// the binding is successful only when the status is `InUse`
+	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
+		response, err := p.describeEipAddresses(allocationID)
+		if err != nil || response.Status != eipStatusInUse {
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		return fmt.Errorf("[%s] error when associate eip address %s: %v", p.GetProviderName(), allocationID, err)
+	}
 	return nil
 }
 
 func (p *Alibaba) unassociateEipAddress(allocationID string) error {
+	if allocationID == "" {
+		return fmt.Errorf("[%s] allocationID can not be empty", p.GetProviderName())
+	}
 	request := vpc.CreateUnassociateEipAddressRequest()
 	request.Scheme = "https"
 
@@ -895,6 +910,9 @@ func (p *Alibaba) allocateEipAddress() (*vpc.AllocateEipAddressResponse, error) 
 }
 
 func (p *Alibaba) releaseEipAddress(allocationID string) error {
+	if allocationID == "" {
+		return fmt.Errorf("[%s] allocationID can not be empty", p.GetProviderName())
+	}
 	request := vpc.CreateReleaseEipAddressRequest()
 	request.Scheme = "https"
 
@@ -906,50 +924,51 @@ func (p *Alibaba) releaseEipAddress(allocationID string) error {
 	return nil
 }
 
-func (p *Alibaba) releaseEipAddresses() {
+func (p *Alibaba) releaseEipAddresses(rollBack bool) {
+	var releaseEipIds []string
 	// unassociate master eip address
 	for _, master := range p.MasterNodes {
-		for _, allocationID := range master.EipAllocationIds {
-			if err := p.unassociateEipAddress(allocationID); err != nil {
-				p.logger.Errorf("[%s] error when unassociate eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+		if master.RollBack == rollBack {
+			for _, allocationID := range master.EipAllocationIds {
+				if err := p.unassociateEipAddress(allocationID); err != nil {
+					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+				}
+				releaseEipIds = append(releaseEipIds, allocationID)
 			}
 		}
 	}
 	// unassociate worker eip address
 	for _, worker := range p.WorkerNodes {
-		for _, allocationID := range worker.EipAllocationIds {
-			if err := p.unassociateEipAddress(allocationID); err != nil {
-				p.logger.Errorf("[%s] error when unassociate eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+		if worker.RollBack == rollBack {
+			for _, allocationID := range worker.EipAllocationIds {
+				if err := p.unassociateEipAddress(allocationID); err != nil {
+					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+				}
+				releaseEipIds = append(releaseEipIds, allocationID)
 			}
 		}
 	}
 
 	// release eips with tags
 	tags := []vpc.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
-	allocationIds, err := p.listVpcTagResources(resourceTypeEip, nil, tags)
+	allocationIds, err := p.listVpcTagResources(resourceTypeEip, releaseEipIds, tags)
 	if err != nil {
 		p.logger.Errorf("[%s] error when query eip address: %s\n", p.GetProviderName(), err)
 	}
-	// retry 5 times, total 120 seconds.
-	backoff := wait.Backoff{
-		Duration: 30 * time.Second,
-		Factor:   1,
-		Steps:    5,
-	}
 	for _, allocationID := range allocationIds {
 		// eip can be released only when status is `Available`
-		if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 			response, err := p.describeEipAddresses(allocationID)
 			if err != nil || response.Status != eipStatusAvailable {
 				return false, nil
 			}
 			return true, nil
 		}); err != nil {
-			p.logger.Errorf("[%s] error when release eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 			continue
 		}
 		if err := p.releaseEipAddress(allocationID); err != nil {
-			p.logger.Errorf("[%s] error when release eip address %s: %s\n", p.GetProviderName(), allocationID, err)
+			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 		}
 	}
 }
