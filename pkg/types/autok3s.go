@@ -25,6 +25,7 @@ type Metadata struct {
 	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
 	Registries             string `json:"registries,omitempty" yaml:"registries,omitempty"`
+	DataStore              string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
 }
 
 type Status struct {
@@ -42,6 +43,7 @@ type Node struct {
 	InternalIPAddress []string `json:"internal-ip-address,omitempty" yaml:"internal-ip-address,omitempty"`
 	EipAllocationIds  []string `json:"eip-allocation-ids,omitempty" yaml:"eip-allocation-ids,omitempty"`
 	RollBack          bool     `json:"-" yaml:"-"`
+	Current           bool     `json:"-" yaml:"-"`
 }
 
 type SSH struct {
