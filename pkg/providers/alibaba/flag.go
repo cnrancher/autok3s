@@ -377,6 +377,12 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Usage: "K3s registries, use commas to separate multiple entries",
 		},
 		{
+			Name:  "datastore",
+			P:     &p.DataStore,
+			V:     p.DataStore,
+			Usage: "K3s datastore, HA mode `create/join` master node needed this flag",
+		},
+		{
 			Name:  "token",
 			P:     &p.Token,
 			V:     p.Token,

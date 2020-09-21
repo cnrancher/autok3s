@@ -31,32 +31,38 @@ The user can get the commands available for different providers according to the
 ### Setup K3s Cluster
 If already have access information in `/var/lib/rancher/autok3s/config.yaml` you can use the simplified command.
 ```
-sudo autok3s create --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path>
+sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path>
 ```
 
 Generic commands can be used anywhere.
 ```
-sudo autok3s create --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --access-key <access-key> --access-secret <access-secret>
+sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --access-key <access-key> --access-secret <access-secret>
 ```
 
-By default, one master and one worker will be created, and the number can be changed by `--worker`.
+HA mode need `--master` greater than 1, also need to specify `--datastore` e.g.
+```
+--master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+```
 
 ### Join K3s Nodes
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```
-sudo autok3s join --provider alibaba --region cn-hangzhou --name <cluster name>
+sudo autok3s join --provider alibaba --region <region> --name <cluster name> --ssh-key-path <ssh-key-path> 
 ```
 
 Generic commands can be used anywhere.
 ```
-sudo autok3s join --provider alibaba --region cn-hangzhou --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --token <k3s token> --url <k3s master ip>
+sudo autok3s join --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --token <k3s token> --url <k3s master ip>
 ```
 
-By default, one worker will be created, and the number can be changed by `--worker`.
+HA mode need `--master` greater than 0, also need to specify `--datastore` e.g.
+```
+--master 1 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+```
 
 ### Delete K3s Cluster
 ```
-sudo autok3s delete --provider alibaba --region cn-hangzhou --name <cluster name>
+sudo autok3s delete --provider alibaba --region <region> --name <cluster name>
 ```
 
 ### List K3s Clusters
