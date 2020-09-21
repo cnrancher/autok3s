@@ -34,6 +34,7 @@ var (
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
+	logrus.Infof("[%s] executing init k3s cluster logic...\n", cluster.Provider)
 	var (
 		k3sScript    string
 		k3sMirror    string
@@ -96,6 +97,10 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	masterExtraArgs := cluster.MasterExtraArgs
 	workerExtraArgs := cluster.WorkerExtraArgs
 
+	if len(cluster.MasterNodes) > 1 {
+		masterExtraArgs += "--datastore-endpoint " + cluster.DataStore
+	}
+
 	if noFlannel {
 		masterExtraArgs += " --flannel-backend=none"
 	}
@@ -108,7 +113,8 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		masterExtraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
 	}
 
-	for _, master := range cluster.MasterNodes {
+	for i, master := range cluster.MasterNodes {
+		logrus.Infof("[%s] creating k3s %dth master...\n", cluster.Provider, i+1)
 		extraArgs := masterExtraArgs
 		if strings.Contains(extraArgs, "--docker") {
 			if _, err := execute(&hosts.Host{Node: master},
@@ -123,12 +129,14 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		}
 
 		if _, err := execute(&hosts.Host{Node: master},
-			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, publicIP, extraArgs), true); err != nil {
+			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, publicIP, strings.TrimSpace(extraArgs)), false); err != nil {
 			return err
 		}
+		logrus.Infof("[%s] successfully created k3s %dth master\n", cluster.Provider, i+1)
 	}
 
-	for _, worker := range cluster.WorkerNodes {
+	for i, worker := range cluster.WorkerNodes {
+		logrus.Infof("[%s] creating k3s %dth worker...\n", cluster.Provider, i+1)
 		extraArgs := workerExtraArgs
 		if strings.Contains(extraArgs, "--docker") {
 			if _, err := execute(&hosts.Host{Node: worker},
@@ -143,9 +151,10 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		}
 
 		if _, err := execute(&hosts.Host{Node: worker},
-			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, cluster.Registries, cluster.URL, cluster.Token, extraArgs), true); err != nil {
+			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, cluster.Registries, cluster.URL, cluster.Token, strings.TrimSpace(extraArgs)), false); err != nil {
 			return err
 		}
+		logrus.Infof("[%s] successfully created k3s %dth worker\n", cluster.Provider, i+1)
 	}
 
 	// get k3s cluster config.
@@ -202,14 +211,17 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
+	logrus.Infof("[%s] successfully init k3s cluster logic\n", cluster.Provider)
 	return nil
 }
 
 func JoinK3sNode(merged, added *types.Cluster) error {
+	logrus.Infof("[%s] executing join k3s node logic\n", merged.Provider)
 	var (
 		k3sScript    string
 		k3sMirror    string
 		dockerMirror string
+		noFlannel    bool
 		aliCCM       *alibaba.CloudControllerManager
 	)
 
@@ -225,6 +237,9 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 					AccessKey:    option.AccessKey,
 					AccessSecret: option.AccessSecret,
 				}
+			}
+			if strings.EqualFold(option.Terway.Mode, "eni") {
+				noFlannel = true
 			}
 		}
 	default:
@@ -248,11 +263,57 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		merged.URL = merged.MasterNodes[0].InternalIPAddress[0]
 	}
 
-	// TODO: join master node will be added soon.
-	for i := 0; i < len(added.WorkerNodes); i++ {
+	for i := 0; i < len(added.Status.MasterNodes); i++ {
+		for _, full := range merged.MasterNodes {
+			extraArgs := merged.MasterExtraArgs
+			if added.Status.MasterNodes[i].InstanceID == full.InstanceID {
+				logrus.Infof("[%s] joining k3s %dth master...\n", merged.Provider, i+1)
+
+				if len(added.MasterNodes) >= 1 {
+					extraArgs += "server --datastore-endpoint " + merged.DataStore
+				}
+
+				if noFlannel {
+					extraArgs += " --flannel-backend=none"
+				}
+
+				if merged.ClusterCIDR != "" {
+					extraArgs += " --cluster-cidr " + merged.ClusterCIDR
+				}
+
+				if aliCCM != nil {
+					extraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
+				}
+
+				if strings.Contains(extraArgs, "--docker") {
+					if _, err := execute(&hosts.Host{Node: full},
+						fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+						return err
+					}
+				}
+
+				if aliCCM != nil && !strings.Contains(extraArgs, "provider-id=alicloud://") {
+					extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+						aliCCM.Region, full.InstanceID, aliCCM.Region, full.InstanceID)
+				}
+
+				// for now, use the workerCommand to join the additional master server node.
+				if _, err := execute(&hosts.Host{Node: full},
+					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, strings.TrimSpace(extraArgs)), false); err != nil {
+					return err
+				}
+				logrus.Infof("[%s] successfully joined k3s %dth master\n", merged.Provider, i+1)
+
+				break
+			}
+		}
+	}
+
+	for i := 0; i < len(added.Status.WorkerNodes); i++ {
 		for _, full := range merged.WorkerNodes {
 			extraArgs := merged.WorkerExtraArgs
-			if added.WorkerNodes[i].InstanceID == full.InstanceID {
+			if added.Status.WorkerNodes[i].InstanceID == full.InstanceID {
+				logrus.Infof("[%s] joining k3s %dth worker...\n", merged.Provider, i+1)
 				if strings.Contains(extraArgs, "--docker") {
 					if _, err := execute(&hosts.Host{Node: full},
 						fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
@@ -266,19 +327,27 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 				}
 
 				if _, err := execute(&hosts.Host{Node: full},
-					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, extraArgs), true); err != nil {
+					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, strings.TrimSpace(extraArgs)), false); err != nil {
 					return err
 				}
+				logrus.Infof("[%s] successfully joined k3s %dth worker\n", merged.Provider, i+1)
 
 				break
 			}
 		}
 	}
 
+	// sync master & worker numbers.
+	merged.Master = strconv.Itoa(len(merged.MasterNodes))
 	merged.Worker = strconv.Itoa(len(merged.WorkerNodes))
 
 	// write current cluster to state file.
-	return SaveState(merged)
+	if err := SaveState(merged); err != nil {
+		return nil
+	}
+
+	logrus.Infof("[%s] successfully join k3s node logic\n", merged.Provider)
+	return nil
 }
 
 func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
