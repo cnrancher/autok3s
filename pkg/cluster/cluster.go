@@ -97,7 +97,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	masterExtraArgs := cluster.MasterExtraArgs
 	workerExtraArgs := cluster.WorkerExtraArgs
 
-	if len(cluster.MasterNodes) > 1 {
+	if len(cluster.MasterNodes) > 1 || cluster.DataStore != "" {
 		masterExtraArgs += "--datastore-endpoint " + cluster.DataStore
 	}
 
@@ -269,7 +269,7 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 			if added.Status.MasterNodes[i].InstanceID == full.InstanceID {
 				logrus.Infof("[%s] joining k3s %dth master...\n", merged.Provider, i+1)
 
-				if len(added.MasterNodes) >= 1 {
+				if len(added.MasterNodes) >= 1 || merged.DataStore != "" {
 					extraArgs += "server --datastore-endpoint " + merged.DataStore
 				}
 
