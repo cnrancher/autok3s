@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/hosts"
@@ -113,48 +114,58 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		masterExtraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
 	}
 
+	logrus.Infof("[%s] creating k3s master-%d ...\n", cluster.Provider, 1)
+	if err := initMaster0(k3sScript, k3sMirror, dockerMirror, publicIP, masterExtraArgs, cluster, cluster.MasterNodes[0], aliCCM); err != nil {
+		return err
+	}
+	logrus.Infof("[%s] successfully created k3s master-%d\n", cluster.Provider, 1)
+
+	masterErrChan := make(chan error)
+	masterWaitGroup := &sync.WaitGroup{}
+	masterWaitGroup.Add(len(cluster.MasterNodes) - 1)
+	defer close(masterErrChan)
+
 	for i, master := range cluster.MasterNodes {
-		logrus.Infof("[%s] creating k3s %dth master...\n", cluster.Provider, i+1)
-		extraArgs := masterExtraArgs
-		if strings.Contains(extraArgs, "--docker") {
-			if _, err := execute(&hosts.Host{Node: master},
-				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
-				return err
-			}
+		// skip first master nodes
+		if i == 0 {
+			continue
 		}
-
-		if aliCCM != nil {
-			extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
-				aliCCM.Region, master.InstanceID, aliCCM.Region, master.InstanceID)
-		}
-
-		if _, err := execute(&hosts.Host{Node: master},
-			fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, publicIP, strings.TrimSpace(extraArgs)), false); err != nil {
-			return err
-		}
-		logrus.Infof("[%s] successfully created k3s %dth master\n", cluster.Provider, i+1)
+		logrus.Infof("[%s] creating k3s master-%d...\n", cluster.Provider, i+1)
+		initMaster(masterWaitGroup, masterErrChan, k3sScript, k3sMirror, dockerMirror, publicIP, masterExtraArgs, cluster, master, aliCCM)
+		logrus.Infof("[%s] successfully created k3s master-%d\n", cluster.Provider, i+1)
 	}
 
-	for i, worker := range cluster.WorkerNodes {
-		logrus.Infof("[%s] creating k3s %dth worker...\n", cluster.Provider, i+1)
-		extraArgs := workerExtraArgs
-		if strings.Contains(extraArgs, "--docker") {
-			if _, err := execute(&hosts.Host{Node: worker},
-				fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
-				return err
-			}
-		}
+	masterWaitGroup.Wait()
 
-		if aliCCM != nil {
-			extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
-				aliCCM.Region, worker.InstanceID, aliCCM.Region, worker.InstanceID)
-		}
-
-		if _, err := execute(&hosts.Host{Node: worker},
-			fmt.Sprintf(workerCommand, k3sScript, k3sMirror, cluster.Registries, cluster.URL, cluster.Token, strings.TrimSpace(extraArgs)), false); err != nil {
+	select {
+	case err, ok := <-masterErrChan:
+		if ok {
 			return err
 		}
-		logrus.Infof("[%s] successfully created k3s %dth worker\n", cluster.Provider, i+1)
+	default:
+	}
+
+	workerErrChan := make(chan error)
+	workerWaitGroup := &sync.WaitGroup{}
+	workerWaitGroup.Add(len(cluster.WorkerNodes))
+	defer close(workerErrChan)
+
+	for i, worker := range cluster.WorkerNodes {
+		go func(i int, worker types.Node) {
+			logrus.Infof("[%s] creating k3s worker-%d...\n", cluster.Provider, i+1)
+			initWorker(workerWaitGroup, workerErrChan, k3sScript, k3sMirror, dockerMirror, workerExtraArgs, cluster, worker, aliCCM)
+			logrus.Infof("[%s] successfully created k3s worker-%d\n", cluster.Provider, i+1)
+		}(i, worker)
+	}
+
+	workerWaitGroup.Wait()
+
+	select {
+	case err, ok := <-workerErrChan:
+		if ok {
+			return err
+		}
+	default:
 	}
 
 	// get k3s cluster config.
@@ -267,47 +278,20 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		merged.URL = merged.MasterNodes[0].InternalIPAddress[0]
 	}
 
+	errChan := make(chan error)
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(len(added.MasterNodes) + len(added.WorkerNodes))
+	defer close(errChan)
+
 	for i := 0; i < len(added.Status.MasterNodes); i++ {
 		for _, full := range merged.MasterNodes {
 			extraArgs := merged.MasterExtraArgs
 			if added.Status.MasterNodes[i].InstanceID == full.InstanceID {
-				logrus.Infof("[%s] joining k3s %dth master...\n", merged.Provider, i+1)
-
-				if len(added.MasterNodes) >= 1 || merged.DataStore != "" {
-					extraArgs += "server --datastore-endpoint " + merged.DataStore
-				}
-
-				if noFlannel {
-					extraArgs += " --flannel-backend=none"
-				}
-
-				if merged.ClusterCIDR != "" {
-					extraArgs += " --cluster-cidr " + merged.ClusterCIDR
-				}
-
-				if aliCCM != nil {
-					extraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
-				}
-
-				if strings.Contains(extraArgs, "--docker") {
-					if _, err := execute(&hosts.Host{Node: full},
-						fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
-						return err
-					}
-				}
-
-				if aliCCM != nil && !strings.Contains(extraArgs, "provider-id=alicloud://") {
-					extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
-						aliCCM.Region, full.InstanceID, aliCCM.Region, full.InstanceID)
-				}
-
-				// for now, use the workerCommand to join the additional master server node.
-				if _, err := execute(&hosts.Host{Node: full},
-					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, strings.TrimSpace(extraArgs)), false); err != nil {
-					return err
-				}
-				logrus.Infof("[%s] successfully joined k3s %dth master\n", merged.Provider, i+1)
-
+				go func(i int, full types.Node) {
+					logrus.Infof("[%s] joining k3s master-%d...\n", merged.Provider, i+1)
+					joinMaster(waitGroup, errChan, noFlannel, k3sScript, k3sMirror, dockerMirror, extraArgs, merged, added, full, aliCCM)
+					logrus.Infof("[%s] successfully joined k3s master-%d\n", merged.Provider, i+1)
+				}(i, full)
 				break
 			}
 		}
@@ -317,28 +301,24 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		for _, full := range merged.WorkerNodes {
 			extraArgs := merged.WorkerExtraArgs
 			if added.Status.WorkerNodes[i].InstanceID == full.InstanceID {
-				logrus.Infof("[%s] joining k3s %dth worker...\n", merged.Provider, i+1)
-				if strings.Contains(extraArgs, "--docker") {
-					if _, err := execute(&hosts.Host{Node: full},
-						fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
-						return err
-					}
-				}
-
-				if aliCCM != nil && !strings.Contains(extraArgs, "provider-id=alicloud://") {
-					extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
-						aliCCM.Region, full.InstanceID, aliCCM.Region, full.InstanceID)
-				}
-
-				if _, err := execute(&hosts.Host{Node: full},
-					fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, strings.TrimSpace(extraArgs)), false); err != nil {
-					return err
-				}
-				logrus.Infof("[%s] successfully joined k3s %dth worker\n", merged.Provider, i+1)
-
+				go func(i int, full types.Node) {
+					logrus.Infof("[%s] joining k3s worker-%d...\n", merged.Provider, i+1)
+					joinWorker(waitGroup, errChan, k3sScript, k3sMirror, dockerMirror, extraArgs, merged, full, aliCCM)
+					logrus.Infof("[%s] successfully joined k3s worker-%d\n", merged.Provider, i+1)
+				}(i, full)
 				break
 			}
 		}
+	}
+
+	waitGroup.Wait()
+
+	select {
+	case err, ok := <-errChan:
+		if ok {
+			return err
+		}
+	default:
 	}
 
 	// sync master & worker numbers.
@@ -516,6 +496,130 @@ func OverwriteCfg(context string) error {
 	delete(c.AuthInfos, context)
 
 	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+}
+
+func initMaster0(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluster *types.Cluster, master types.Node,
+	aliCCM *alibaba.CloudControllerManager) error {
+	if strings.Contains(extraArgs, "--docker") {
+		if _, err := execute(&hosts.Host{Node: master},
+			fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+			return err
+		}
+	}
+
+	if aliCCM != nil {
+		extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+			aliCCM.Region, master.InstanceID, aliCCM.Region, master.InstanceID)
+	}
+
+	if _, err := execute(&hosts.Host{Node: master},
+		fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, ip, strings.TrimSpace(extraArgs)), false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func initMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, ip, extraArgs string,
+	cluster *types.Cluster, master types.Node, aliCCM *alibaba.CloudControllerManager) {
+	defer wg.Done()
+	if strings.Contains(extraArgs, "--docker") {
+		if _, err := execute(&hosts.Host{Node: master},
+			fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+			errChan <- err
+		}
+	}
+
+	if aliCCM != nil {
+		extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+			aliCCM.Region, master.InstanceID, aliCCM.Region, master.InstanceID)
+	}
+
+	if _, err := execute(&hosts.Host{Node: master},
+		fmt.Sprintf(masterCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, ip, strings.TrimSpace(extraArgs)), false); err != nil {
+		errChan <- err
+	}
+}
+
+func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, extraArgs string,
+	cluster *types.Cluster, worker types.Node, aliCCM *alibaba.CloudControllerManager) {
+	defer wg.Done()
+	if strings.Contains(extraArgs, "--docker") {
+		if _, err := execute(&hosts.Host{Node: worker},
+			fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+			errChan <- err
+		}
+	}
+
+	if aliCCM != nil {
+		extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+			aliCCM.Region, worker.InstanceID, aliCCM.Region, worker.InstanceID)
+	}
+
+	if _, err := execute(&hosts.Host{Node: worker},
+		fmt.Sprintf(workerCommand, k3sScript, k3sMirror, cluster.Registries, cluster.URL, cluster.Token, strings.TrimSpace(extraArgs)), false); err != nil {
+		errChan <- err
+	}
+}
+
+func joinMaster(wg *sync.WaitGroup, errChan chan error, noFlannel bool, k3sScript, k3sMirror, dockerMirror,
+	extraArgs string, merged, added *types.Cluster, full types.Node, aliCCM *alibaba.CloudControllerManager) {
+	defer wg.Done()
+	if len(added.MasterNodes) >= 1 || merged.DataStore != "" {
+		extraArgs += "server --datastore-endpoint " + merged.DataStore
+	}
+
+	if noFlannel {
+		extraArgs += " --flannel-backend=none"
+	}
+
+	if merged.ClusterCIDR != "" {
+		extraArgs += " --cluster-cidr " + merged.ClusterCIDR
+	}
+
+	if aliCCM != nil {
+		extraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
+	}
+
+	if strings.Contains(extraArgs, "--docker") {
+		if _, err := execute(&hosts.Host{Node: full},
+			fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+			errChan <- err
+		}
+	}
+
+	if aliCCM != nil && !strings.Contains(extraArgs, "provider-id=alicloud://") {
+		extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+			aliCCM.Region, full.InstanceID, aliCCM.Region, full.InstanceID)
+	}
+
+	// for now, use the workerCommand to join the additional master server node.
+	if _, err := execute(&hosts.Host{Node: full},
+		fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token,
+			strings.TrimSpace(extraArgs)), false); err != nil {
+		errChan <- err
+	}
+}
+
+func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, extraArgs string,
+	merged *types.Cluster, full types.Node, aliCCM *alibaba.CloudControllerManager) {
+	defer wg.Done()
+	if strings.Contains(extraArgs, "--docker") {
+		if _, err := execute(&hosts.Host{Node: full},
+			fmt.Sprintf(dockerCommand, dockerMirror), false); err != nil {
+			errChan <- err
+		}
+	}
+
+	if aliCCM != nil && !strings.Contains(extraArgs, "provider-id=alicloud://") {
+		extraArgs += fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+			aliCCM.Region, full.InstanceID, aliCCM.Region, full.InstanceID)
+	}
+
+	if _, err := execute(&hosts.Host{Node: full},
+		fmt.Sprintf(workerCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, strings.TrimSpace(extraArgs)), false); err != nil {
+		errChan <- err
+	}
 }
 
 func execute(host *hosts.Host, cmd string, print bool) (string, error) {

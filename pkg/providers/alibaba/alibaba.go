@@ -448,9 +448,9 @@ func (p *Alibaba) generateClientSDK() error {
 
 func (p *Alibaba) runInstances(num int, master bool) error {
 	if master {
-		p.logger.Debugf("[%s] %d number of master instances will be creating...\n", p.GetProviderName(), num)
+		p.logger.Debugf("[%s] %d number of master instances will be created\n", p.GetProviderName(), num)
 	} else {
-		p.logger.Debugf("[%s] %d number of worker instances will be creating...\n", p.GetProviderName(), num)
+		p.logger.Debugf("[%s] %d number of worker instances will be created\n", p.GetProviderName(), num)
 	}
 
 	request := ecs.CreateRunInstancesRequest()
@@ -508,6 +508,7 @@ func (p *Alibaba) deleteCluster(f bool) error {
 	}
 
 	if err == nil && len(ids) > 0 {
+		p.logger.Debugf("[%s] cluster %s will be deleted\n", p.GetProviderName(), p.Name)
 		p.releaseEipAddresses(false)
 
 		request := ecs.CreateDeleteInstancesRequest()
@@ -539,6 +540,8 @@ func (p *Alibaba) deleteCluster(f bool) error {
 	if err != nil && !f {
 		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
 	}
+
+	p.logger.Debugf("[%s] successfully deleted cluster %s\n", p.GetProviderName(), p.Name)
 
 	return nil
 }
