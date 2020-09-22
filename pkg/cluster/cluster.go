@@ -163,6 +163,8 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
+	logrus.Infof("[%s] deploying additional manifests\n", cluster.Provider)
+
 	// deploy additional Alibaba cloud-controller-manager manifests.
 	if aliCCM != nil {
 		var tmpl string
@@ -201,6 +203,8 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		}
 	}
 
+	logrus.Infof("[%s] successfully deployed additional manifests\n", cluster.Provider)
+
 	// merge current cluster to kube config.
 	if err := SaveCfg(cfg, publicIP, cluster.Name); err != nil {
 		return err
@@ -211,7 +215,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
-	logrus.Infof("[%s] successfully init k3s cluster logic\n", cluster.Provider)
+	logrus.Infof("[%s] successfully executed init k3s cluster logic\n", cluster.Provider)
 	return nil
 }
 
@@ -346,7 +350,7 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		return nil
 	}
 
-	logrus.Infof("[%s] successfully join k3s node logic\n", merged.Provider)
+	logrus.Infof("[%s] successfully executed join k3s node logic\n", merged.Provider)
 	return nil
 }
 
