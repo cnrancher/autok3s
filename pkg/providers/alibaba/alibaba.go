@@ -118,7 +118,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 
-	p.logger.Debugf("[%s] executing create logic: %d master and %d workers will be created\n", p.GetProviderName(), masterNum, workerNum)
+	p.logger.Debugf("[%s] %d masters and %d workers will be created\n", p.GetProviderName(), masterNum, workerNum)
 
 	var (
 		masterEips []vpc.EipAddress
@@ -187,7 +187,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 		return
 	}
 
-	p.logger.Infof("[%s] successfully executing create logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed create logic\n", p.GetProviderName())
 
 	return
 }
@@ -207,7 +207,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 
-	p.logger.Debugf("[%s] executing join logic: %d masters and %d workers will be joined\n", p.GetProviderName(), masterNum, workerNum)
+	p.logger.Debugf("[%s] %d masters and %d workers will be joined\n", p.GetProviderName(), masterNum, workerNum)
 
 	var (
 		masterEips []vpc.EipAddress
@@ -308,7 +308,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executing join logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
 
 	return nil
 }
@@ -350,7 +350,7 @@ func (p *Alibaba) Rollback() error {
 		return true
 	})
 
-	p.logger.Debugf("[%s] executing rollback logic: instances %s will be rollback\n", p.GetProviderName(), ids)
+	p.logger.Debugf("[%s] instances %s will be rollback\n", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
 		p.releaseEipAddresses(true)
@@ -381,7 +381,7 @@ func (p *Alibaba) Rollback() error {
 		}
 	}
 
-	p.logger.Infof("[%s] successfully executing rollback logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed rollback logic\n", p.GetProviderName())
 
 	return nil
 }
@@ -398,7 +398,7 @@ func (p *Alibaba) DeleteK3sNode(f bool) error {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executing delete logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed delete logic\n", p.GetProviderName())
 
 	return nil
 }
@@ -429,6 +429,12 @@ func (p *Alibaba) generateClientSDK() error {
 }
 
 func (p *Alibaba) runInstances(num int, master bool) error {
+	if master {
+		p.logger.Debugf("[%s] %d number of master instances will be creating...\n", p.GetProviderName(), num)
+	} else {
+		p.logger.Debugf("[%s] %d number of worker instances will be creating...\n", p.GetProviderName(), num)
+	}
+
 	request := ecs.CreateRunInstancesRequest()
 	request.Scheme = "https"
 	request.InstanceType = p.Type
@@ -467,6 +473,12 @@ func (p *Alibaba) runInstances(num int, master bool) error {
 		}
 	}
 
+	if master {
+		p.logger.Debugf("[%s] %d number of master instances successfully created\n", p.GetProviderName(), num)
+	} else {
+		p.logger.Debugf("[%s] %d number of worker instances successfully created\n", p.GetProviderName(), num)
+	}
+
 	return nil
 }
 
@@ -474,8 +486,7 @@ func (p *Alibaba) deleteCluster(f bool) error {
 	exist, ids, err := p.IsClusterExist()
 
 	if !exist && !f {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
 	}
 
 	if err == nil && len(ids) > 0 {
@@ -491,28 +502,24 @@ func (p *Alibaba) deleteCluster(f bool) error {
 		_, err := p.c.DeleteInstances(request)
 
 		if err != nil {
-			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]",
-				p.GetProviderName(), err)
+			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]", p.GetProviderName(), err)
 		}
 	}
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]",
-			p.GetProviderName(), err)
+		return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]", p.GetProviderName(), err)
 	}
 
 	err = cluster.OverwriteCfg(p.Name)
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: [%v]",
-			p.GetProviderName(), err)
+		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: [%v]", p.GetProviderName(), err)
 	}
 
 	err = cluster.DeleteState(p.Name, p.Provider)
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]",
-			p.GetProviderName(), err)
+		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
 	}
 
 	return nil
@@ -526,6 +533,7 @@ func (p *Alibaba) getInstanceStatus() error {
 	})
 
 	if len(ids) > 0 {
+		p.logger.Debugf("[%s] waiting for the instances %s to be in `Running` status...\n", p.GetProviderName(), ids)
 		request := ecs.CreateDescribeInstanceStatusRequest()
 		request.Scheme = "https"
 		request.InstanceId = &ids
@@ -533,7 +541,7 @@ func (p *Alibaba) getInstanceStatus() error {
 			request.ZoneId = p.Zone
 		}
 
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not running status",
+		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not `Running` status",
 			p.GetProviderName(), p.Region, p.Zone, ids)
 
 		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
@@ -591,6 +599,8 @@ func (p *Alibaba) getInstanceStatus() error {
 		}
 		return true
 	})
+
+	p.logger.Debugf("[%s] instances %s are in `Running` status\n", p.GetProviderName(), ids)
 
 	return nil
 }
