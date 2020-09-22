@@ -152,6 +152,8 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 		return
 	}
 
+	var associatedEipIds []string
+
 	// associate master eip
 	if masterEips != nil {
 		for i, master := range p.Status.MasterNodes {
@@ -161,6 +163,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			}
 			p.Status.MasterNodes[i].EipAllocationIds = append(p.Status.MasterNodes[i].EipAllocationIds, masterEips[i].AllocationId)
 			p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[i].IpAddress)
+			associatedEipIds = append(associatedEipIds, masterEips[i].AllocationId)
 		}
 	}
 
@@ -173,7 +176,13 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			}
 			p.Status.WorkerNodes[i].EipAllocationIds = append(p.Status.WorkerNodes[i].EipAllocationIds, workerEips[i].AllocationId)
 			p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[i].IpAddress)
+			associatedEipIds = append(associatedEipIds, workerEips[i].AllocationId)
 		}
+	}
+
+	// wait eip to be InUse status.
+	if err = p.getEipStatus(associatedEipIds, eipStatusInUse); err != nil {
+		return err
 	}
 
 	// assemble instance status.
@@ -246,6 +255,8 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 		return err
 	}
 
+	var associatedEipIds []string
+
 	// associate master eip
 	if masterEips != nil {
 		j := 0
@@ -257,6 +268,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 				}
 				p.Status.MasterNodes[i].EipAllocationIds = append(p.Status.MasterNodes[i].EipAllocationIds, masterEips[j].AllocationId)
 				p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[j].IpAddress)
+				associatedEipIds = append(associatedEipIds, masterEips[j].AllocationId)
 				j++
 			}
 		}
@@ -273,9 +285,15 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 				}
 				p.Status.WorkerNodes[i].EipAllocationIds = append(p.Status.WorkerNodes[i].EipAllocationIds, workerEips[j].AllocationId)
 				p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[j].IpAddress)
+				associatedEipIds = append(associatedEipIds, workerEips[j].AllocationId)
 				j++
 			}
 		}
+	}
+
+	// wait eip to be InUse status.
+	if err = p.getEipStatus(associatedEipIds, eipStatusInUse); err != nil {
+		return err
 	}
 
 	// assemble instance status.
@@ -827,21 +845,21 @@ func (p *Alibaba) joinCheck() error {
 	return nil
 }
 
-func (p *Alibaba) describeEipAddresses(allocationID string) (vpc.EipAddress, error) {
-	if allocationID == "" {
-		return vpc.EipAddress{}, fmt.Errorf("[%s] allocationID can not be empty", p.GetProviderName())
+func (p *Alibaba) describeEipAddresses(allocationIds []string) (*vpc.DescribeEipAddressesResponse, error) {
+	if allocationIds == nil {
+		return nil, fmt.Errorf("[%s] allocationID can not be empty", p.GetProviderName())
 	}
 	request := vpc.CreateDescribeEipAddressesRequest()
 	request.Scheme = "https"
 
 	request.PageSize = requests.NewInteger(50)
-	request.AllocationId = allocationID
+	request.AllocationId = strings.Join(allocationIds, ",")
 
 	response, err := p.v.DescribeEipAddresses(request)
 	if err != nil {
-		return vpc.EipAddress{}, err
+		return nil, err
 	}
-	return response.EipAddresses.EipAddress[0], nil
+	return response, nil
 }
 
 func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
@@ -879,16 +897,6 @@ func (p *Alibaba) associateEipAddress(instanceID, allocationID string) error {
 
 	if _, err := p.v.AssociateEipAddress(request); err != nil {
 		return err
-	}
-	// the binding is successful only when the status is `InUse`
-	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
-		response, err := p.describeEipAddresses(allocationID)
-		if err != nil || response.Status != eipStatusInUse {
-			return false, nil
-		}
-		return true, nil
-	}); err != nil {
-		return fmt.Errorf("[%s] error when associate eip address %s: %v", p.GetProviderName(), allocationID, err)
 	}
 	return nil
 }
@@ -963,24 +971,39 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	tags := []vpc.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 	allocationIds, err := p.listVpcTagResources(resourceTypeEip, releaseEipIds, tags)
 	if err != nil {
-		p.logger.Errorf("[%s] error when query eip address: %s\n", p.GetProviderName(), err)
+		p.logger.Errorf("[%s] error when query eip address: %v\n", p.GetProviderName(), err)
+	}
+	// eip can be released only when status is `Available`
+	// wait eip to be `Available` status
+	if err := p.getEipStatus(allocationIds, eipStatusAvailable); err != nil {
+		p.logger.Errorf("[%s] error when query eip status: %v\n", p.GetProviderName(), err)
 	}
 	for _, allocationID := range allocationIds {
-		// eip can be released only when status is `Available`
-		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
-			response, err := p.describeEipAddresses(allocationID)
-			if err != nil || response.Status != eipStatusAvailable {
-				return false, nil
-			}
-			return true, nil
-		}); err != nil {
-			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
-			continue
-		}
 		if err := p.releaseEipAddress(allocationID); err != nil {
 			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 		}
 	}
+}
+
+func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
+	if allocationIds == nil {
+		return fmt.Errorf("[%s] allocationIds can not be empty", p.GetProviderName())
+	}
+	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
+		response, err := p.describeEipAddresses(allocationIds)
+		if err != nil || !response.IsSuccess() || len(response.EipAddresses.EipAddress) <= 0 {
+			return false, nil
+		}
+		for _, eip := range response.EipAddresses.EipAddress {
+			if eip.Status != aimStatus {
+				return false, nil
+			}
+		}
+		return true, nil
+	}); err != nil {
+		return fmt.Errorf("[%s] error in querying eip %s status of [%s]: %v", p.GetProviderName(), aimStatus, strings.Join(allocationIds, ","), err)
+	}
+	return nil
 }
 
 func (p *Alibaba) listVpcTagResources(resourceType string, resourceID []string, tag []vpc.ListTagResourcesTag) ([]string, error) {
