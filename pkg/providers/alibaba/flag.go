@@ -363,10 +363,10 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Required: true,
 		},
 		{
-			Name:     "ip",
-			P:        &p.IP,
-			V:        p.IP,
-			Usage:    "Specify K3s master/lb ip",
+			Name:  "ip",
+			P:     &p.IP,
+			V:     p.IP,
+			Usage: "Specify K3s master/lb ip",
 		},
 		{
 			Name:     "k3s-version",
