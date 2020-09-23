@@ -93,8 +93,12 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return errors.New("[cluster] master node internal ip address can not be empty")
 	}
 
-	cluster.URL = cluster.MasterNodes[0].InternalIPAddress[0]
-	publicIP := cluster.MasterNodes[0].PublicIPAddress[0]
+	publicIP := cluster.IP
+	if cluster.IP == "" {
+		cluster.IP = cluster.MasterNodes[0].InternalIPAddress[0]
+		publicIP = cluster.MasterNodes[0].PublicIPAddress[0]
+	}
+
 	masterExtraArgs := cluster.MasterExtraArgs
 	workerExtraArgs := cluster.WorkerExtraArgs
 
@@ -271,11 +275,11 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		return errors.New("[cluster] k3s token can not be empty")
 	}
 
-	if merged.URL == "" {
+	if merged.IP == "" {
 		if len(merged.MasterNodes) <= 0 || len(merged.MasterNodes[0].InternalIPAddress) <= 0 {
 			return errors.New("[cluster] master node internal ip address can not be empty")
 		}
-		merged.URL = merged.MasterNodes[0].InternalIPAddress[0]
+		merged.IP = merged.MasterNodes[0].InternalIPAddress[0]
 	}
 
 	errChan := make(chan error)
@@ -563,7 +567,7 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 	}
 
 	if _, err := execute(&hosts.Host{Node: worker},
-		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, cluster.URL, cluster.Token,
+		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, cluster.IP, cluster.Token,
 			strings.TrimSpace(extraArgs), cluster.K3sVersion), false); err != nil {
 		errChan <- err
 	}
@@ -574,7 +578,7 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, noFlannel bool, k3sScrip
 	defer wg.Done()
 
 	if !strings.Contains(extraArgs, "server --server") {
-		extraArgs += " server --server " + fmt.Sprintf("https://%s:6443", merged.URL)
+		extraArgs += " server --server " + fmt.Sprintf("https://%s:6443", merged.IP)
 	}
 
 	if merged.DataStore != "" {
@@ -607,7 +611,7 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, noFlannel bool, k3sScrip
 
 	// for now, use the workerCommand to join the additional master server node.
 	if _, err := execute(&hosts.Host{Node: full},
-		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token,
+		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.IP, merged.Token,
 			strings.TrimSpace(extraArgs), merged.K3sVersion), false); err != nil {
 		errChan <- err
 	}
@@ -629,7 +633,7 @@ func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 	}
 
 	if _, err := execute(&hosts.Host{Node: full},
-		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token,
+		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.IP, merged.Token,
 			strings.TrimSpace(extraArgs), merged.K3sVersion), false); err != nil {
 		errChan <- err
 	}
