@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	initCommand         = "curl -sLS %s | %s INSTALL_K3S_CHANNEL=latest INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' sh -\n"
-	joinCommand         = "curl -sLS %s | %s INSTALL_K3S_CHANNEL=latest INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' sh -\n"
+	initCommand         = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' INSTALL_K3S_VERSION='%s' sh -\n"
+	joinCommand         = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' INSTALL_K3S_VERSION='%s' sh -\n"
 	catCfgCommand       = "cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand       = "curl https://get.docker.com | VERSION=19.03 sh -s - %s\n"
 	deployUICommand     = "echo \"%s\" > \"%s/ui.yaml\""
@@ -514,7 +514,7 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 
 	if _, err := execute(&hosts.Host{Node: master},
 		fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, "--cluster-init", ip,
-			strings.TrimSpace(extraArgs)), false); err != nil {
+			strings.TrimSpace(extraArgs), cluster.K3sVersion), false); err != nil {
 		return err
 	}
 
@@ -542,7 +542,7 @@ func initAdditionalMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3s
 
 	if _, err := execute(&hosts.Host{Node: master},
 		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, ip, cluster.Token,
-			strings.TrimSpace(extraArgs)), false); err != nil {
+			strings.TrimSpace(extraArgs), cluster.K3sVersion), false); err != nil {
 		errChan <- err
 	}
 }
@@ -564,7 +564,7 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 
 	if _, err := execute(&hosts.Host{Node: worker},
 		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, cluster.URL, cluster.Token,
-			strings.TrimSpace(extraArgs)), false); err != nil {
+			strings.TrimSpace(extraArgs), cluster.K3sVersion), false); err != nil {
 		errChan <- err
 	}
 }
@@ -608,7 +608,7 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, noFlannel bool, k3sScrip
 	// for now, use the workerCommand to join the additional master server node.
 	if _, err := execute(&hosts.Host{Node: full},
 		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token,
-			strings.TrimSpace(extraArgs)), false); err != nil {
+			strings.TrimSpace(extraArgs), merged.K3sVersion), false); err != nil {
 		errChan <- err
 	}
 }
@@ -629,7 +629,8 @@ func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 	}
 
 	if _, err := execute(&hosts.Host{Node: full},
-		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token, strings.TrimSpace(extraArgs)), false); err != nil {
+		fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.URL, merged.Token,
+			strings.TrimSpace(extraArgs), merged.K3sVersion), false); err != nil {
 		errChan <- err
 	}
 }
