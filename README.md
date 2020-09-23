@@ -23,55 +23,90 @@ The user can get the commands available for different providers according to the
 
 ### Setup K3s Cluster
 If already have access information in `/var/lib/rancher/autok3s/config.yaml` you can use the simplified command.
-```
-sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --master 1
+```bash
+sudo autok3s create \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --key-pair <key-pair id> \
+    --v-switch <v-switch id> \
+    --security-group <security-group id> \
+    --ssh-key-path <ssh-key-path> \
+    --master 1
 ```
 
 Generic commands can be used anywhere.
-```
-sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --access-key <access-key> --access-secret <access-secret> --master 1
+```bash
+sudo autok3s create \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --key-pair <key-pair id> \
+    --v-switch <v-switch id> \
+    --security-group <security-group id> \
+    --ssh-key-path <ssh-key-path> \
+    --access-key <access-key> \
+    --access-secret <access-secret> \
+    --master 1
 ```
 
 HA mode need `--master` greater than 1, also need to specify `--datastore` e.g.
-```
+```bash
 --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
 ### Join K3s Nodes
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
-```
-sudo autok3s join --provider alibaba --region <region> --name <cluster name> --ssh-key-path <ssh-key-path> --worker 1
+```bash
+sudo autok3s join \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --ssh-key-path <ssh-key-path> \
+    --worker 1
 ```
 
 Generic commands can be used anywhere.
-```
-sudo autok3s join --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --token <k3s token> --url <k3s master ip> --worker 1
+```bash
+sudo autok3s join \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --key-pair <key-pair id> \
+    --v-switch <v-switch id> \
+    --security-group <security-group id> \
+    --token <k3s token> \
+    --url <k3s master ip> \
+    --worker 1
 ```
 
 HA mode need `--master` greater than 0, also need to specify `--datastore` e.g.
-```
+```bash
 --master 1 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
 ### Delete K3s Cluster
-```
-sudo autok3s delete --provider alibaba --region <region> --name <cluster name>
+```bash
+sudo autok3s delete \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name>
 ```
 
 ### List K3s Clusters
 This command will list the clusters that you have created on this machine.
-```
+```bash
 sudo autok3s list
 ```
 
 ### Access K3s Cluster
 After cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
-```
+```bash
 sudo autok3s kubectl <sub-commands> <flags>
 ```
 
 In the scenario of multiple clusters, the access to different clusters can be completed by switching context.
-```
+```bash
 sudo autok3s kubectl config get-contexts
 sudo autok3s kubectl config use-context <context>
 ```
