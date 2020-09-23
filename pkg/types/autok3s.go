@@ -27,6 +27,10 @@ type Metadata struct {
 	Registries             string `json:"registries,omitempty" yaml:"registries,omitempty"`
 	DataStore              string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
 	K3sVersion             string `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
+	InstallScript          string `json:"installScript,omitempty" yaml:"installScript,omitempty" default:"https://get.k3s.io"`
+	Mirror                 string `json:"mirror,omitempty" yaml:"mirror,omitempty"`
+	DockerMirror           string `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
+	Network                string `json:"network,omitempty" yaml:"network,omitempty"`
 }
 
 type Status struct {

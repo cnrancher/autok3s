@@ -9,6 +9,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
 	"github.com/cnrancher/autok3s/pkg/utils"
@@ -46,6 +47,19 @@ Use 'autok3s kubectl config use-context %s'
 Use 'autok3s kubectl get pods -A' get POD status`
 )
 
+// ProviderName is the name of this provider.
+const ProviderName = "alibaba"
+
+var (
+	k3sScript           = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
+	k3sMirror           = "INSTALL_K3S_MIRROR=cn"
+	dockerMirror        = "--mirror Aliyun"
+	deployCCMCommand    = "echo \"%s\" > \"%s/cloud-controller-manager.yaml\""
+	deployTerwayCommand = "echo \"%s\" > \"%s/terway.yaml\""
+)
+
+type checkFun func() error
+
 type Alibaba struct {
 	types.Metadata  `json:",inline"`
 	alibaba.Options `json:",inline"`
@@ -55,6 +69,12 @@ type Alibaba struct {
 	v      *vpc.Client
 	m      *sync.Map
 	logger *logrus.Logger
+}
+
+func init() {
+	providers.RegisterProvider(ProviderName, func() (providers.Provider, error) {
+		return NewProvider(), nil
+	})
 }
 
 func NewProvider() *Alibaba {
@@ -109,101 +129,8 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 		}
 	}()
 
-	if err = p.generateClientSDK(); err != nil {
-		return
-	}
-
-	if err = p.createCheck(); err != nil {
-		return
-	}
-
-	masterNum, _ := strconv.Atoi(p.Master)
-	workerNum, _ := strconv.Atoi(p.Worker)
-
-	p.logger.Debugf("[%s] %d masters and %d workers will be created\n", p.GetProviderName(), masterNum, workerNum)
-
-	var (
-		masterEips []vpc.EipAddress
-		workerEips []vpc.EipAddress
-	)
-
-	p.logger.Debugf("[%s] start to allocate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-
-	if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
-		return err
-	}
-
-	p.logger.Debugf("[%s] successfully allocated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-
-	if workerNum > 0 {
-		p.logger.Debugf("[%s] start to allocate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
-			return err
-		}
-		p.logger.Debugf("[%s] successfully allocated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-	}
-
-	// run ecs master instances.
-	if err = p.runInstances(masterNum, true); err != nil {
-		return
-	}
-
-	// run ecs worker instances.
-	if workerNum != 0 {
-		if err = p.runInstances(workerNum, false); err != nil {
-			return
-		}
-	}
-
-	// wait ecs instances to be running status.
-	if err = p.getInstanceStatus(alibaba.StatusRunning); err != nil {
-		return
-	}
-
-	var associatedEipIds []string
-
-	// associate master eip
-	if masterEips != nil {
-		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-
-		for i, master := range p.Status.MasterNodes {
-			err := p.associateEipAddress(master.InstanceID, masterEips[i].AllocationId)
-			if err != nil {
-				return err
-			}
-			p.Status.MasterNodes[i].EipAllocationIds = append(p.Status.MasterNodes[i].EipAllocationIds, masterEips[i].AllocationId)
-			p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[i].IpAddress)
-			associatedEipIds = append(associatedEipIds, masterEips[i].AllocationId)
-		}
-
-		p.logger.Debugf("[%s] successfully associated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-	}
-
-	// associate worker eip
-	if workerEips != nil {
-		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-
-		for i, worker := range p.Status.WorkerNodes {
-			err := p.associateEipAddress(worker.InstanceID, workerEips[i].AllocationId)
-			if err != nil {
-				return err
-			}
-			p.Status.WorkerNodes[i].EipAllocationIds = append(p.Status.WorkerNodes[i].EipAllocationIds, workerEips[i].AllocationId)
-			p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[i].IpAddress)
-			associatedEipIds = append(associatedEipIds, workerEips[i].AllocationId)
-		}
-
-		p.logger.Debugf("[%s] successfully associated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-	}
-
-	// wait eip to be InUse status.
-	if err = p.getEipStatus(associatedEipIds, eipStatusInUse); err != nil {
-		return err
-	}
-
-	// assemble instance status.
-	var c *types.Cluster
-	if c, err = p.assembleInstanceStatus(ssh); err != nil {
+	c, err := p.generateInstance(p.createCheck, ssh)
+	if err != nil {
 		return
 	}
 
@@ -211,8 +138,48 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return
 	}
-
 	p.logger.Infof("[%s] successfully executed create logic\n", p.GetProviderName())
+
+	if option, ok := c.Options.(alibaba.Options); ok {
+		if strings.EqualFold(option.Terway.Mode, "eni") {
+			// deploy additional Terway manifests.
+			terway := &alibaba.Terway{
+				Mode:          option.Terway.Mode,
+				AccessKey:     option.AccessKey,
+				AccessSecret:  option.AccessSecret,
+				CIDR:          option.Terway.CIDR,
+				SecurityGroup: option.SecurityGroup,
+				VSwitches:     fmt.Sprintf(`{\"%s\":[\"%s\"]}`, option.Region, option.VSwitch),
+				MaxPoolSize:   option.Terway.MaxPoolSize,
+			}
+			p.logger.Infof("[%s] start deploy Alibaba Terway manifests", p.GetProviderName())
+			tmpl := fmt.Sprintf(terwayTmpl, terway.AccessKey, terway.AccessSecret, terway.SecurityGroup, terway.CIDR, terway.VSwitches, terway.MaxPoolSize)
+			if err := cluster.DeployExtraManifest(c, deployTerwayCommand, tmpl); err != nil {
+				return err
+			}
+			p.logger.Infof("[%s] successfully deploy Alibaba Terway manifests", p.GetProviderName())
+		}
+		if strings.EqualFold(c.CloudControllerManager, "true") {
+			// deploy additional Alibaba cloud-controller-manager manifests.
+			p.logger.Infof("[%s] start deploy Alibaba cloud-controller-manager manifests", p.GetProviderName())
+			aliCCM := &alibaba.CloudControllerManager{
+				Region:       option.Region,
+				AccessKey:    option.AccessKey,
+				AccessSecret: option.AccessSecret,
+			}
+			var tmpl string
+			if c.ClusterCIDR == "" {
+				tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, "10.42.0.0/16")
+			} else {
+				tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, c.ClusterCIDR)
+			}
+
+			if err := cluster.DeployExtraManifest(c, deployCCMCommand, tmpl); err != nil {
+				return err
+			}
+			p.logger.Infof("[%s] successfully deploy Alibaba cloud-controller-manager manifests", p.GetProviderName())
+		}
+	}
 
 	return
 }
@@ -221,116 +188,8 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
 
-	if err := p.generateClientSDK(); err != nil {
-		return err
-	}
-
-	if err := p.joinCheck(); err != nil {
-		return err
-	}
-
-	masterNum, _ := strconv.Atoi(p.Master)
-	workerNum, _ := strconv.Atoi(p.Worker)
-
-	p.logger.Debugf("[%s] %d masters and %d workers will be joined\n", p.GetProviderName(), masterNum, workerNum)
-
-	var (
-		masterEips []vpc.EipAddress
-		workerEips []vpc.EipAddress
-		err        error
-	)
-
-	if masterNum > 0 {
-		p.logger.Debugf("[%s] start to allocate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-
-		if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
-			return err
-		}
-
-		p.logger.Debugf("[%s] successfully allocated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-	}
-
-	if workerNum > 0 {
-		p.logger.Debugf("[%s] start to allocate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-
-		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
-			return err
-		}
-
-		p.logger.Debugf("[%s] successfully allocated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-	}
-
-	// run ecs master instances.
-	if masterNum > 0 {
-		if err := p.runInstances(masterNum, true); err != nil {
-			return err
-		}
-	}
-
-	// run ecs worker instances.
-	if workerNum > 0 {
-		if err := p.runInstances(workerNum, false); err != nil {
-			return err
-		}
-	}
-
-	// wait ecs instances to be running status.
-	if err := p.getInstanceStatus(alibaba.StatusRunning); err != nil {
-		return err
-	}
-
-	var associatedEipIds []string
-
-	// associate master eip
-	if masterEips != nil {
-		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-
-		j := 0
-		for i, master := range p.Status.MasterNodes {
-			if p.Status.MasterNodes[i].PublicIPAddress == nil {
-				err := p.associateEipAddress(master.InstanceID, masterEips[j].AllocationId)
-				if err != nil {
-					return err
-				}
-				p.Status.MasterNodes[i].EipAllocationIds = append(p.Status.MasterNodes[i].EipAllocationIds, masterEips[j].AllocationId)
-				p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[j].IpAddress)
-				associatedEipIds = append(associatedEipIds, masterEips[j].AllocationId)
-				j++
-			}
-		}
-
-		p.logger.Debugf("[%s] successfully associated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
-	}
-
-	// associate worker eip
-	if workerEips != nil {
-		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-
-		j := 0
-		for i, worker := range p.Status.WorkerNodes {
-			if p.Status.WorkerNodes[i].PublicIPAddress == nil {
-				err := p.associateEipAddress(worker.InstanceID, workerEips[j].AllocationId)
-				if err != nil {
-					return err
-				}
-				p.Status.WorkerNodes[i].EipAllocationIds = append(p.Status.WorkerNodes[i].EipAllocationIds, workerEips[j].AllocationId)
-				p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[j].IpAddress)
-				associatedEipIds = append(associatedEipIds, workerEips[j].AllocationId)
-				j++
-			}
-		}
-
-		p.logger.Debugf("[%s] successfully associated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
-	}
-
-	// wait eip to be InUse status.
-	if err = p.getEipStatus(associatedEipIds, eipStatusInUse); err != nil {
-		return err
-	}
-
-	// assemble instance status.
-	var merged *types.Cluster
-	if merged, err = p.assembleInstanceStatus(ssh); err != nil {
+	merged, err := p.generateInstance(p.joinCheck, ssh)
+	if err != nil {
 		return err
 	}
 
@@ -438,7 +297,7 @@ func (p *Alibaba) Rollback() error {
 
 func (p *Alibaba) DeleteK3sNode(f bool) error {
 	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing delete logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
 
 	if err := p.generateClientSDK(); err != nil {
 		return err
@@ -448,7 +307,7 @@ func (p *Alibaba) DeleteK3sNode(f bool) error {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executed delete logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
 
 	return nil
 }
@@ -485,6 +344,21 @@ func (p *Alibaba) StopK3sCluster(f bool) error {
 	p.logger.Infof("[%s] successfully executed stop logic\n", p.GetProviderName())
 
 	return nil
+}
+
+func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
+	if option, ok := cluster.Options.(alibaba.Options); ok {
+		if strings.EqualFold(cluster.CloudControllerManager, "true") {
+			extraArgs := fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+				option.Region, master.InstanceID, option.Region, master.InstanceID)
+			return extraArgs
+		}
+	}
+	return ""
+}
+
+func (p *Alibaba) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
+	return p.GenerateMasterExtraArgs(cluster, worker)
 }
 
 func (p *Alibaba) generateClientSDK() error {
@@ -1251,4 +1125,126 @@ func (p *Alibaba) tagVpcResources(resourceType string, resourceIds []string, tag
 		return err
 	}
 	return nil
+}
+
+func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, error) {
+	var (
+		masterEips []vpc.EipAddress
+		workerEips []vpc.EipAddress
+		err        error
+	)
+
+	if err = p.generateClientSDK(); err != nil {
+		return nil, err
+	}
+
+	if err = fn(); err != nil {
+		return nil, err
+	}
+
+	masterNum, _ := strconv.Atoi(p.Master)
+	workerNum, _ := strconv.Atoi(p.Worker)
+
+	p.logger.Debugf("[%s] %d masters and %d workers will be added\n", p.GetProviderName(), masterNum, workerNum)
+	if masterNum > 0 {
+		if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
+			return nil, err
+		}
+		p.logger.Debugf("[%s] successfully allocated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+	}
+
+	if workerNum > 0 {
+		p.logger.Debugf("[%s] start to allocate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
+			return nil, err
+		}
+		p.logger.Debugf("[%s] successfully allocated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+	}
+
+	// run ecs master instances.
+	if masterNum > 0 {
+		if err := p.runInstances(masterNum, true); err != nil {
+			return nil, err
+		}
+	}
+
+	// run ecs worker instances.
+	if workerNum > 0 {
+		if err := p.runInstances(workerNum, false); err != nil {
+			return nil, err
+		}
+	}
+
+	// wait ecs instances to be running status.
+	if err = p.getInstanceStatus(alibaba.StatusRunning); err != nil {
+		return nil, err
+	}
+
+	var associatedEipIds []string
+
+	// associate master eip
+	if masterEips != nil {
+		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+
+		j := 0
+		for i, master := range p.Status.MasterNodes {
+			if p.Status.MasterNodes[i].PublicIPAddress == nil {
+				err := p.associateEipAddress(master.InstanceID, masterEips[j].AllocationId)
+				if err != nil {
+					return nil, err
+				}
+				p.Status.MasterNodes[i].EipAllocationIds = append(p.Status.MasterNodes[i].EipAllocationIds, masterEips[j].AllocationId)
+				p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[j].IpAddress)
+				associatedEipIds = append(associatedEipIds, masterEips[j].AllocationId)
+				j++
+			}
+		}
+		p.logger.Debugf("[%s] successfully associated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+	}
+
+	// associate worker eip
+	if workerEips != nil {
+		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+
+		j := 0
+		for i, worker := range p.Status.WorkerNodes {
+			if p.Status.WorkerNodes[i].PublicIPAddress == nil {
+				err := p.associateEipAddress(worker.InstanceID, workerEips[j].AllocationId)
+				if err != nil {
+					return nil, err
+				}
+				p.Status.WorkerNodes[i].EipAllocationIds = append(p.Status.WorkerNodes[i].EipAllocationIds, workerEips[j].AllocationId)
+				p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[j].IpAddress)
+				associatedEipIds = append(associatedEipIds, workerEips[j].AllocationId)
+				j++
+			}
+		}
+		p.logger.Debugf("[%s] successfully associated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+	}
+
+	// wait eip to be InUse status.
+	if err = p.getEipStatus(associatedEipIds, eipStatusInUse); err != nil {
+		return nil, err
+	}
+
+	// assemble instance status.
+	var c *types.Cluster
+	if c, err = p.assembleInstanceStatus(ssh); err != nil {
+		return nil, err
+	}
+
+	c.InstallScript = k3sScript
+	c.Mirror = k3sMirror
+	c.DockerMirror = dockerMirror
+
+	if option, ok := c.Options.(alibaba.Options); ok {
+		if strings.EqualFold(option.Terway.Mode, "eni") {
+			c.Network = "none"
+		}
+		if strings.EqualFold(c.CloudControllerManager, "true") {
+			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
+		}
+	}
+
+	return c, nil
 }
