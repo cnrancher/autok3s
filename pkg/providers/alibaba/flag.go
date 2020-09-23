@@ -189,9 +189,6 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 			}
 		}
 
-		// need reset master number.
-		p.Master = "0"
-
 		if matched != nil {
 			// join command need merge status & token value.
 			p.Status = matched.Status
