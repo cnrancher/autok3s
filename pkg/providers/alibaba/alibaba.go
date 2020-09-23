@@ -768,12 +768,7 @@ func (p *Alibaba) createCheck() error {
 			p.GetProviderName())
 	}
 
-	if masterNum > 1 && p.DataStore == "" {
-		return fmt.Errorf("[%s] calling preflight error: HA mode `--datastore` can not be empty",
-			p.GetProviderName())
-	}
-
-	if masterNum > 1 && strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
+	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
 		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
 			p.GetProviderName())
 	}
@@ -811,13 +806,7 @@ func (p *Alibaba) createCheck() error {
 }
 
 func (p *Alibaba) joinCheck() error {
-	masterNum, _ := strconv.Atoi(p.Master)
-	if masterNum >= 1 && p.DataStore == "" {
-		return fmt.Errorf("[%s] calling preflight error: HA mode `--datastore` can not be empty",
-			p.GetProviderName())
-	}
-
-	if masterNum > 1 && strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
+	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
 		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
 			p.GetProviderName())
 	}
@@ -947,7 +936,8 @@ func (p *Alibaba) releaseEipAddress(allocationID string) error {
 
 func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	var releaseEipIds []string
-	// unassociate master eip address
+
+	// unassociate master eip address.
 	for _, master := range p.MasterNodes {
 		if master.RollBack == rollBack {
 			for _, allocationID := range master.EipAllocationIds {
@@ -958,7 +948,8 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 			}
 		}
 	}
-	// unassociate worker eip address
+
+	// unassociate worker eip address.
 	for _, worker := range p.WorkerNodes {
 		if worker.RollBack == rollBack {
 			for _, allocationID := range worker.EipAllocationIds {
@@ -970,17 +961,20 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 		}
 	}
 
-	// release eips with tags
+	// list eips with tags.
 	tags := []vpc.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 	allocationIds, err := p.listVpcTagResources(resourceTypeEip, releaseEipIds, tags)
 	if err != nil {
 		p.logger.Errorf("[%s] error when query eip address: %v\n", p.GetProviderName(), err)
 	}
-	// eip can be released only when status is `Available`
-	// wait eip to be `Available` status
+
+	// eip can be released only when status is `Available`.
+	// wait eip to be `Available` status.
 	if err := p.getEipStatus(allocationIds, eipStatusAvailable); err != nil {
 		p.logger.Errorf("[%s] error when query eip status: %v\n", p.GetProviderName(), err)
 	}
+
+	// release eips.
 	for _, allocationID := range allocationIds {
 		if err := p.releaseEipAddress(allocationID); err != nil {
 			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
