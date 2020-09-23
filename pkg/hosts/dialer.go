@@ -3,6 +3,7 @@ package hosts
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -102,10 +103,11 @@ func newDialer(h *Host, kind string) (*Dialer, error) {
 }
 
 func (d *Dialer) getSSHTunnelConnection() (*ssh.Client, error) {
-	cfg, err := utils.GetSSHConfig(d.username, d.sshKey, d.passphrase, d.sshCert, d.password, d.useSSHAgentAuth)
+	timeout := time.Duration((common.Backoff.Steps - 1) * int(common.Backoff.Duration))
+	cfg, err := utils.GetSSHConfig(d.username, d.sshKey, d.passphrase, d.sshCert, d.password, timeout, d.useSSHAgentAuth)
 	if err != nil {
 		return nil, err
 	}
-	// Establish connection with SSH server
+	// establish connection with SSH server.
 	return ssh.Dial(tcpNetProtocol, d.sshAddress, cfg)
 }

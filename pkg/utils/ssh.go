@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -36,9 +37,10 @@ func SSHCertificatePath(sshCertPath string) (string, error) {
 	return string(buff), nil
 }
 
-func GetSSHConfig(username, sshPrivateKeyString, passphrase, sshCert string, password string, useAgentAuth bool) (*ssh.ClientConfig, error) {
+func GetSSHConfig(username, sshPrivateKeyString, passphrase, sshCert string, password string, timeout time.Duration, useAgentAuth bool) (*ssh.ClientConfig, error) {
 	config := &ssh.ClientConfig{
 		User:            username,
+		Timeout:         timeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
