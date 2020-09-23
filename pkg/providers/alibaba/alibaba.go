@@ -101,9 +101,9 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			fmt.Printf(usageInfo, p.Name)
 			if p.UI != "none" {
 				if strings.EqualFold(p.CloudControllerManager, "true") {
-					fmt.Printf("K3s UI %s URL: https://<using `kubectl get svc -A` get UI address>:8999\n", p.UI)
+					fmt.Printf("\nK3s UI %s URL: https://<using `kubectl get svc -A` get UI address>:8999\n", p.UI)
 				} else {
-					fmt.Printf("K3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+					fmt.Printf("\nK3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
 				}
 			}
 		}
@@ -128,9 +128,11 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	)
 
 	p.logger.Debugf("[%s] start to allocate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+
 	if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
 		return err
 	}
+
 	p.logger.Debugf("[%s] successfully allocated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 
 	if workerNum > 0 {
@@ -163,6 +165,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	// associate master eip
 	if masterEips != nil {
 		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+
 		for i, master := range p.Status.MasterNodes {
 			err := p.associateEipAddress(master.InstanceID, masterEips[i].AllocationId)
 			if err != nil {
@@ -172,12 +175,14 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			p.Status.MasterNodes[i].PublicIPAddress = append(p.Status.MasterNodes[i].PublicIPAddress, masterEips[i].IpAddress)
 			associatedEipIds = append(associatedEipIds, masterEips[i].AllocationId)
 		}
+
 		p.logger.Debugf("[%s] successfully associated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 	}
 
 	// associate worker eip
 	if workerEips != nil {
 		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+
 		for i, worker := range p.Status.WorkerNodes {
 			err := p.associateEipAddress(worker.InstanceID, workerEips[i].AllocationId)
 			if err != nil {
@@ -187,6 +192,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			p.Status.WorkerNodes[i].PublicIPAddress = append(p.Status.WorkerNodes[i].PublicIPAddress, workerEips[i].IpAddress)
 			associatedEipIds = append(associatedEipIds, workerEips[i].AllocationId)
 		}
+
 		p.logger.Debugf("[%s] successfully associated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 	}
 
@@ -236,17 +242,21 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 
 	if masterNum > 0 {
 		p.logger.Debugf("[%s] start to allocate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+
 		if masterEips, err = p.allocateEipAddresses(masterNum); err != nil {
 			return err
 		}
+
 		p.logger.Debugf("[%s] successfully allocated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 	}
 
 	if workerNum > 0 {
 		p.logger.Debugf("[%s] start to allocate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+
 		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
 			return err
 		}
+
 		p.logger.Debugf("[%s] successfully allocated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 	}
 
@@ -273,8 +283,9 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 
 	// associate master eip
 	if masterEips != nil {
-		j := 0
 		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+
+		j := 0
 		for i, master := range p.Status.MasterNodes {
 			if p.Status.MasterNodes[i].PublicIPAddress == nil {
 				err := p.associateEipAddress(master.InstanceID, masterEips[j].AllocationId)
@@ -287,13 +298,15 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 				j++
 			}
 		}
+
 		p.logger.Debugf("[%s] successfully associated %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 	}
 
 	// associate worker eip
 	if workerEips != nil {
-		j := 0
 		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+
+		j := 0
 		for i, worker := range p.Status.WorkerNodes {
 			if p.Status.WorkerNodes[i].PublicIPAddress == nil {
 				err := p.associateEipAddress(worker.InstanceID, workerEips[j].AllocationId)
@@ -306,6 +319,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 				j++
 			}
 		}
+
 		p.logger.Debugf("[%s] successfully associated %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 	}
 
@@ -1045,11 +1059,13 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 		eipIds = append(eipIds, eip.AllocationId)
 	}
 	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
-	p.logger.Debugf("[%s] start to tag eip(s):[%s]\n", p.GetProviderName(), eipIds)
+	p.logger.Debugf("[%s] start to tag eip(s): [%s]\n", p.GetProviderName(), eipIds)
+
 	if err := p.tagVpcResources(resourceTypeEip, eipIds, tag); err != nil {
-		p.logger.Errorf("[%s] error when tag eips: %s\n", p.GetProviderName(), err)
+		p.logger.Errorf("[%s] error when tag eip(s): %s\n", p.GetProviderName(), err)
 	}
-	p.logger.Debugf("[%s] tagged eips\n", p.GetProviderName())
+
+	p.logger.Debugf("[%s] successfully tagged eip(s): [%s]\n", p.GetProviderName(), eipIds)
 	return eips, nil
 }
 
@@ -1114,12 +1130,14 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	for _, master := range p.MasterNodes {
 		if master.RollBack == rollBack {
 			p.logger.Debugf("[%s] start to unassociate eip address for %d master(s)\n", p.GetProviderName(), len(p.MasterNodes))
+
 			for _, allocationID := range master.EipAllocationIds {
 				if err := p.unassociateEipAddress(allocationID); err != nil {
 					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 				}
 				releaseEipIds = append(releaseEipIds, allocationID)
 			}
+
 			p.logger.Debugf("[%s] unassociated eip address for master(s)\n", p.GetProviderName())
 		}
 	}
@@ -1128,12 +1146,14 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	for _, worker := range p.WorkerNodes {
 		if worker.RollBack == rollBack {
 			p.logger.Debugf("[%s] start to unassociate eip address for %d worker(s)\n", p.GetProviderName(), len(p.WorkerNodes))
+
 			for _, allocationID := range worker.EipAllocationIds {
 				if err := p.unassociateEipAddress(allocationID); err != nil {
 					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 				}
 				releaseEipIds = append(releaseEipIds, allocationID)
 			}
+
 			p.logger.Debugf("[%s] unassociated eip address for worker(s)\n", p.GetProviderName())
 		}
 	}
@@ -1154,6 +1174,7 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	// release eips.
 	for _, allocationID := range allocationIds {
 		p.logger.Debugf("[%s] start to release eip: %s\n", p.GetProviderName(), allocationID)
+
 		if err := p.releaseEipAddress(allocationID); err != nil {
 			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 		} else {
@@ -1166,23 +1187,30 @@ func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
 	if allocationIds == nil {
 		return fmt.Errorf("[%s] allocationIds can not be empty", p.GetProviderName())
 	}
-	p.logger.Debugf("[%s] start to query eip status\n", p.GetProviderName())
+
+	p.logger.Debugf("[%s] waiting eip(s) to be in `%s` status...\n", p.GetProviderName(), aimStatus)
+
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		response, err := p.describeEipAddresses(allocationIds)
 		if err != nil || !response.IsSuccess() || len(response.EipAddresses.EipAddress) <= 0 {
 			return false, nil
 		}
+
 		for _, eip := range response.EipAddresses.EipAddress {
-			p.logger.Debugf("[%s] status of eip [%s]:%s\n", p.GetProviderName(), eip.AllocationId, eip.Status)
+			p.logger.Debugf("[%s] eip(s) [%s] is in `%s` status\n", p.GetProviderName(), eip.AllocationId, eip.Status)
+
 			if eip.Status != aimStatus {
 				return false, nil
 			}
 		}
+
 		return true, nil
 	}); err != nil {
-		return fmt.Errorf("[%s] error in querying eip %s status of [%s], msg: [%v]", p.GetProviderName(), aimStatus, allocationIds, err)
+		return fmt.Errorf("[%s] error in querying eip(s) %s status of [%s], msg: [%v]", p.GetProviderName(), aimStatus, allocationIds, err)
 	}
-	p.logger.Debugf("[%s] successfully query eip status\n", p.GetProviderName())
+
+	p.logger.Debugf("[%s] eip(s) are in `%s` status\n", p.GetProviderName(), aimStatus)
+
 	return nil
 }
 
