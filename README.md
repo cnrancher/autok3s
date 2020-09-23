@@ -52,12 +52,16 @@ sudo autok3s create \
 
 HA(embedded etcd) mode need `--master` at least 3 nodes, e.g.
 ```bash
---master 2"
+sudo autok3s ... \
+    --master 2
 ```
 
 HA(external database) mode need `--master` greater than 1 node, also need to specify `--datastore` and `--k3s-version`, e.g.
 ```bash
---master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" --k3s-version="v1.18.9-k3s1"
+sudo autok3s ... \
+    --master 2 \
+    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" \
+    --k3s-version="v1.18.9-k3s1"
 ```
 
 ### Join K3s Nodes
@@ -87,12 +91,16 @@ sudo autok3s join \
 
 Join master nodes to (embedded etcd) HA cluster e.g.
 ```bash
---master 2
+sudo autok3s ... \
+    --master 2
 ```
 
 Join master nodes to (external database) HA cluster, also need to specify `--datastore` and `--k3s-version`, e.g.
 ```bash
---master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" --k3s-version="v1.18.9-k3s1"
+sudo autok3s ... \
+    --master 2 \
+    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" 
+    --k3s-version="v1.18.9-k3s1"
 ```
 
 ### Delete K3s Cluster
