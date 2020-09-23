@@ -30,7 +30,7 @@ func DeleteCommand() *cobra.Command {
 	pStr := common.FlagHackLookup("--provider")
 
 	if pStr != "" {
-		if reg, err := providers.Register(pStr); err != nil {
+		if reg, err := providers.GetProvider(pStr); err != nil {
 			logrus.Fatalln(err)
 		} else {
 			dp = reg

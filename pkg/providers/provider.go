@@ -1,15 +1,25 @@
 package providers
 
 import (
-	"errors"
+	"fmt"
+	"sync"
 
-	"github.com/cnrancher/autok3s/pkg/providers/alibaba"
 	"github.com/cnrancher/autok3s/pkg/types"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
+// Factory is a function that returns a Provider.Interface.
+type Factory func() (Provider, error)
+
+var (
+	providersMutex sync.Mutex
+	providers      = make(map[string]Factory)
+)
+
+// Provider is an abstract, pluggable interface for k3s provider
 type Provider interface {
 	GetProviderName() string
 	// Create command flags.
@@ -28,6 +38,10 @@ type Provider interface {
 	BindCredentialFlags() *pflag.FlagSet
 	// Generate cluster name.
 	GenerateClusterName()
+	// Generate create/join extra args for master nodes
+	GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string
+	// Generate create/join extra args for worker nodes
+	GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string
 	// K3s create cluster interface.
 	CreateK3sCluster(ssh *types.SSH) error
 	// K3s join node interface.
@@ -44,15 +58,25 @@ type Provider interface {
 	StopK3sCluster(f bool) error
 }
 
-func Register(provider string) (Provider, error) {
-	var p Provider
-
-	switch provider {
-	case "alibaba":
-		p = alibaba.NewProvider()
-	default:
-		return p, errors.New("not a valid provider, please run `autok3s get provider` display valid providers")
+// RegisterProvider registers a provider.Factory by name.
+func RegisterProvider(name string, p Factory) {
+	providersMutex.Lock()
+	defer providersMutex.Unlock()
+	if _, found := providers[name]; !found {
+		logrus.Debugf("registered provider %s", name)
+		providers[name] = p
 	}
+}
 
-	return p, nil
+// GetProvider creates an instance of the named provider, or nil if
+// the name is unknown.  The error return is only used if the named provider
+// was known but failed to initialize.
+func GetProvider(name string) (Provider, error) {
+	providersMutex.Lock()
+	defer providersMutex.Unlock()
+	f, found := providers[name]
+	if !found {
+		return nil, fmt.Errorf("provider %s is not registered", name)
+	}
+	return f()
 }
