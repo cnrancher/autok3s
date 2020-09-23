@@ -151,16 +151,6 @@ func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
 
-	fs = append(fs, []types.Flag{
-		{
-			Name:     "url",
-			P:        &p.URL,
-			V:        p.URL,
-			Usage:    "Specify K3s master URL",
-			Required: true,
-		},
-	}...)
-
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
@@ -193,7 +183,7 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 			// join command need merge status & token value.
 			p.Status = matched.Status
 			p.Token = matched.Token
-			p.URL = matched.URL
+			p.IP = matched.IP
 			p.mergeOptions(*matched)
 		}
 
@@ -371,6 +361,12 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			V:        p.InternetMaxBandwidthOut,
 			Usage:    "Used to specify the maximum out flow of the instance internet",
 			Required: true,
+		},
+		{
+			Name:     "ip",
+			P:        &p.IP,
+			V:        p.IP,
+			Usage:    "Specify K3s master/lb ip",
 		},
 		{
 			Name:     "k3s-version",

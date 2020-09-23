@@ -76,7 +76,7 @@ sudo autok3s join \
     --v-switch <v-switch id> \
     --security-group <security-group id> \
     --token <k3s token> \
-    --url <k3s master ip> \
+    --ip <k3s master/lb ip> \
     --worker 1
 ```
 
