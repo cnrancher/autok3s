@@ -12,13 +12,6 @@ You can also use it to join hosts as agents to the K3s cluster. It will automati
 Then user can use `autok3s kubectl` command quickly access the cluster.
 
 Use [viper](https://github.com/spf13/viper) to bind flags and configuration file. `autok3s` will generate a configuration file to store cloud-providers' access information at the specified location(`/var/lib/rancher/autok3s/config.yaml`) to reduce the number of flags to be passed for multiple runs.
-```
-autok3s:
-  providers:
-    alibaba:
-      access-key: <access-key>
-      access-secret: <access-secret>
-```
 
 It's also generated a state file `/var/lib/rancher/autok3s/.state` to record the clusters' information created on this host.
 
@@ -31,12 +24,12 @@ The user can get the commands available for different providers according to the
 ### Setup K3s Cluster
 If already have access information in `/var/lib/rancher/autok3s/config.yaml` you can use the simplified command.
 ```
-sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path>
+sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --master 1
 ```
 
 Generic commands can be used anywhere.
 ```
-sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --access-key <access-key> --access-secret <access-secret>
+sudo autok3s create --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --ssh-key-path <ssh-key-path> --access-key <access-key> --access-secret <access-secret> --master 1
 ```
 
 HA mode need `--master` greater than 1, also need to specify `--datastore` e.g.
@@ -47,12 +40,12 @@ HA mode need `--master` greater than 1, also need to specify `--datastore` e.g.
 ### Join K3s Nodes
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```
-sudo autok3s join --provider alibaba --region <region> --name <cluster name> --ssh-key-path <ssh-key-path> 
+sudo autok3s join --provider alibaba --region <region> --name <cluster name> --ssh-key-path <ssh-key-path> --worker 1
 ```
 
 Generic commands can be used anywhere.
 ```
-sudo autok3s join --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --token <k3s token> --url <k3s master ip>
+sudo autok3s join --provider alibaba --region <region> --name <cluster name> --key-pair <key-pair id> --v-switch <v-switch id> --security-group <security-group id> --token <k3s token> --url <k3s master ip> --worker 1
 ```
 
 HA mode need `--master` greater than 0, also need to specify `--datastore` e.g.
