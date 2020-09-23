@@ -26,6 +26,7 @@ type Metadata struct {
 	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
 	Registries             string `json:"registries,omitempty" yaml:"registries,omitempty"`
 	DataStore              string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
+	K3sVersion             string `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
 }
 
 type Status struct {
@@ -55,8 +56,7 @@ type SSH struct {
 	SSHCert          string `json:"ssh-cert,omitempty" yaml:"ssh-cert,omitempty"`
 	SSHCertPath      string `json:"ssh-cert-path,omitempty" yaml:"ssh-cert-path,omitempty"`
 	SSHKeyPassphrase string `json:"ssh-key-passphrase,omitempty" yaml:"ssh-key-passphrase,omitempty"`
-
-	SSHAgentAuth bool `json:"ssh-agent-auth,omitempty" yaml:"ssh-agent-auth,omitempty" `
+	SSHAgentAuth     bool   `json:"ssh-agent-auth,omitempty" yaml:"ssh-agent-auth,omitempty" `
 }
 
 type Flag struct {

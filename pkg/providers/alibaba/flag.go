@@ -373,6 +373,13 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Required: true,
 		},
 		{
+			Name:     "k3s-version",
+			P:        &p.K3sVersion,
+			V:        p.K3sVersion,
+			Usage:    "Used to specify the version of k3s cluster",
+			Required: true,
+		},
+		{
 			Name:     "cloud-controller-manager",
 			P:        &p.CloudControllerManager,
 			V:        p.CloudControllerManager,
