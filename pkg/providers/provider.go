@@ -32,6 +32,8 @@ type Provider interface {
 	GetStartFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Delete command flags.
 	GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet
+	// Remove command flags.
+	GetRemoveFlags(cmd *cobra.Command) *pflag.FlagSet
 	// SSH command flags.
 	GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Credential flags.
@@ -56,6 +58,8 @@ type Provider interface {
 	StopK3sCluster(f bool) error
 	// K3s ssh node interface.
 	SSHK3sNode() error
+	// K3s remove nodes interface.
+	RemoveK3sNodes(nodeNames string, f bool) error
 	// K3s check cluster exist.
 	IsClusterExist() (bool, []string, error)
 	// Rollback when error occurs.

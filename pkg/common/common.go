@@ -9,15 +9,17 @@ import (
 )
 
 const (
-	BindPrefix         = "autok3s.providers.%s.%s"
-	ConfigFile         = "config.yaml"
-	StateFile          = ".state"
-	KubeCfgFile        = ".kube/config"
-	KubeCfgTempName    = "autok3s-temp"
-	K3sManifestsDir    = "/var/lib/rancher/k3s/server/manifests"
-	MasterInstanceName = "autok3s.%s.master"
-	WorkerInstanceName = "autok3s.%s.worker"
-	TagClusterPrefix   = "autok3s-"
+	BindPrefix           = "autok3s.providers.%s.%s"
+	ConfigFile           = "config.yaml"
+	StateFile            = ".state"
+	KubeCfgFile          = ".kube/config"
+	KubeCfgTempName      = "autok3s-temp"
+	K3sManifestsDir      = "/var/lib/rancher/k3s/server/manifests"
+	MasterInstanceName   = "autok3s.%s.master"
+	WorkerInstanceName   = "autok3s.%s.worker"
+	TagClusterPrefix     = "autok3s-"
+	K3sTagNameInternalIP = "k3s.io/internal-ip"
+	K3sRoleMasterValue   = "master"
 )
 
 var (

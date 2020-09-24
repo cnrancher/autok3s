@@ -27,11 +27,13 @@ import (
 )
 
 var (
-	initCommand     = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' INSTALL_K3S_VERSION='%s' sh -\n"
-	joinCommand     = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' INSTALL_K3S_VERSION='%s' sh -\n"
-	catCfgCommand   = "cat /etc/rancher/k3s/k3s.yaml"
-	dockerCommand   = "curl https://get.docker.com | VERSION=19.03 sh -s - %s\n"
-	deployUICommand = "echo \"%s\" | base64 -d > \"%s/ui.yaml\""
+	initCommand       = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' INSTALL_K3S_VERSION='%s' sh -\n"
+	joinCommand       = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' INSTALL_K3S_VERSION='%s' sh -\n"
+	catCfgCommand     = "cat /etc/rancher/k3s/k3s.yaml"
+	dockerCommand     = "curl https://get.docker.com | VERSION=19.03 sh -s - %s\n"
+	deployUICommand   = "echo \"%s\" | base64 -d > \"%s/ui.yaml\""
+	getNodeCommand    = "kubectl get node --show-labels | grep %s | awk '{print $1\" \"$3\" \"$6}'"
+	deleteNodeCommand = "kubectl delete node %s"
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
@@ -481,6 +483,134 @@ func DeployExtraManifest(cluster *types.Cluster, cmds []string) error {
 		return err
 	}
 	return nil
+}
+
+func GetK3sNodeInfo(nodeNames string, cluster *types.Cluster, master types.Node, ccmEnabled bool) ([]string, []types.Node, error) {
+	var (
+		nodes          []types.Node
+		validNodeNames []string
+	)
+	nodeNames = "'" + strings.Replace(nodeNames, ",", "\\|", -1) + "'"
+	cmdResult, err := execute(&hosts.Host{Node: master}, true, []string{fmt.Sprintf(getNodeCommand, nodeNames)})
+	if err != nil {
+		return validNodeNames, nodes, err
+	}
+	if cmdResult != "" {
+		// one line for one node
+		lines := strings.Split(cmdResult, "\n")
+		for _, line := range lines {
+			if line == "" {
+				continue
+			}
+			// nodeName role label
+			nodeInfo := strings.Split(line, " ")
+			validNodeNames = append(validNodeNames, nodeInfo[0])
+			matchedNode := false
+			if ccmEnabled {
+				if strings.Contains(nodeInfo[1], common.K3sRoleMasterValue) {
+					for _, masterNode := range cluster.MasterNodes {
+						// <region-id>.<instance-id>
+						if strings.Contains(nodeInfo[0], masterNode.InstanceID) {
+							nodes = append(nodes, masterNode)
+							matchedNode = true
+							break
+						}
+						if matchedNode {
+							break
+						}
+					}
+				} else {
+					for _, workerNode := range cluster.WorkerNodes {
+						if strings.Contains(nodeInfo[0], workerNode.InstanceID) {
+							nodes = append(nodes, workerNode)
+							matchedNode = true
+							break
+						}
+						if matchedNode {
+							break
+						}
+					}
+				}
+			} else {
+				// labelKey=labelValue
+				labels := strings.Split(nodeInfo[2], ",")
+				for _, label := range labels {
+					kv := strings.Split(label, "=")
+					if kv[0] == common.K3sTagNameInternalIP {
+						if strings.Contains(nodeInfo[1], common.K3sRoleMasterValue) {
+							for _, masterNode := range cluster.MasterNodes {
+								for _, internalIPAddress := range masterNode.InternalIPAddress {
+									if internalIPAddress == kv[1] {
+										nodes = append(nodes, masterNode)
+										matchedNode = true
+										break
+									}
+								}
+								if matchedNode {
+									break
+								}
+							}
+						} else {
+							for _, workerNode := range cluster.WorkerNodes {
+								for _, internalIPAddress := range workerNode.InternalIPAddress {
+									if internalIPAddress == kv[1] {
+										nodes = append(nodes, workerNode)
+										matchedNode = true
+										break
+									}
+								}
+								if matchedNode {
+									break
+								}
+							}
+						}
+					}
+					if matchedNode {
+						break
+					}
+				}
+			}
+		}
+	} else {
+		return validNodeNames, nodes, fmt.Errorf("[cluster] specific nodes not found")
+	}
+
+	return validNodeNames, nodes, nil
+}
+
+func RemoveK3sNode(clusterName string, nodeNames []string, f bool, master types.Node, updateConfig bool) ([]string, error) {
+	var (
+		messages     []string
+		errNodeNames []string
+		command      string
+	)
+	for _, nodeName := range nodeNames {
+		command = deleteNodeCommand
+		if f {
+			command += " --force"
+		}
+		cmdResult, err := execute(&hosts.Host{Node: master}, true, []string{fmt.Sprintf(command, nodeName)})
+		if err != nil {
+			errNodeNames = append(errNodeNames, nodeName)
+		} else {
+			messages = append(messages, nodeName+":"+cmdResult)
+		}
+	}
+	if len(errNodeNames) == 0 {
+		if updateConfig {
+			// get k3s cluster config.
+			cfg, err := execute(&hosts.Host{Node: master}, true, []string{catCfgCommand})
+			if err != nil {
+				return messages, err
+			}
+			// merge current cluster to kube config.
+			if err := SaveCfg(cfg, master.PublicIPAddress[0], clusterName); err != nil {
+				return messages, err
+			}
+		}
+		return messages, nil
+	}
+	return messages, fmt.Errorf("[cluster] error when delete node [%s] in %s", strings.Join(errNodeNames, ","), clusterName)
 }
 
 func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {

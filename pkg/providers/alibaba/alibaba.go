@@ -430,6 +430,30 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 	return false, utils.UniqueArray(ids), nil
 }
 
+func (p *Alibaba) RemoveK3sNodes(nodeNames string, f bool) error {
+	isConfirmed := true
+	if !f {
+		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete node(s): [%s]", p.GetProviderName(), nodeNames))
+	}
+
+	if isConfirmed {
+		p.logger = common.NewLogger(common.Debug)
+		p.logger.Infof("[%s] executing remove node logic...\n", p.GetProviderName())
+
+		if err := p.generateClientSDK(); err != nil {
+			return err
+		}
+
+		if err := p.removeNodes(nodeNames, f); err != nil {
+			return err
+		}
+
+		p.logger.Infof("[%s] successfully executed remove node logic\n", p.GetProviderName())
+	}
+
+	return nil
+}
+
 func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(alibaba.Options); ok {
 		if strings.EqualFold(cluster.CloudControllerManager, "true") {
@@ -536,15 +560,7 @@ func (p *Alibaba) deleteCluster(f bool) error {
 
 		p.releaseEipAddresses(false)
 
-		request := ecs.CreateDeleteInstancesRequest()
-		request.Scheme = "https"
-		request.RegionId = p.Region
-		request.InstanceId = &ids
-		request.Force = requests.NewBoolean(true)
-		request.TerminateSubscription = requests.NewBoolean(true)
-
-		_, err := p.c.DeleteInstances(request)
-		if err != nil {
+		if _, err := p.deleteInstances(ids); err != nil {
 			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]", p.GetProviderName(), err)
 		}
 	}
@@ -1334,4 +1350,125 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 	}
 
 	return c, nil
+}
+
+func (p *Alibaba) deleteInstances(ids []string) (*ecs.DeleteInstancesResponse, error) {
+	request := ecs.CreateDeleteInstancesRequest()
+	request.Scheme = "https"
+	request.RegionId = p.Region
+	request.InstanceId = &ids
+	request.Force = requests.NewBoolean(true)
+	request.TerminateSubscription = requests.NewBoolean(true)
+
+	return p.c.DeleteInstances(request)
+}
+
+func (p *Alibaba) removeNodes(nodeNames string, f bool) error {
+	validNodeNames, nodes, err := cluster.GetK3sNodeInfo(nodeNames, &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}, p.MasterNodes[0], strings.EqualFold(p.CloudControllerManager, "true"))
+
+	if err != nil {
+		return fmt.Errorf("[%s] error when get nodes info of [%s], msg: [%#v]", p.GetProviderName(), nodeNames, err)
+	}
+
+	// if the num of input nodes does not match the query result.
+	if len(validNodeNames) != len(strings.Split(nodeNames, ",")) {
+		p.logger.Warnf("[%s] only the following node(s) [%s] is valid and will be deleted", p.GetProviderName(), strings.Join(validNodeNames, ","))
+	}
+
+	deleteMasterCnt := 0
+	for _, node := range nodes {
+		if node.Master {
+			deleteMasterCnt++
+		}
+	}
+	masterNodeNum := len(p.MasterNodes)
+	if masterNodeNum <= deleteMasterCnt {
+		return fmt.Errorf("[%s] cluster must keep at least 1 master node", p.GetProviderName())
+	}
+	// In embedded etcd mode, you must have an odd number of server nodes.
+	if masterNodeNum > 1 && p.DataStore == "" && (masterNodeNum-deleteMasterCnt)%2 != 1 {
+		return fmt.Errorf("[%s] you must have an odd number of server nodes in embedded etcd mode", p.GetProviderName())
+	}
+
+	var delIds []string
+	for _, node := range nodes {
+		if node.Master {
+			for i := 0; i < len(p.MasterNodes); i++ {
+				if node.InstanceID == p.MasterNodes[i].InstanceID {
+					p.MasterNodes = append(p.MasterNodes[:i], p.MasterNodes[i+1:]...)
+					break
+				}
+			}
+		} else {
+			for i := 0; i < len(p.WorkerNodes); i++ {
+				if node.InstanceID == p.WorkerNodes[i].InstanceID {
+					p.WorkerNodes = append(p.WorkerNodes[:i], p.WorkerNodes[i+1:]...)
+					break
+				}
+			}
+		}
+		delIds = append(delIds, node.InstanceID)
+	}
+
+	// execute delete nodes command.
+	p.logger.Debugf("[%s] executing the delete nodes command\n", p.GetProviderName())
+	msg, err := cluster.RemoveK3sNode(p.Name, validNodeNames, f, p.MasterNodes[0], p.IP != p.MasterNodes[0].PublicIPAddress[0])
+	if err != nil {
+		return fmt.Errorf("[%s] error when delete node, msg: [%#v]", p.GetProviderName(), err)
+	}
+	p.logger.Debugf("[%s] executed the delete nodes command, msg: [%s]\n", p.GetProviderName(), strings.Join(msg, ","))
+
+	// unassociate eip.
+	var allocationIds []string
+	p.logger.Debugf("[%s] unassociating %d eip(s)\n", p.GetProviderName(), len(nodes))
+	for _, node := range nodes {
+		for _, allocationID := range node.EipAllocationIds {
+			if err := p.unassociateEipAddress(allocationID); err != nil {
+				p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+			}
+			allocationIds = append(allocationIds, allocationID)
+		}
+	}
+	p.logger.Debugf("[%s] unassociated eip(s)\n", p.GetProviderName())
+
+	// delete instances.
+	p.logger.Debugf("[%s] deleting instances: [%s]\n", p.GetProviderName(), strings.Join(delIds, ","))
+	_, err = p.deleteInstances(delIds)
+	if err != nil {
+		return fmt.Errorf("[%s] error when delete instances: [%s],msg: [%#v]", p.GetProviderName(), strings.Join(delIds, ","), err)
+	}
+	p.logger.Debugf("[%s] deleted instances\n", p.GetProviderName())
+
+	// eip can be released only when status is `Available`.
+	// wait eip to be `Available` status.
+	if err := p.getEipStatus(allocationIds, eipStatusAvailable); err != nil {
+		p.logger.Errorf("[%s] error when query eip status: %v\n", p.GetProviderName(), err)
+	}
+
+	// release eips.
+	for _, allocationID := range allocationIds {
+		p.logger.Debugf("[%s] releasing eip: %s\n", p.GetProviderName(), allocationID)
+
+		if err := p.releaseEipAddress(allocationID); err != nil {
+			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+		} else {
+			p.logger.Debugf("[%s] successfully released eip: %s\n", p.GetProviderName(), allocationID)
+		}
+	}
+
+	// update num of nodes.
+	p.Master = strconv.Itoa(len(p.MasterNodes))
+	p.Worker = strconv.Itoa(len(p.WorkerNodes))
+	// update ip
+	p.IP = p.MasterNodes[0].PublicIPAddress[0]
+
+	return cluster.SaveState(&types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	})
 }
