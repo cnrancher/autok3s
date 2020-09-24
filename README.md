@@ -86,6 +86,8 @@ sudo autok3s join \
     --security-group <security-group id> \
     --token <k3s token> \
     --ip <k3s master/lb ip> \
+    --access-key <access-key> \
+    --access-secret <access-secret> \
     --worker 1
 ```
 
@@ -108,7 +110,9 @@ sudo autok3s ... \
 sudo autok3s start \
     --provider alibaba \
     --region <region> \
-    --name <cluster name>
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>
 ```
 
 ### Stop K3s Cluster
@@ -116,7 +120,9 @@ sudo autok3s start \
 sudo autok3s stop \
     --provider alibaba \
     --region <region> \
-    --name <cluster name>
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>
 ```
 
 ### Delete K3s Cluster
@@ -124,7 +130,9 @@ sudo autok3s stop \
 sudo autok3s delete \
     --provider alibaba \
     --region <region> \
-    --name <cluster name>
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>
 ```
 
 ### List K3s Clusters
