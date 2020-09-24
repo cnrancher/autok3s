@@ -104,6 +104,15 @@ sudo autok3s ... \
 ```
 
 ### Start K3s Cluster
+If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+```bash
+sudo autok3s start \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name>
+```
+
+Generic commands can be used anywhere.
 ```bash
 sudo autok3s start \
     --provider alibaba \
@@ -114,6 +123,15 @@ sudo autok3s start \
 ```
 
 ### Stop K3s Cluster
+If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+```bash
+sudo autok3s stop \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name>
+```
+
+Generic commands can be used anywhere.
 ```bash
 sudo autok3s stop \
     --provider alibaba \
@@ -124,6 +142,15 @@ sudo autok3s stop \
 ```
 
 ### Delete K3s Cluster
+If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+```bash
+sudo autok3s delete \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name>
+```
+
+Generic commands can be used anywhere.
 ```bash
 sudo autok3s delete \
     --provider alibaba \
