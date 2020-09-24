@@ -8,7 +8,7 @@ It can help users quickly complete the personalized configuration of the K3s clu
 
 ## Design Ideas
 This tool uses the cloud provider's SDK to create and manage hosts, and then uses SSH to install the K3s cluster to the remote host.
-You can also use it to join hosts as agents to the K3s cluster. It will automatically merge and store the `kubeconfig` in `/var/lib/rancher/autok3s/.kube/config` which necessary for user to access the cluster.
+You can also use it to join hosts as masters/agents to the K3s cluster. It will automatically merge and store the `kubeconfig` in `/var/lib/rancher/autok3s/.kube/config` which necessary for user to access the cluster.
 Then user can use `autok3s kubectl` command quickly access the cluster.
 
 Use [viper](https://github.com/spf13/viper) to bind flags and configuration file. `autok3s` will generate a configuration file to store cloud-providers' access information at the specified location(`/var/lib/rancher/autok3s/config.yaml`) to reduce the number of flags to be passed for multiple runs.
@@ -50,18 +50,17 @@ sudo autok3s create \
     --master 1
 ```
 
-HA(embedded etcd) mode need `--master` at least 3 nodes, e.g.
+HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3 nodes, e.g.
 ```bash
 sudo autok3s ... \
     --master 2
 ```
 
-HA(external database) mode need `--master` greater than 1 node, also need to specify `--datastore` and `--k3s-version`, e.g.
+HA(external database) mode need `--master` greater than 1 node, also need to specify `--datastore`, e.g.
 ```bash
 sudo autok3s ... \
     --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" \
-    --k3s-version="v1.18.9-k3s1"
+    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
 ### Join K3s Nodes
@@ -91,18 +90,17 @@ sudo autok3s join \
     --worker 1
 ```
 
-Join master nodes to (embedded etcd) HA cluster e.g.
+Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
 ```bash
 sudo autok3s ... \
     --master 2
 ```
 
-Join master nodes to (external database) HA cluster, also need to specify `--datastore` and `--k3s-version`, e.g.
+Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
 ```bash
 sudo autok3s ... \
     --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" 
-    --k3s-version="v1.18.9-k3s1"
+    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
 ### Start K3s Cluster
