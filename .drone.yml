@@ -63,7 +63,7 @@ depends_on:
   - lint
 ---
 kind: pipeline
-name: compress-amd64
+name: cross-build
 platform:
   os: linux
   arch: amd64
@@ -88,7 +88,7 @@ steps:
       - wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz
       - tar -xvf upx-3.96-amd64_linux.tar.xz
       - cp upx-3.96-amd64_linux/upx /usr/bin/
-      - upx --brute dist/autok3s_linux_amd64
+      - upx -9 dist/autok3s_*
     volumes:
       - name: docker
         path: /var/run/docker.sock
@@ -97,7 +97,7 @@ steps:
         - tag
     depends_on:
       - build
-  - name: github_linux_amd64_binary_release
+  - name: github_binary_release
     image: ibuildthecloud/github-release:v0.0.1
     settings:
       api_key:
@@ -105,61 +105,10 @@ steps:
       prerelease: true
       checksum:
         - sha256
-      checksum_file: CHECKSUMsum-amd64.txt
+      checksum_file: CHECKSUMsum.txt
       checksum_flatten: true
       files:
-        - "dist/autok3s_linux_amd64"
-    when:
-      event:
-        - tag
-    depends_on:
-      - compress
-  - name: github_darwin_amd64_binary_release
-    image: ibuildthecloud/github-release:v0.0.1
-    settings:
-      api_key:
-        from_secret: github_token
-      prerelease: true
-      checksum:
-        - sha256
-      checksum_file: CHECKSUMsum-darwin-amd64.txt
-      checksum_flatten: true
-      files:
-        - "dist/autok3s_darwin_amd64"
-    when:
-      event:
-        - tag
-    depends_on:
-      - compress
-  - name: github_windows_amd64_binary_release
-    image: ibuildthecloud/github-release:v0.0.1
-    settings:
-      api_key:
-        from_secret: github_token
-      prerelease: true
-      checksum:
-        - sha256
-      checksum_file: CHECKSUMsum-windows-amd64.txt
-      checksum_flatten: true
-      files:
-        - "dist/autok3s_windows_amd64.exe"
-    when:
-      event:
-        - tag
-    depends_on:
-      - compress
-  - name: github_windows_386_binary_release
-    image: ibuildthecloud/github-release:v0.0.1
-    settings:
-      api_key:
-        from_secret: github_token
-      prerelease: true
-      checksum:
-        - sha256
-      checksum_file: CHECKSUMsum-windows-386.txt
-      checksum_flatten: true
-      files:
-        - "dist/autok3s_windows_386.exe"
+        - "dist/autok3s_*"
     when:
       event:
         - tag
@@ -177,138 +126,6 @@ trigger:
       - tag
 node:
   instance: agent-amd64
-depends_on:
-  - integration-test
----
-kind: pipeline
-name: compress-arm64
-platform:
-  os: linux
-  arch: arm64
-steps:
-  - name: build
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - make autok3s build only
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-  - name: compress
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-arm64_linux.tar.xz
-      - tar -xvf upx-3.96-arm64_linux.tar.xz
-      - cp upx-3.96-arm64_linux/upx /usr/bin/
-      - upx --brute dist/autok3s_linux_arm64
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-    depends_on:
-      - build
-  - name: github_binary_release
-    image: ibuildthecloud/github-release:v0.0.1
-    settings:
-      api_key:
-        from_secret: github_token
-      prerelease: true
-      checksum:
-        - sha256
-      checksum_file: CHECKSUMsum-arm64.txt
-      checksum_flatten: true
-      files:
-        - "dist/autok3s_linux_arm64"
-    when:
-      event:
-        - tag
-    depends_on:
-      - compress
-volumes:
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-trigger:
-  event:
-    include:
-      - push
-      - pull_request
-      - tag
-node:
-  instance: agent-arm64
-depends_on:
-  - integration-test
----
-kind: pipeline
-name: compress-arm
-platform:
-  os: linux
-  arch: arm
-steps:
-  - name: build
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - make autok3s build only
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-  - name: compress
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-arm_linux.tar.xz
-      - tar -xvf upx-3.96-arm_linux.tar.xz
-      - cp upx-3.96-arm_linux/upx /usr/bin/
-      - upx --brute dist/autok3s_linux_arm
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-    depends_on:
-      - build
-  - name: github_binary_release
-    image: ibuildthecloud/github-release:v0.0.1
-    settings:
-      api_key:
-        from_secret: github_token
-      prerelease: true
-      checksum:
-        - sha256
-      checksum_file: CHECKSUMsum-arm.txt
-      checksum_flatten: true
-      files:
-        - "dist/autok3s_linux_arm"
-    when:
-      event:
-        - tag
-    depends_on:
-      - compress
-volumes:
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-trigger:
-  event:
-    include:
-      - push
-      - pull_request
-      - tag
-node:
-  instance: agent-arm
 depends_on:
   - integration-test
 ---
@@ -359,6 +176,5 @@ trigger:
 node:
   instance: agent-amd64
 depends_on:
-  - compress-amd64
-  - compress-arm64
-  - compress-arm
+  - cross-build
+
