@@ -50,10 +50,10 @@ sudo autok3s create \
     --master 1
 ```
 
-HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3 nodes, e.g.
+HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3 master nodes, e.g.
 ```bash
 sudo autok3s ... \
-    --master 2
+    --master 3
 ```
 
 HA(external database) mode need `--master` greater than 1 node, also need to specify `--datastore`, e.g.
