@@ -1,6 +1,7 @@
 package alibaba
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -54,8 +55,8 @@ var (
 	k3sScript           = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 	k3sMirror           = "INSTALL_K3S_MIRROR=cn"
 	dockerMirror        = "--mirror Aliyun"
-	deployCCMCommand    = "echo \"%s\" > \"%s/cloud-controller-manager.yaml\""
-	deployTerwayCommand = "echo \"%s\" > \"%s/terway.yaml\""
+	deployCCMCommand    = "echo \"%s\" | base64 -d > \"%s/cloud-controller-manager.yaml\""
+	deployTerwayCommand = "echo \"%s\" | base64 -d > \"%s/terway.yaml\""
 )
 
 type checkFun func() error
@@ -141,6 +142,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	p.logger.Infof("[%s] successfully executed create logic\n", p.GetProviderName())
 
 	if option, ok := c.Options.(alibaba.Options); ok {
+		extraManifests := make([]string, 0)
 		if strings.EqualFold(option.Terway.Mode, "eni") {
 			// deploy additional Terway manifests.
 			terway := &alibaba.Terway{
@@ -149,19 +151,16 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 				AccessSecret:  option.AccessSecret,
 				CIDR:          option.Terway.CIDR,
 				SecurityGroup: option.SecurityGroup,
-				VSwitches:     fmt.Sprintf(`{\"%s\":[\"%s\"]}`, option.Region, option.VSwitch),
+				VSwitches:     fmt.Sprintf(`{"%s":["%s"]}`, option.Region, option.VSwitch),
 				MaxPoolSize:   option.Terway.MaxPoolSize,
 			}
-			p.logger.Infof("[%s] start deploy Alibaba Terway manifests", p.GetProviderName())
-			tmpl := fmt.Sprintf(terwayTmpl, terway.AccessKey, terway.AccessSecret, terway.SecurityGroup, terway.CIDR, terway.VSwitches, terway.MaxPoolSize)
-			if err := cluster.DeployExtraManifest(c, deployTerwayCommand, tmpl); err != nil {
-				return err
-			}
-			p.logger.Infof("[%s] successfully deploy Alibaba Terway manifests", p.GetProviderName())
+			tmpl := fmt.Sprintf(terwayTmpl, terway.AccessKey, terway.AccessSecret, terway.SecurityGroup, terway.CIDR,
+				terway.VSwitches, terway.MaxPoolSize)
+			extraManifests = append(extraManifests, fmt.Sprintf(deployTerwayCommand,
+				base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
 		}
 		if strings.EqualFold(c.CloudControllerManager, "true") {
 			// deploy additional Alibaba cloud-controller-manager manifests.
-			p.logger.Infof("[%s] start deploy Alibaba cloud-controller-manager manifests", p.GetProviderName())
 			aliCCM := &alibaba.CloudControllerManager{
 				Region:       option.Region,
 				AccessKey:    option.AccessKey,
@@ -173,12 +172,14 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			} else {
 				tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, c.ClusterCIDR)
 			}
-
-			if err := cluster.DeployExtraManifest(c, deployCCMCommand, tmpl); err != nil {
-				return err
-			}
-			p.logger.Infof("[%s] successfully deploy Alibaba cloud-controller-manager manifests", p.GetProviderName())
+			extraManifests = append(extraManifests, fmt.Sprintf(deployCCMCommand,
+				base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
 		}
+		p.logger.Infof("[%s] start deploy Alibaba additional manifests\n", p.GetProviderName())
+		if err := cluster.DeployExtraManifest(c, extraManifests); err != nil {
+			return err
+		}
+		p.logger.Infof("[%s] successfully deploy Alibaba additional manifests\n", p.GetProviderName())
 	}
 
 	return
@@ -933,13 +934,13 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 		eipIds = append(eipIds, eip.AllocationId)
 	}
 	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
-	p.logger.Debugf("[%s] start to tag eip(s): [%s]\n", p.GetProviderName(), eipIds)
+	p.logger.Debugf("[%s] start to tag eip(s): %s\n", p.GetProviderName(), eipIds)
 
 	if err := p.tagVpcResources(resourceTypeEip, eipIds, tag); err != nil {
 		p.logger.Errorf("[%s] error when tag eip(s): %s\n", p.GetProviderName(), err)
 	}
 
-	p.logger.Debugf("[%s] successfully tagged eip(s): [%s]\n", p.GetProviderName(), eipIds)
+	p.logger.Debugf("[%s] successfully tagged eip(s): %s\n", p.GetProviderName(), eipIds)
 	return eips, nil
 }
 
