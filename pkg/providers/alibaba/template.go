@@ -34,36 +34,36 @@ metadata:
   name: terway-pod-reader
   namespace: kube-system
 rules:
-- apiGroups: [\"\"]
-  resources: [\"pods\", \"nodes\", \"namespaces\", \"configmaps\", \"serviceaccounts\"]
-  verbs: [\"get\", \"watch\", \"list\", \"update\"]
-- apiGroups: [\"\"]
+- apiGroups: [""]
+  resources: ["pods", "nodes", "namespaces", "configmaps", "serviceaccounts"]
+  verbs: ["get", "watch", "list", "update"]
+- apiGroups: [""]
   resources:
     - events
   verbs:
     - create
-- apiGroups: [\"networking.k8s.io\"]
+- apiGroups: ["networking.k8s.io"]
   resources:
   - networkpolicies
   verbs:
   - get
   - list
   - watch
-- apiGroups: [\"extensions\"]
+- apiGroups: ["extensions"]
   resources:
   - networkpolicies
   verbs:
   - get
   - list
   - watch
-- apiGroups: [\"\"]
+- apiGroups: [""]
   resources:
   - pods/status
   verbs:
   - update
-- apiGroups: [\"crd.projectcalico.org\"]
-  resources: [\"*\"]
-  verbs: [\"*\"]
+- apiGroups: ["crd.projectcalico.org"]
+  resources: ["*"]
+  verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -87,23 +87,23 @@ metadata:
 data:
   eni_conf: |
     {
-      \"version\": \"1\",
-      \"access_key\": \"%s\",
-      \"access_secret\": \"%s\",
-      \"security_group\": \"%s\",
-      \"service_cidr\": \"%s\",
-      \"vswitches\": %s,
-      \"max_pool_size\": %s,
-      \"min_pool_size\": 0
+      "version": "1",
+      "access_key": "%s",
+      "access_secret": "%s",
+      "security_group": "%s",
+      "service_cidr": "%s",
+      "vswitches": %s,
+      "max_pool_size": %s,
+      "min_pool_size": 0
     }
   10-terway.conf: |
     {
-      \"cniVersion\": \"0.3.0\",
-      \"name\": \"terway\",
-      \"type\": \"terway\",
-      \"eniip_virtual_type\": \"Veth\"
+      "cniVersion": "0.3.0",
+      "name": "terway",
+      "type": "terway",
+      "eniip_virtual_type": "Veth"
     }
-  disable_network_policy: \"false\"
+  disable_network_policy: "false"
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -125,7 +125,7 @@ spec:
       nodeSelector:
         beta.kubernetes.io/arch: amd64
       tolerations:
-      - operator: \"Exists\"
+      - operator: "Exists"
       terminationGracePeriodSeconds: 0
       serviceAccountName: terway
       hostNetwork: true
@@ -155,7 +155,7 @@ spec:
                   cp /etc/eni/10-terway.conf /etc/cni/net.d/;
                   sysctl -w net.ipv4.conf.eth0.rp_filter=0;
                   modprobe sch_htb || true;
-                  chroot /host sh -c \"systemctl disable eni.service; rm -f /etc/udev/rules.d/75-persistent-net-generator.rules /lib/udev/rules.d/60-net.rules /lib/udev/rules.d/61-eni.rules /lib/udev/write_net_rules && udevadm control --reload-rules && udevadm trigger; true\"'
+                  chroot /host sh -c "systemctl disable eni.service; rm -f /etc/udev/rules.d/75-persistent-net-generator.rules /lib/udev/rules.d/60-net.rules /lib/udev/rules.d/61-eni.rules /lib/udev/write_net_rules && udevadm control --reload-rules && udevadm trigger; true"'
         volumeMounts:
         - name: configvolume
           mountPath: /etc/eni
@@ -201,7 +201,7 @@ spec:
       - name: policy
         image: registry.aliyuncs.com/acs/terway:v1.0.10.122-gd0be015-aliyun
         imagePullPolicy: IfNotPresent
-        command: [\"/bin/policyinit.sh\"]
+        command: ["/bin/policyinit.sh"]
         env:
         - name: NODENAME
           valueFrom:
@@ -245,14 +245,14 @@ spec:
       - name: cni-bin
         hostPath:
           path: /opt/cni/bin
-          type: \"DirectoryOrCreate\"
+          type: "DirectoryOrCreate"
       - name: cni
         hostPath:
           path: /etc/cni/net.d
       - name: eni-run
         hostPath:
           path: /var/run/
-          type: \"Directory\"
+          type: "Directory"
       - name: lib-modules
         hostPath:
           path: /lib/modules
@@ -265,11 +265,11 @@ spec:
       - name: device-plugin-path
         hostPath:
           path: /var/lib/kubelet/device-plugins
-          type: \"Directory\"
+          type: "Directory"
       - name: host-root
         hostPath:
           path: /
-          type: \"Directory\"
+          type: "Directory"
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
