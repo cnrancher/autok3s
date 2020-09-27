@@ -43,14 +43,14 @@ func SSHDialer(h *Host) (*Dialer, error) {
 	return newDialer(h, networkKind)
 }
 
-func (d *Dialer) OpenTunnel() (*Tunnel, error) {
+func (d *Dialer) OpenTunnel(timeout bool) (*Tunnel, error) {
 	wait.ErrWaitTimeout = fmt.Errorf("[dialer] calling openTunnel error. address [%s]", d.sshAddress)
 
 	var conn *ssh.Client
 	var err error
 
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
-		conn, err = d.getSSHTunnelConnection()
+		conn, err = d.getSSHTunnelConnection(timeout)
 		if err != nil {
 			return false, err
 		}
@@ -102,8 +102,12 @@ func newDialer(h *Host, kind string) (*Dialer, error) {
 	return d, nil
 }
 
-func (d *Dialer) getSSHTunnelConnection() (*ssh.Client, error) {
+func (d *Dialer) getSSHTunnelConnection(t bool) (*ssh.Client, error) {
 	timeout := time.Duration((common.Backoff.Steps - 1) * int(common.Backoff.Duration))
+	if !t {
+		timeout = 0
+	}
+
 	cfg, err := utils.GetSSHConfig(d.username, d.sshKey, d.passphrase, d.sshCert, d.password, timeout, d.useSSHAgentAuth)
 	if err != nil {
 		return nil, err

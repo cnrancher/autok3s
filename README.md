@@ -167,7 +167,7 @@ sudo autok3s list
 ```
 
 ### Access K3s Cluster
-After cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
+After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 ```bash
 sudo autok3s kubectl <sub-commands> <flags>
 ```
@@ -176,6 +176,28 @@ In the scenario of multiple clusters, the access to different clusters can be co
 ```bash
 sudo autok3s kubectl config get-contexts
 sudo autok3s kubectl config use-context <context>
+```
+
+### SSH K3s Cluster's Node
+If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+```bash
+sudo autok3s ssh \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name>
+```
+
+Generic commands can be used anywhere.
+```bash
+sudo autok3s ssh \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --ssh-key-path <ssh private key path> \
+    --ssh-user root \
+    --ssh-port 22 \
+    --access-key <access-key> \
+    --access-secret <access-secret>
 ```
 
 ## Developers' Guide

@@ -223,31 +223,6 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	return nil
 }
 
-func (p *Alibaba) IsClusterExist() (bool, []string, error) {
-	ids := make([]string, 0)
-
-	if p.c == nil {
-		if err := p.generateClientSDK(); err != nil {
-			return false, ids, err
-		}
-	}
-
-	request := ecs.CreateListTagResourcesRequest()
-	request.Scheme = "https"
-	request.ResourceType = "instance"
-	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
-
-	response, err := p.c.ListTagResources(request)
-	if err != nil || len(response.TagResources.TagResource) > 0 {
-		for _, resource := range response.TagResources.TagResource {
-			ids = append(ids, resource.ResourceId)
-		}
-		// ecs will return multiple instance ids based on the value of tag key.n by n, so duplicate items need to be removed.
-		return true, utils.UniqueArray(ids), err
-	}
-	return false, utils.UniqueArray(ids), nil
-}
-
 func (p *Alibaba) Rollback() error {
 	p.logger.Infof("[%s] executing rollback logic...\n", p.GetProviderName())
 
@@ -296,7 +271,7 @@ func (p *Alibaba) Rollback() error {
 	return nil
 }
 
-func (p *Alibaba) DeleteK3sNode(f bool) error {
+func (p *Alibaba) DeleteK3sCluster(f bool) error {
 	isConfirmed := true
 
 	if !f {
@@ -353,6 +328,79 @@ func (p *Alibaba) StopK3sCluster(f bool) error {
 	p.logger.Infof("[%s] successfully executed stop logic\n", p.GetProviderName())
 
 	return nil
+}
+
+func (p *Alibaba) SSHK3sNode() error {
+	p.logger = common.NewLogger(common.Debug)
+	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
+
+	if err := p.generateClientSDK(); err != nil {
+		return err
+	}
+
+	response, err := p.describeInstances()
+	if err != nil {
+		return err
+	}
+	if len(response.Instances.Instance) < 1 {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
+			p.GetProviderName(), p.Name)
+	}
+
+	ids := make(map[string]string, len(response.Instances.Instance))
+	for _, instance := range response.Instances.Instance {
+		if instance.EipAddress.IpAddress != "" {
+			ids[instance.InstanceId] = instance.EipAddress.IpAddress
+		} else if instance.EipAddress.IpAddress == "" && len(instance.PublicIpAddress.IpAddress) > 0 {
+			ids[instance.InstanceId] = instance.PublicIpAddress.IpAddress[0]
+		}
+	}
+
+	ip := utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids)
+
+	if ip == "" {
+		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
+	}
+
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}
+
+	// ssh K3s node.
+	if err := cluster.SSHK3sNode(ip, c); err != nil {
+		return err
+	}
+
+	p.logger.Infof("[%s] successfully executed ssh logic\n", p.GetProviderName())
+
+	return nil
+}
+
+func (p *Alibaba) IsClusterExist() (bool, []string, error) {
+	ids := make([]string, 0)
+
+	if p.c == nil {
+		if err := p.generateClientSDK(); err != nil {
+			return false, ids, err
+		}
+	}
+
+	request := ecs.CreateListTagResourcesRequest()
+	request.Scheme = "https"
+	request.ResourceType = "instance"
+	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
+
+	response, err := p.c.ListTagResources(request)
+	if err != nil || len(response.TagResources.TagResource) > 0 {
+		for _, resource := range response.TagResources.TagResource {
+			ids = append(ids, resource.ResourceId)
+		}
+		// ecs will return multiple instance ids based on the value of tag key.n by n, so duplicate items need to be removed.
+		return true, utils.UniqueArray(ids), err
+	}
+	return false, utils.UniqueArray(ids), nil
 }
 
 func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
@@ -770,8 +818,11 @@ func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
 
 	response, err := p.c.DescribeInstances(request)
 	if err == nil && len(response.Instances.Instance) == 0 {
-		return nil, fmt.Errorf("[%s] calling describeInstances error. region: %s, zone: %s, "+"instanceName: %s, message: [%s]",
-			p.GetProviderName(), p.Region, p.Zone, request.InstanceName, err)
+		return nil, fmt.Errorf("[%s] calling describeInstances error. region: %s, zone: %s, "+"cluster: %s, message: [%s]",
+			p.GetProviderName(), p.Region, p.Zone, p.Name, err)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	return response, nil
