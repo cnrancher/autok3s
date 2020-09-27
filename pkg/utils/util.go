@@ -1,8 +1,14 @@
 package utils
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 func RandomToken(size int) (string, error) {
@@ -29,4 +35,21 @@ func UniqueArray(origin []string) (unique []string) {
 		}
 	}
 	return
+}
+
+func AskForConfirmation(s string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("%s [y/n]: ", s)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
 }
