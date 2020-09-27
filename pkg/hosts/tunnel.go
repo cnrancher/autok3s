@@ -3,13 +3,19 @@ package hosts
 import (
 	"bytes"
 	"io"
+	"os"
 
 	"golang.org/x/crypto/ssh"
 )
 
 type Tunnel struct {
+	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+	Modes  ssh.TerminalModes
+	Term   string
+	Height int
+	Weight int
 
 	err  error
 	conn *ssh.Client
@@ -31,6 +37,57 @@ func (t *Tunnel) Cmd(cmd string) *Tunnel {
 	}
 
 	return t
+}
+
+func (t *Tunnel) Terminal() error {
+	session, err := t.conn.NewSession()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = session.Close()
+	}()
+
+	if t.Stdin == nil {
+		session.Stdin = os.Stdin
+	} else {
+		session.Stdin = t.Stdin
+	}
+	if t.Stdout == nil {
+		session.Stdout = os.Stdout
+	} else {
+		session.Stdout = t.Stdout
+	}
+	if t.Stderr == nil {
+		session.Stderr = os.Stderr
+	} else {
+		session.Stderr = t.Stderr
+	}
+
+	term := os.Getenv("TERM")
+	if term == "" {
+		t.Term = "xterm-256color"
+	}
+	t.Height = 40
+	t.Weight = 80
+	t.Modes = ssh.TerminalModes{
+		ssh.TTY_OP_ISPEED: 14400,
+		ssh.TTY_OP_OSPEED: 14400,
+	}
+	if err := session.RequestPty(t.Term, t.Height, t.Weight, t.Modes); err != nil {
+		return err
+	}
+
+	if err := session.Shell(); err != nil {
+		return err
+	}
+
+	if err := session.Wait(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *Tunnel) Run() error {

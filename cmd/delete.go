@@ -55,7 +55,7 @@ func DeleteCommand() *cobra.Command {
 
 		dp.GenerateClusterName()
 
-		if err := dp.DeleteK3sNode(force); err != nil {
+		if err := dp.DeleteK3sCluster(force); err != nil {
 			logrus.Fatalln(err)
 		}
 	}

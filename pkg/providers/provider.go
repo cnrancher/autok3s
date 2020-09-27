@@ -32,6 +32,8 @@ type Provider interface {
 	GetStartFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Delete command flags.
 	GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet
+	// SSH command flags.
+	GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Credential flags.
 	GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Use this method to bind Viper, although it is somewhat repetitive.
@@ -46,16 +48,18 @@ type Provider interface {
 	CreateK3sCluster(ssh *types.SSH) error
 	// K3s join node interface.
 	JoinK3sNode(ssh *types.SSH) error
-	// K3s check cluster exist.
-	IsClusterExist() (bool, []string, error)
-	// Rollback when error occurs.
-	Rollback() error
-	// K3s delete node interface.
-	DeleteK3sNode(f bool) error
+	// K3s delete cluster interface.
+	DeleteK3sCluster(f bool) error
 	// K3s start cluster interface.
 	StartK3sCluster() error
 	// K3s stop cluster interface.
 	StopK3sCluster(f bool) error
+	// K3s ssh node interface.
+	SSHK3sNode() error
+	// K3s check cluster exist.
+	IsClusterExist() (bool, []string, error)
+	// Rollback when error occurs.
+	Rollback() error
 }
 
 // RegisterProvider registers a provider.Factory by name.

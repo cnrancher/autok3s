@@ -2,13 +2,24 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	tmpl = `
+{{- range $key, $element := .}}
+  {{$key}}: {{$element}}
+{{- end}}
+`
 )
 
 func RandomToken(size int) (string, error) {
@@ -52,4 +63,30 @@ func AskForConfirmation(s string) bool {
 			return false
 		}
 	}
+}
+
+func AskForSelectItem(s string, ss map[string]string) string {
+	reader := bufio.NewReader(os.Stdin)
+	t := template.New("tmpl")
+	t, err := t.Parse(tmpl)
+	if err != nil {
+		return ""
+	}
+	buffer := new(bytes.Buffer)
+	if err := t.Execute(buffer, ss); err != nil {
+		return ""
+	}
+	fmt.Printf("%s: \n \t%s\n[choose 0-%d]:", s, buffer.String(), len(ss))
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	index := 0
+	for _, v := range ss {
+		if strconv.Itoa(index) == strings.ToLower(strings.TrimSpace(response)) {
+			return v
+		}
+		index++
+	}
+	return ""
 }

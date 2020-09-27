@@ -298,6 +298,24 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	return nil
 }
 
+func SSHK3sNode(ip string, cluster *types.Cluster) error {
+	var node types.Node
+
+	for _, n := range cluster.Status.MasterNodes {
+		if n.PublicIPAddress[0] == ip {
+			node = n
+		}
+	}
+
+	for _, n := range cluster.Status.WorkerNodes {
+		if n.PublicIPAddress[0] == ip {
+			node = n
+		}
+	}
+
+	return terminal(&hosts.Host{Node: node})
+}
+
 func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 	r := make([]types.Cluster, 0)
 	v := common.CfgPath
@@ -589,7 +607,7 @@ func execute(host *hosts.Host, print bool, cmds []string) (string, error) {
 		return "", err
 	}
 
-	tunnel, err := dialer.OpenTunnel()
+	tunnel, err := dialer.OpenTunnel(true)
 	if err != nil {
 		return "", err
 	}
@@ -615,6 +633,23 @@ func execute(host *hosts.Host, print bool, cmds []string) (string, error) {
 	}
 
 	return "", nil
+}
+
+func terminal(host *hosts.Host) error {
+	dialer, err := hosts.SSHDialer(host)
+	if err != nil {
+		return err
+	}
+
+	tunnel, err := dialer.OpenTunnel(false)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tunnel.Close()
+	}()
+
+	return tunnel.Terminal()
 }
 
 func mergeCfg(context, right string) error {
