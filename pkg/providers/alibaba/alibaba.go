@@ -297,18 +297,26 @@ func (p *Alibaba) Rollback() error {
 }
 
 func (p *Alibaba) DeleteK3sNode(f bool) error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
+	isConfirmed := true
 
-	if err := p.generateClientSDK(); err != nil {
-		return err
+	if !f {
+		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.GetProviderName(), p.Name))
 	}
 
-	if err := p.deleteCluster(f); err != nil {
-		return err
-	}
+	if isConfirmed {
+		p.logger = common.NewLogger(common.Debug)
+		p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
 
-	p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
+		if err := p.generateClientSDK(); err != nil {
+			return err
+		}
+
+		if err := p.deleteCluster(f); err != nil {
+			return err
+		}
+
+		p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
+	}
 
 	return nil
 }
@@ -450,6 +458,7 @@ func (p *Alibaba) deleteCluster(f bool) error {
 
 	if err == nil && len(ids) > 0 {
 		p.logger.Debugf("[%s] cluster %s will be deleted\n", p.GetProviderName(), p.Name)
+
 		p.releaseEipAddresses(false)
 
 		request := ecs.CreateDeleteInstancesRequest()
@@ -460,7 +469,6 @@ func (p *Alibaba) deleteCluster(f bool) error {
 		request.TerminateSubscription = requests.NewBoolean(true)
 
 		_, err := p.c.DeleteInstances(request)
-
 		if err != nil {
 			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]", p.GetProviderName(), err)
 		}
