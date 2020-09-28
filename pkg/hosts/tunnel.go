@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Tunnel struct {
@@ -41,40 +42,42 @@ func (t *Tunnel) Cmd(cmd string) *Tunnel {
 
 func (t *Tunnel) Terminal() error {
 	session, err := t.conn.NewSession()
-	if err != nil {
-		return err
-	}
-
 	defer func() {
 		_ = session.Close()
 	}()
-
-	if t.Stdin == nil {
-		session.Stdin = os.Stdin
-	} else {
-		session.Stdin = t.Stdin
-	}
-	if t.Stdout == nil {
-		session.Stdout = os.Stdout
-	} else {
-		session.Stdout = t.Stdout
-	}
-	if t.Stderr == nil {
-		session.Stderr = os.Stderr
-	} else {
-		session.Stderr = t.Stderr
+	if err != nil {
+		return err
 	}
 
 	term := os.Getenv("TERM")
 	if term == "" {
 		t.Term = "xterm-256color"
 	}
-	t.Height = 40
-	t.Weight = 80
 	t.Modes = ssh.TerminalModes{
+		ssh.ECHO:          1,
+		ssh.VSTATUS:       1,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
+
+	fd := int(os.Stdin.Fd())
+	oldState, err := terminal.MakeRaw(fd)
+	defer func() {
+		_ = terminal.Restore(fd, oldState)
+	}()
+	if err != nil {
+		return err
+	}
+
+	t.Weight, t.Height, err = terminal.GetSize(fd)
+	if err != nil {
+		return err
+	}
+
+	session.Stdin = os.Stdin
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
+
 	if err := session.RequestPty(t.Term, t.Height, t.Weight, t.Modes); err != nil {
 		return err
 	}

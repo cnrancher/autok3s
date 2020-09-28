@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -16,8 +15,8 @@ import (
 
 const (
 	tmpl = `
-{{- range $key, $element := .}}
-  {{$key}}: {{$element}}
+{{- range $key, $value := .}}
+  - {{$key}}: {{$value}}
 {{- end}}
 `
 )
@@ -76,17 +75,10 @@ func AskForSelectItem(s string, ss map[string]string) string {
 	if err := t.Execute(buffer, ss); err != nil {
 		return ""
 	}
-	fmt.Printf("%s: \n \t%s\n[choose 0-%d]:", s, buffer.String(), len(ss))
+	fmt.Printf("%s: \n \t%s\n[choose one id]: ", s, buffer.String())
 	response, err := reader.ReadString('\n')
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	index := 0
-	for _, v := range ss {
-		if strconv.Itoa(index) == strings.ToLower(strings.TrimSpace(response)) {
-			return v
-		}
-		index++
-	}
-	return ""
+	return ss[strings.ToLower(strings.TrimSpace(response))]
 }
