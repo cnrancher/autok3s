@@ -515,7 +515,7 @@ func initAdditionalMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3s
 	}
 
 	if !strings.Contains(extraArgs, "server --server") {
-		extraArgs += " server --server " + fmt.Sprintf("https://%s:6443", ip)
+		extraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", ip), master.PublicIPAddress[0])
 	}
 
 	if _, err := execute(&hosts.Host{Node: master}, false,
@@ -550,7 +550,7 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 	extraArgs string, merged *types.Cluster, full types.Node) {
 
 	if !strings.Contains(extraArgs, "server --server") {
-		extraArgs += " server --server " + fmt.Sprintf("https://%s:6443", merged.IP)
+		extraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", merged.IP), full.PublicIPAddress[0])
 	}
 
 	if merged.DataStore != "" {
