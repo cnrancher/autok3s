@@ -1020,7 +1020,7 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 		eipIds = append(eipIds, eip.AllocationId)
 	}
 	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
-	p.logger.Debugf("[%s] start to tag eip(s): %s\n", p.GetProviderName(), eipIds)
+	p.logger.Debugf("[%s] tagging eip(s): %s\n", p.GetProviderName(), eipIds)
 
 	if err := p.tagVpcResources(resourceTypeEip, eipIds, tag); err != nil {
 		p.logger.Errorf("[%s] error when tag eip(s): %s\n", p.GetProviderName(), err)
@@ -1090,32 +1090,32 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	// unassociate master eip address.
 	for _, master := range p.MasterNodes {
 		if master.RollBack == rollBack {
-			p.logger.Debugf("[%s] start to unassociate eip address for %d master(s)\n", p.GetProviderName(), len(p.MasterNodes))
+			p.logger.Debugf("[%s] unassociating eip address for %d master(s)\n", p.GetProviderName(), len(p.MasterNodes))
 
 			for _, allocationID := range master.EipAllocationIds {
 				if err := p.unassociateEipAddress(allocationID); err != nil {
-					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+					p.logger.Errorf("[%s] error when unassociating eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 				}
 				releaseEipIds = append(releaseEipIds, allocationID)
 			}
 
-			p.logger.Debugf("[%s] unassociated eip address for master(s)\n", p.GetProviderName())
+			p.logger.Debugf("[%s] successfully unassociated eip address for master(s)\n", p.GetProviderName())
 		}
 	}
 
 	// unassociate worker eip address.
 	for _, worker := range p.WorkerNodes {
 		if worker.RollBack == rollBack {
-			p.logger.Debugf("[%s] start to unassociate eip address for %d worker(s)\n", p.GetProviderName(), len(p.WorkerNodes))
+			p.logger.Debugf("[%s] unassociating eip address for %d worker(s)\n", p.GetProviderName(), len(p.WorkerNodes))
 
 			for _, allocationID := range worker.EipAllocationIds {
 				if err := p.unassociateEipAddress(allocationID); err != nil {
-					p.logger.Errorf("[%s] error when unassociate eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+					p.logger.Errorf("[%s] error when unassociating eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 				}
 				releaseEipIds = append(releaseEipIds, allocationID)
 			}
 
-			p.logger.Debugf("[%s] unassociated eip address for worker(s)\n", p.GetProviderName())
+			p.logger.Debugf("[%s] successfully unassociated eip address for worker(s)\n", p.GetProviderName())
 		}
 	}
 
@@ -1134,10 +1134,10 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 
 	// release eips.
 	for _, allocationID := range allocationIds {
-		p.logger.Debugf("[%s] start to release eip: %s\n", p.GetProviderName(), allocationID)
+		p.logger.Debugf("[%s] releasing eip: %s\n", p.GetProviderName(), allocationID)
 
 		if err := p.releaseEipAddress(allocationID); err != nil {
-			p.logger.Errorf("[%s] error when release eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+			p.logger.Errorf("[%s] error when releasing eip address %s: %v\n", p.GetProviderName(), allocationID, err)
 		} else {
 			p.logger.Debugf("[%s] successfully released eip: %s\n", p.GetProviderName(), allocationID)
 		}
@@ -1241,7 +1241,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 	}
 
 	if workerNum > 0 {
-		p.logger.Debugf("[%s] start to allocate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+		p.logger.Debugf("[%s] allocating %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 		if workerEips, err = p.allocateEipAddresses(workerNum); err != nil {
 			return nil, err
 		}
@@ -1271,7 +1271,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 
 	// associate master eip
 	if masterEips != nil {
-		p.logger.Debugf("[%s] start to associate %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
+		p.logger.Debugf("[%s] associating %d eip(s) for master(s)\n", p.GetProviderName(), masterNum)
 
 		j := 0
 		for i, master := range p.Status.MasterNodes {
@@ -1291,7 +1291,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 
 	// associate worker eip
 	if workerEips != nil {
-		p.logger.Debugf("[%s] start to associate %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
+		p.logger.Debugf("[%s] associating %d eip(s) for worker(s)\n", p.GetProviderName(), workerNum)
 
 		j := 0
 		for i, worker := range p.Status.WorkerNodes {
