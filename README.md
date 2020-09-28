@@ -160,6 +160,27 @@ autok3s delete \
     --access-secret <access-secret>
 ```
 
+### Remove K3s Nodes
+If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+```bash
+autok3s remove \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --node-names <node-name-a,node-name-b>
+```
+
+Generic commands can be used anywhere.
+```bash
+autok3s remove \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --node-names <node-name-a,node-name-b> \
+    --access-key <access-key> \
+    --access-secret <access-secret>
+```
+
 ### List K3s Clusters
 This command will list the clusters that you have created on this machine.
 ```bash
