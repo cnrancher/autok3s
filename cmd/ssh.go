@@ -12,9 +12,17 @@ import (
 
 var (
 	sshCmd = &cobra.Command{
-		Use:     "ssh",
-		Short:   "SSH k3s node",
-		Example: `  autok3s ssh --provider alibaba`,
+		Use:   "ssh",
+		Short: "SSH k3s node",
+		Example: `  autok3s ssh \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --ssh-key-path <ssh private key path> \
+    --ssh-user root \
+    --ssh-port 22 \
+    --access-key <access-key> \
+    --access-secret <access-secret>`,
 	}
 
 	sProvider = ""

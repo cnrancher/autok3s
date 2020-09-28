@@ -12,9 +12,19 @@ import (
 
 var (
 	createCmd = &cobra.Command{
-		Use:     "create",
-		Short:   "Create k3s cluster",
-		Example: `  autok3s create --provider alibaba`,
+		Use:   "create",
+		Short: "Create k3s cluster",
+		Example: `  autok3s create \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --key-pair <key-pair id> \
+    --v-switch <v-switch id> \
+    --security-group <security-group id> \
+    --ssh-key-path <ssh-key-path> \
+    --access-key <access-key> \
+    --access-secret <access-secret> \
+    --master 1`,
 	}
 
 	cProvider = ""

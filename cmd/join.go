@@ -12,9 +12,20 @@ import (
 
 var (
 	joinCmd = &cobra.Command{
-		Use:     "join",
-		Short:   "Join k3s node",
-		Example: `  autok3s join --provider alibaba`,
+		Use:   "join",
+		Short: "Join k3s node",
+		Example: `  autok3s join \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --key-pair <key-pair id> \
+    --v-switch <v-switch id> \
+    --security-group <security-group id> \
+    --token <k3s token> \
+    --ip <k3s master/lb ip> \
+    --access-key <access-key> \
+    --access-secret <access-secret> \
+    --worker 1`,
 	}
 
 	jProvider = ""
