@@ -11,9 +11,14 @@ import (
 
 var (
 	startCmd = &cobra.Command{
-		Use:     "start",
-		Short:   "Start k3s cluster",
-		Example: `  autok3s start --name cluster`,
+		Use:   "start",
+		Short: "Start k3s cluster",
+		Example: `  autok3s start \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>`,
 	}
 	stProvider = ""
 	stP        providers.Provider

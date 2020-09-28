@@ -11,9 +11,14 @@ import (
 
 var (
 	stopCmd = &cobra.Command{
-		Use:     "stop",
-		Short:   "Stop k3s cluster",
-		Example: `  autok3s stop --name cluster`,
+		Use:   "stop",
+		Short: "Stop k3s cluster",
+		Example: `  autok3s stop \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>`,
 	}
 	spProvider = ""
 	spForce    = false

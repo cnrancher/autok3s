@@ -11,9 +11,14 @@ import (
 
 var (
 	deleteCmd = &cobra.Command{
-		Use:     "delete",
-		Short:   "Delete k3s cluster",
-		Example: `  autok3s delete --name cluster`,
+		Use:   "delete",
+		Short: "Delete k3s cluster",
+		Example: `  autok3s delete \
+    --provider alibaba \
+    --region <region> \
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>`,
 	}
 	dProvider = ""
 	force     = false
