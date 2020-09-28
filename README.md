@@ -8,12 +8,12 @@ It can help users quickly complete the personalized configuration of the K3s clu
 
 ## Design Ideas
 This tool uses the cloud provider's SDK to create and manage hosts, and then uses SSH to install the K3s cluster to the remote host.
-You can also use it to join hosts as masters/agents to the K3s cluster. It will automatically merge and store the `kubeconfig` in `/var/lib/rancher/autok3s/.kube/config` which necessary for user to access the cluster.
+You can also use it to join hosts as masters/agents to the K3s cluster. It will automatically merge and store the `kubeconfig` in `$HOME/.autok3s/.kube/config` which necessary for user to access the cluster.
 Then user can use `autok3s kubectl` command quickly access the cluster.
 
-Use [viper](https://github.com/spf13/viper) to bind flags and configuration file. `autok3s` will generate a configuration file to store cloud-providers' access information at the specified location(`/var/lib/rancher/autok3s/config.yaml`) to reduce the number of flags to be passed for multiple runs.
+Use [viper](https://github.com/spf13/viper) to bind flags and configuration file. `autok3s` will generate a configuration file to store cloud-providers' access information at the specified location(`$HOME/.autok3s/config.yaml`) to reduce the number of flags to be passed for multiple runs.
 
-It's also generated a state file `/var/lib/rancher/autok3s/.state` to record the clusters' information created on this host.
+It's also generated a state file `$HOME/.autok3s/.state` to record the clusters' information created on this host.
 
 ## Providers
 - alibaba
@@ -22,9 +22,9 @@ It's also generated a state file `/var/lib/rancher/autok3s/.state` to record the
 User can get the commands available for different providers according to the `--provider <provider> --help`.
 
 ### Setup K3s Cluster
-If already have access information in `/var/lib/rancher/autok3s/config.yaml` you can use the simplified command.
+If already have access information in `$HOME/.autok3s/config.yaml` you can use the simplified command.
 ```bash
-sudo autok3s create \
+autok3s create \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
@@ -37,7 +37,7 @@ sudo autok3s create \
 
 Generic commands can be used anywhere.
 ```bash
-sudo autok3s create \
+autok3s create \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
@@ -52,13 +52,13 @@ sudo autok3s create \
 
 HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3 master nodes, e.g.
 ```bash
-sudo autok3s ... \
+autok3s ... \
     --master 3
 ```
 
 HA(external database) mode need `--master` greater than 1 node, also need to specify `--datastore`, e.g.
 ```bash
-sudo autok3s ... \
+autok3s ... \
     --master 2 \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
@@ -66,7 +66,7 @@ sudo autok3s ... \
 ### Join K3s Nodes
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```bash
-sudo autok3s join \
+autok3s join \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
@@ -76,7 +76,7 @@ sudo autok3s join \
 
 Generic commands can be used anywhere.
 ```bash
-sudo autok3s join \
+autok3s join \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
@@ -92,13 +92,13 @@ sudo autok3s join \
 
 Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
 ```bash
-sudo autok3s ... \
+autok3s ... \
     --master 2
 ```
 
 Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
 ```bash
-sudo autok3s ... \
+autok3s ... \
     --master 2 \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
@@ -106,7 +106,7 @@ sudo autok3s ... \
 ### Start K3s Cluster
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```bash
-sudo autok3s start \
+autok3s start \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
@@ -114,7 +114,7 @@ sudo autok3s start \
 
 Generic commands can be used anywhere.
 ```bash
-sudo autok3s start \
+autok3s start \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
@@ -125,7 +125,7 @@ sudo autok3s start \
 ### Stop K3s Cluster
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```bash
-sudo autok3s stop \
+autok3s stop \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
@@ -133,7 +133,7 @@ sudo autok3s stop \
 
 Generic commands can be used anywhere.
 ```bash
-sudo autok3s stop \
+autok3s stop \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
@@ -144,7 +144,7 @@ sudo autok3s stop \
 ### Delete K3s Cluster
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```bash
-sudo autok3s delete \
+autok3s delete \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
@@ -152,7 +152,7 @@ sudo autok3s delete \
 
 Generic commands can be used anywhere.
 ```bash
-sudo autok3s delete \
+autok3s delete \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
@@ -163,25 +163,25 @@ sudo autok3s delete \
 ### List K3s Clusters
 This command will list the clusters that you have created on this machine.
 ```bash
-sudo autok3s list
+autok3s list
 ```
 
 ### Access K3s Cluster
 After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 ```bash
-sudo autok3s kubectl <sub-commands> <flags>
+autok3s kubectl <sub-commands> <flags>
 ```
 
 In the scenario of multiple clusters, the access to different clusters can be completed by switching context.
 ```bash
-sudo autok3s kubectl config get-contexts
-sudo autok3s kubectl config use-context <context>
+autok3s kubectl config get-contexts
+autok3s kubectl config use-context <context>
 ```
 
 ### SSH K3s Cluster's Node
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```bash
-sudo autok3s ssh \
+autok3s ssh \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
@@ -189,7 +189,7 @@ sudo autok3s ssh \
 
 Generic commands can be used anywhere.
 ```bash
-sudo autok3s ssh \
+autok3s ssh \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \

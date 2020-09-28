@@ -44,8 +44,8 @@ const (
 	eipStatusAvailable      = "Available"
 	eipStatusInUse          = "InUse"
 	usageInfo               = `=========================== Prompt Info ===========================
-Use 'sudo autok3s kubectl config use-context %s'
-Use 'sudo autok3s kubectl get pods -A' get POD status`
+Use 'autok3s kubectl config use-context %s'
+Use 'autok3s kubectl get pods -A' get POD status`
 )
 
 // ProviderName is the name of this provider.
