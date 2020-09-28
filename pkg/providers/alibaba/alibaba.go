@@ -350,13 +350,40 @@ func (p *Alibaba) SSHK3sNode() error {
 	ids := make(map[string]string, len(response.Instances.Instance))
 	for _, instance := range response.Instances.Instance {
 		if instance.EipAddress.IpAddress != "" {
-			ids[instance.InstanceId] = instance.EipAddress.IpAddress
+			for _, t := range instance.Tags.Tag {
+				switch t.TagKey {
+				case "master":
+					if t.TagValue == "true" {
+						ids[instance.InstanceId] = instance.EipAddress.IpAddress + " (master)"
+					}
+				case "worker":
+					if t.TagValue == "true" {
+						ids[instance.InstanceId] = instance.EipAddress.IpAddress + " (worker)"
+					}
+				default:
+					continue
+				}
+			}
 		} else if instance.EipAddress.IpAddress == "" && len(instance.PublicIpAddress.IpAddress) > 0 {
-			ids[instance.InstanceId] = instance.PublicIpAddress.IpAddress[0]
+			for _, t := range instance.Tags.Tag {
+				switch t.TagKey {
+				case "master":
+					if t.TagValue == "true" {
+						ids[instance.InstanceId] = instance.PublicIpAddress.IpAddress[0] + " (master)"
+					}
+				case "worker":
+					if t.TagValue == "true" {
+						ids[instance.InstanceId] = instance.PublicIpAddress.IpAddress[0] + " (worker)"
+					}
+				default:
+					continue
+				}
+			}
+
 		}
 	}
 
-	ip := utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids)
+	ip := strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
 
 	if ip == "" {
 		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
