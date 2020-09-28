@@ -41,13 +41,6 @@ func init() {
 }
 
 func Command() *cobra.Command {
-	cmd.PreRun = func(cmd *cobra.Command, args []string) {
-		if os.Getuid() != 0 {
-			logrus.Errorf("%s: need to be root", os.Args[0])
-			os.Exit(1)
-		}
-	}
-
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		printASCII()
 		if err := cmd.Help(); err != nil {
@@ -59,11 +52,6 @@ func Command() *cobra.Command {
 }
 
 func initCfg() {
-	if os.Getuid() != 0 {
-		logrus.Errorf("%s: need to be root", os.Args[0])
-		os.Exit(1)
-	}
-
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(fmt.Sprintf("%s/%s", common.CfgPath, common.ConfigFile))
 	viper.AutomaticEnv()

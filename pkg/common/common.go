@@ -3,6 +3,8 @@ package common
 import (
 	"time"
 
+	"github.com/cnrancher/autok3s/pkg/utils"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -20,7 +22,7 @@ const (
 
 var (
 	Debug   = false
-	CfgPath = "/var/lib/rancher/autok3s"
+	CfgPath = utils.UserHome() + "/.autok3s"
 	Backoff = wait.Backoff{
 		Duration: 30 * time.Second,
 		Factor:   1,
