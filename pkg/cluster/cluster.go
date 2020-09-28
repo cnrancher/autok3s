@@ -127,7 +127,6 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	case <-masterWaitGroupDone:
 		break
 	case err := <-masterErrChan:
-		close(masterErrChan)
 		return err
 	}
 
@@ -158,7 +157,6 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	case <-workerWaitGroupDone:
 		break
 	case err := <-workerErrChan:
-		close(workerErrChan)
 		return err
 	}
 
@@ -234,7 +232,6 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	waitGroupDone := make(chan bool)
 	waitGroup := &sync.WaitGroup{}
 	waitGroup.Add(len(added.MasterNodes) + len(added.WorkerNodes))
-	defer close(errChan)
 
 	for i := 0; i < len(added.Status.MasterNodes); i++ {
 		for _, full := range merged.MasterNodes {
@@ -281,7 +278,6 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	case <-waitGroupDone:
 		break
 	case err := <-errChan:
-		close(errChan)
 		return err
 	}
 
@@ -506,6 +502,7 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 
 func initAdditionalMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, ip, extraArgs string,
 	cluster *types.Cluster, master types.Node) {
+	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
 		if _, err := execute(&hosts.Host{Node: master}, false,
@@ -515,12 +512,14 @@ func initAdditionalMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3s
 	}
 
 	if !strings.Contains(extraArgs, "server --server") {
-		extraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", ip), master.PublicIPAddress[0])
+		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", ip), master.PublicIPAddress[0])
 	}
+
+	sortedExtraArgs += " " + extraArgs
 
 	if _, err := execute(&hosts.Host{Node: master}, false,
 		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, ip, cluster.Token,
-			strings.TrimSpace(extraArgs), cluster.K3sVersion)}); err != nil {
+			strings.TrimSpace(sortedExtraArgs), cluster.K3sVersion)}); err != nil {
 		errChan <- err
 	}
 
@@ -529,6 +528,7 @@ func initAdditionalMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3s
 
 func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, extraArgs string,
 	cluster *types.Cluster, worker types.Node) {
+	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
 		if _, err := execute(&hosts.Host{Node: worker}, false,
@@ -537,9 +537,11 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
+	sortedExtraArgs += " " + extraArgs
+
 	if _, err := execute(&hosts.Host{Node: worker}, false,
 		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, cluster.IP, cluster.Token,
-			strings.TrimSpace(extraArgs), cluster.K3sVersion)}); err != nil {
+			strings.TrimSpace(sortedExtraArgs), cluster.K3sVersion)}); err != nil {
 		errChan <- err
 	}
 
@@ -548,17 +550,18 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 
 func joinMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror,
 	extraArgs string, merged *types.Cluster, full types.Node) {
+	sortedExtraArgs := ""
 
 	if !strings.Contains(extraArgs, "server --server") {
-		extraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", merged.IP), full.PublicIPAddress[0])
+		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", merged.IP), full.PublicIPAddress[0])
 	}
 
 	if merged.DataStore != "" {
-		extraArgs += " --datastore-endpoint " + merged.DataStore
+		sortedExtraArgs += " --datastore-endpoint " + merged.DataStore
 	}
 
 	if merged.ClusterCIDR != "" {
-		extraArgs += " --cluster-cidr " + merged.ClusterCIDR
+		sortedExtraArgs += " --cluster-cidr " + merged.ClusterCIDR
 	}
 
 	if strings.Contains(extraArgs, "--docker") {
@@ -568,10 +571,12 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
+	sortedExtraArgs += " " + extraArgs
+
 	// for now, use the workerCommand to join the additional master server node.
 	if _, err := execute(&hosts.Host{Node: full}, false,
 		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.IP, merged.Token,
-			strings.TrimSpace(extraArgs), merged.K3sVersion)}); err != nil {
+			strings.TrimSpace(sortedExtraArgs), merged.K3sVersion)}); err != nil {
 		errChan <- err
 	}
 
@@ -580,6 +585,7 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 
 func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, extraArgs string,
 	merged *types.Cluster, full types.Node) {
+	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
 		if _, err := execute(&hosts.Host{Node: full}, false,
@@ -588,9 +594,11 @@ func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
+	sortedExtraArgs += " " + extraArgs
+
 	if _, err := execute(&hosts.Host{Node: full}, false,
 		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.IP, merged.Token,
-			strings.TrimSpace(extraArgs), merged.K3sVersion)}); err != nil {
+			strings.TrimSpace(sortedExtraArgs), merged.K3sVersion)}); err != nil {
 		errChan <- err
 	}
 
