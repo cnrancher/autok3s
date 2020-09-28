@@ -19,7 +19,7 @@ It's also generated a state file `/var/lib/rancher/autok3s/.state` to record the
 - alibaba
 
 ## Usage
-The user can get the commands available for different providers according to the `--help` flag.
+User can get the commands available for different providers according to the `--provider <provider> --help`.
 
 ### Setup K3s Cluster
 If already have access information in `/var/lib/rancher/autok3s/config.yaml` you can use the simplified command.
