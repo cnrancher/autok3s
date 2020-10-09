@@ -18,6 +18,9 @@ It's also generated a state file `$HOME/.autok3s/.state` to record the clusters'
 ## Providers
 - alibaba
 
+## Pre-Requests
+The following demo uses the Alibaba Provider, so you need to set the following [RAMs](docs/alibaba/ram.md).
+
 ## Usage
 User can get the commands available for different providers according to the `--provider <provider> --help`.
 
