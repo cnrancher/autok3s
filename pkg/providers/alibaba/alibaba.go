@@ -545,24 +545,24 @@ func (p *Alibaba) deleteCluster(f bool) error {
 
 		_, err := p.c.DeleteInstances(request)
 		if err != nil {
-			return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]", p.GetProviderName(), err)
+			return fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
 		}
 	}
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteInstance error, msg: [%v]", p.GetProviderName(), err)
+		return fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
 	}
 
 	err = cluster.OverwriteCfg(p.Name)
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: [%v]", p.GetProviderName(), err)
+		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: %v", p.GetProviderName(), err)
 	}
 
 	err = cluster.DeleteState(p.Name, p.Provider)
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
+		return fmt.Errorf("[%s] synchronizing .state file error, msg: %v", p.GetProviderName(), err)
 	}
 
 	p.logger.Debugf("[%s] successfully deleted cluster %s\n", p.GetProviderName(), p.Name)

@@ -30,7 +30,7 @@ var (
 	initCommand     = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' INSTALL_K3S_VERSION='%s' sh -\n"
 	joinCommand     = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' INSTALL_K3S_VERSION='%s' sh -\n"
 	catCfgCommand   = "cat /etc/rancher/k3s/k3s.yaml"
-	dockerCommand   = "curl https://get.docker.com | VERSION=19.03 sh -s - %s\n"
+	dockerCommand   = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s\n"
 	deployUICommand = "echo \"%s\" | base64 -d > \"%s/ui.yaml\""
 )
 
