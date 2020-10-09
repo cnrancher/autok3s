@@ -8,8 +8,10 @@ import (
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/providers/alibaba"
+	"github.com/cnrancher/autok3s/pkg/providers/native"
 	"github.com/cnrancher/autok3s/pkg/types"
 	typesAli "github.com/cnrancher/autok3s/pkg/types/alibaba"
+	typesNative "github.com/cnrancher/autok3s/pkg/types/native"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
@@ -94,7 +96,44 @@ func listCluster() {
 			}
 
 			if isExist && len(ids) > 0 {
-				filters = append(filters, &r)
+				filters = append(filters, &types.Cluster{
+					Metadata: r.Metadata,
+					Options:  r.Options,
+					Status:   r.Status,
+				})
+			} else {
+				removeCtx = append(removeCtx, r.Name)
+			}
+		case "native":
+			b, err := yaml.Marshal(r.Options)
+			if err != nil {
+				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
+				removeCtx = append(removeCtx, r.Name)
+				continue
+			}
+			option := &typesNative.Options{}
+			if err := yaml.Unmarshal(b, option); err != nil {
+				removeCtx = append(removeCtx, r.Name)
+				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
+				continue
+			}
+			p = &native.Native{
+				Metadata: r.Metadata,
+				Options:  *option,
+				Status:   r.Status,
+			}
+
+			isExist, ids, err := p.IsClusterExist()
+			if err != nil {
+				logrus.Fatalln(err)
+			}
+
+			if isExist && len(ids) > 0 {
+				filters = append(filters, &types.Cluster{
+					Metadata: r.Metadata,
+					Options:  r.Options,
+					Status:   r.Status,
+				})
 			} else {
 				removeCtx = append(removeCtx, r.Name)
 			}
@@ -113,10 +152,21 @@ func listCluster() {
 		}
 	}
 
+	var (
+		name   string
+		region string
+	)
 	for _, f := range filters {
+		if f.Provider != "native" && strings.Contains(f.Name, ".") {
+			name = f.Name[:strings.LastIndex(f.Name, ".")]
+			region = f.Name[strings.LastIndex(f.Name, ".")+1:]
+		} else {
+			name = f.Name
+			region = "-"
+		}
 		table.Append([]string{
-			f.Name[:strings.LastIndex(f.Name, ".")],
-			f.Name[strings.LastIndex(f.Name, ".")+1:],
+			name,
+			region,
 			f.Provider,
 			f.Master,
 			f.Worker,

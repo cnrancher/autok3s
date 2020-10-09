@@ -16,6 +16,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
+	"github.com/cnrancher/autok3s/pkg/types/native"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
@@ -27,11 +28,13 @@ import (
 )
 
 var (
-	initCommand     = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' INSTALL_K3S_VERSION='%s' sh -\n"
-	joinCommand     = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' INSTALL_K3S_VERSION='%s' sh -\n"
-	catCfgCommand   = "cat /etc/rancher/k3s/k3s.yaml"
-	dockerCommand   = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s\n"
-	deployUICommand = "echo \"%s\" | base64 -d > \"%s/ui.yaml\""
+	initCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' INSTALL_K3S_VERSION='%s' sh -\n"
+	joinCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' INSTALL_K3S_VERSION='%s' sh -\n"
+	catCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
+	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s\n"
+	deployUICommand        = "echo \"%s\" | base64 -d > \"%s/ui.yaml\""
+	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
+	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
@@ -337,6 +340,10 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 			if option, ok := cluster.Options.(alibaba.Options); ok {
 				name = fmt.Sprintf("%s.%s", cluster.Name, option.Region)
 			}
+		case "native":
+			if _, ok := cluster.Options.(native.Options); ok {
+				name = cluster.Name
+			}
 		}
 
 		if c.Provider == cluster.Provider && c.Name == name {
@@ -392,6 +399,38 @@ func DeleteState(name string, provider string) error {
 	}
 
 	return utils.WriteYaml(r, v, common.StateFile)
+}
+
+func UninstallK3sCluster(cluster *types.Cluster) error {
+	for _, workerNode := range cluster.WorkerNodes {
+		_, _ = execute(&hosts.Host{Node: workerNode}, false, []string{workerUninstallCommand})
+	}
+	for _, masterNode := range cluster.MasterNodes {
+		_, _ = execute(&hosts.Host{Node: masterNode}, false, []string{masterUninstallCommand})
+	}
+
+	return DeleteState(cluster.Name, cluster.Provider)
+}
+
+func UninstallK3sNodes(nodes []types.Node) error {
+	var errInfo []string
+	for _, node := range nodes {
+		if node.Master {
+			if _, e := execute(&hosts.Host{Node: node}, false, []string{masterUninstallCommand}); e != nil {
+				errInfo = append(errInfo, e.Error())
+			}
+		} else {
+			if _, e := execute(&hosts.Host{Node: node}, false, []string{workerUninstallCommand}); e != nil {
+				errInfo = append(errInfo, e.Error())
+			}
+		}
+
+	}
+	if len(errInfo) > 0 {
+		return fmt.Errorf("[cluster] error when uninstall k3s nodes: %s", strings.Join(errInfo, ","))
+	}
+
+	return nil
 }
 
 func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
