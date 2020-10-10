@@ -17,6 +17,7 @@ It's also generated a state file `$HOME/.autok3s/.state` to record the clusters'
 
 ## Providers
 - alibaba
+- [native](docs/native/README.md)
 
 ## Pre-Requests
 The following demo uses the Alibaba Provider, so you need to set the following [RAMs](docs/alibaba/ram.md).
@@ -52,6 +53,17 @@ autok3s create \
     --access-secret <access-secret> \
     --master 1
 ```
+
+SSH connection also supports the following options.
+
+| Option Name | Description |
+| --- | --- |
+| --ssh-user | SSH user for host |
+| --ssh-port | SSH port for host |
+| --ssh-key-path | SSH private key path |
+| --ssh-key-pass | SSH passphrase of private key |
+| --ssh-key-cert-path | SSH private key certificate path |
+| --ssh-password | SSH login password |
 
 HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3 master nodes, e.g.
 ```bash
@@ -107,6 +119,8 @@ autok3s ... \
 ```
 
 ### Start K3s Cluster
+> Provider `native` **DO NOT** support.
+
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```bash
 autok3s start \
@@ -126,6 +140,8 @@ autok3s start \
 ```
 
 ### Stop K3s Cluster
+> Provider `native` **DO NOT** support.
+
 If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
 ```bash
 autok3s stop \
