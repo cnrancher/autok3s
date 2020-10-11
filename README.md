@@ -16,207 +16,49 @@ Use [viper](https://github.com/spf13/viper) to bind flags and configuration file
 It's also generated a state file `$HOME/.autok3s/.state` to record the clusters' information created on this host.
 
 ## Providers
-- alibaba
-- [native](docs/native/README.md)
-
-## Pre-Requests
-The following demo uses the Alibaba Provider, so you need to set the following [RAMs](docs/alibaba/ram.md).
+- [alibaba](docs/alibaba/README.md) - Uses Alibaba Cloud SDK manage hosts, then uses SSH to install or join K3s cluster and hosts.
+- [native](docs/native/README.md) - Does not integrate the Cloud SDK, but only uses SSH to install or join K3s cluster and hosts.
 
 ## Usage
-User can get the commands available for different providers according to the `--provider <provider> --help`.
+The `autok3s` tool is a client application which you can run on your own computer. More usage detail please see [alibaba](docs/alibaba/README.md) or [native](docs/native/README.md) section.
 
-### Setup K3s Cluster
-If already have access information in `$HOME/.autok3s/config.yaml` you can use the simplified command.
-```bash
-autok3s create \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --ssh-key-path <ssh-key-path> \
-    --master 1
 ```
 
-Generic commands can be used anywhere.
-```bash
-autok3s create \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --ssh-key-path <ssh-key-path> \
-    --access-key <access-key> \
-    --access-secret <access-secret> \
-    --master 1
-```
+               ,        , 
+  ,------------|'------'|             _        _    _____ 
+ / .           '-'    |-             | |      | |  |____ | 
+ \\/|             |    |   __ _ _   _| |_ ___ | | __   / / ___
+   |   .________.'----'   / _  | | | | __/ _ \| |/ /   \ \/ __|
+   |   |        |   |    | (_| | |_| | || (_) |   <.___/ /\__ \
+   \\___/        \\___/   \__,_|\__,_|\__\___/|_|\_\____/ |___/
 
-SSH connection also supports the following options.
 
-| Option Name | Description |
-| --- | --- |
-| --ssh-user | SSH user for host |
-| --ssh-port | SSH port for host |
-| --ssh-key-path | SSH private key path |
-| --ssh-key-pass | SSH passphrase of private key |
-| --ssh-key-cert-path | SSH private key certificate path |
-| --ssh-password | SSH login password |
+autok3s is used to manage the lifecycle of K3s on multiple cloud providers.
 
-HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3 master nodes, e.g.
-```bash
-autok3s ... \
-    --master 3
-```
+Usage:
+  autok3s [flags]
+  autok3s [command]
 
-HA(external database) mode need `--master` greater than 1 node, also need to specify `--datastore`, e.g.
-```bash
-autok3s ... \
-    --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
-```
+Available Commands:
+  completion  Generate completion script
+  create      Create k3s cluster
+  delete      Delete k3s cluster
+  help        Help about any command
+  join        Join k3s node
+  kubectl     Kubectl controls the Kubernetes cluster manager
+  list        List K3s clusters
+  ssh         SSH k3s node
+  start       Start k3s cluster
+  stop        Stop k3s cluster
+  version     Show the version
 
-### Join K3s Nodes
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
-```bash
-autok3s join \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --ssh-key-path <ssh-key-path> \
-    --worker 1
-```
+Flags:
+  -c, --cfg string    Path to the cfg file to use for CLI requests (default "$HOME/.autok3s")
+  -d, --debug         Enable log debug level
+  -h, --help          help for autok3s
+  -r, --retry int     The number of retries waiting for the desired state (default 5)
 
-Generic commands can be used anywhere.
-```bash
-autok3s join \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --token <k3s token> \
-    --ip <k3s master/lb ip> \
-    --access-key <access-key> \
-    --access-secret <access-secret> \
-    --worker 1
-```
-
-Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
-```bash
-autok3s ... \
-    --master 2
-```
-
-Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
-```bash
-autok3s ... \
-    --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
-```
-
-### Start K3s Cluster
-> Provider `native` **DO NOT** support.
-
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
-```bash
-autok3s start \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name>
-```
-
-Generic commands can be used anywhere.
-```bash
-autok3s start \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
-```
-
-### Stop K3s Cluster
-> Provider `native` **DO NOT** support.
-
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
-```bash
-autok3s stop \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name>
-```
-
-Generic commands can be used anywhere.
-```bash
-autok3s stop \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
-```
-
-### Delete K3s Cluster
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
-```bash
-autok3s delete \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name>
-```
-
-Generic commands can be used anywhere.
-```bash
-autok3s delete \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
-```
-
-### List K3s Clusters
-This command will list the clusters that you have created on this machine.
-```bash
-autok3s list
-```
-
-### Access K3s Cluster
-After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
-```bash
-autok3s kubectl <sub-commands> <flags>
-```
-
-In the scenario of multiple clusters, the access to different clusters can be completed by switching context.
-```bash
-autok3s kubectl config get-contexts
-autok3s kubectl config use-context <context>
-```
-
-### SSH K3s Cluster's Node
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
-```bash
-autok3s ssh \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name>
-```
-
-Generic commands can be used anywhere.
-```bash
-autok3s ssh \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --ssh-key-path <ssh private key path> \
-    --ssh-user root \
-    --ssh-port 22 \
-    --access-key <access-key> \
-    --access-secret <access-secret>
+Use "autok3s [command] --help" for more information about a command.
 ```
 
 ## Developers' Guide

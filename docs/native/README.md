@@ -1,4 +1,13 @@
-## Provider native
+# Native Provider
+It does not integrate the Cloud SDK, but only uses SSH to install or join K3s cluster and hosts.
+
+## Pre-Requests
+The following demo uses the `native` Provider, so you need to provision a new VM running a compatible operating system such as Ubuntu, Centos, etc.
+Registered or setup `SSH keys/password` to the new VM or host.
+
+## Usage
+User can get the flags available for native providers according to the `autok3s <sub-command> --provider native --help`.
+
 ### Setup K3s Cluster
 ```bash
 autok3s create \
@@ -8,18 +17,6 @@ autok3s create \
     --master-ips <master0-ip>
     --worker-ips <worker0-ip,worker1-ip>
 ```
-
-SSH connection also supports the following options.
-
-| Option Name | Description |
-| --- | --- |
-| --ssh-user | SSH user for host |
-| --ssh-port | SSH port for host |
-| --ssh-key-path | SSH private key path |
-| --ssh-key-pass | SSH passphrase of private key |
-| --ssh-key-cert-path | SSH private key certificate path |
-| --ssh-password | SSH login password |
-
 
 HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master-ips` at least 3 master nodes, e.g.
 ```bash
