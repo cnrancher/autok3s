@@ -16,50 +16,10 @@ Use [viper](https://github.com/spf13/viper) to bind flags and configuration file
 It's also generated a state file `$HOME/.autok3s/.state` to record the clusters' information created on this host.
 
 ## Providers
+See the providers' links below for more usage details:
+
 - [alibaba](docs/alibaba/README.md) - Uses Alibaba Cloud SDK manage hosts, then uses SSH to install or join K3s cluster and hosts.
 - [native](docs/native/README.md) - Does not integrate the Cloud SDK, but only uses SSH to install or join K3s cluster and hosts.
-
-## Usage
-The `autok3s` tool is a client application which you can run on your own computer. More usage detail please see [alibaba](docs/alibaba/README.md) or [native](docs/native/README.md) section.
-
-```
-
-               ,        , 
-  ,------------|'------'|             _        _    _____ 
- / .           '-'    |-             | |      | |  |____ | 
- \\/|             |    |   __ _ _   _| |_ ___ | | __   / / ___
-   |   .________.'----'   / _  | | | | __/ _ \| |/ /   \ \/ __|
-   |   |        |   |    | (_| | |_| | || (_) |   <.___/ /\__ \
-   \\___/        \\___/   \__,_|\__,_|\__\___/|_|\_\____/ |___/
-
-
-autok3s is used to manage the lifecycle of K3s on multiple cloud providers.
-
-Usage:
-  autok3s [flags]
-  autok3s [command]
-
-Available Commands:
-  completion  Generate completion script
-  create      Create k3s cluster
-  delete      Delete k3s cluster
-  help        Help about any command
-  join        Join k3s node
-  kubectl     Kubectl controls the Kubernetes cluster manager
-  list        List K3s clusters
-  ssh         SSH k3s node
-  start       Start k3s cluster
-  stop        Stop k3s cluster
-  version     Show the version
-
-Flags:
-  -c, --cfg string    Path to the cfg file to use for CLI requests (default "$HOME/.autok3s")
-  -d, --debug         Enable log debug level
-  -h, --help          help for autok3s
-  -r, --retry int     The number of retries waiting for the desired state (default 5)
-
-Use "autok3s [command] --help" for more information about a command.
-```
 
 ## Developers' Guide
 Use `Makefile` to manage project compilation, testing and packaging.
