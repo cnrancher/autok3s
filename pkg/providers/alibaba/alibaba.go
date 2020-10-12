@@ -330,7 +330,7 @@ func (p *Alibaba) StopK3sCluster(f bool) error {
 	return nil
 }
 
-func (p *Alibaba) SSHK3sNode() error {
+func (p *Alibaba) SSHK3sNode(ssh *types.SSH) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
 
@@ -396,7 +396,7 @@ func (p *Alibaba) SSHK3sNode() error {
 	}
 
 	// ssh K3s node.
-	if err := cluster.SSHK3sNode(ip, c); err != nil {
+	if err := cluster.SSHK3sNode(ip, c, ssh); err != nil {
 		return err
 	}
 

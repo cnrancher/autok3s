@@ -55,7 +55,7 @@ type Provider interface {
 	// K3s stop cluster interface.
 	StopK3sCluster(f bool) error
 	// K3s ssh node interface.
-	SSHK3sNode() error
+	SSHK3sNode(ssh *types.SSH) error
 	// K3s check cluster exist.
 	IsClusterExist() (bool, []string, error)
 	// Rollback when error occurs.

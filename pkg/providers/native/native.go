@@ -194,7 +194,7 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 	return nil
 }
 
-func (p *Native) SSHK3sNode() error {
+func (p *Native) SSHK3sNode(ssh *types.SSH) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
 
@@ -218,7 +218,7 @@ func (p *Native) SSHK3sNode() error {
 		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
 	}
 	// ssh K3s node.
-	if err := cluster.SSHK3sNode(ip, c); err != nil {
+	if err := cluster.SSHK3sNode(ip, c, ssh); err != nil {
 		return err
 	}
 

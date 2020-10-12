@@ -297,21 +297,49 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	return nil
 }
 
-func SSHK3sNode(ip string, cluster *types.Cluster) error {
+func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 	var node types.Node
 
 	for _, n := range cluster.Status.MasterNodes {
 		if n.PublicIPAddress[0] == ip {
 			node = n
+			break
 		}
 	}
 
 	for _, n := range cluster.Status.WorkerNodes {
 		if n.PublicIPAddress[0] == ip {
 			node = n
+			break
 		}
 	}
 
+	node.SSH.User = ssh.User
+	node.SSH.Port = ssh.Port
+	if ssh.Password != "" {
+		node.SSH.Password = ssh.Password
+	}
+	if ssh.SSHKey != "" {
+		node.SSH.SSHKey = ssh.SSHKey
+	}
+	if ssh.SSHKeyPath != "" {
+		node.SSH.SSHKeyPath = ssh.SSHKeyPath
+	}
+	if ssh.SSHCert != "" {
+		node.SSH.SSHCert = ssh.SSHCert
+	}
+	if ssh.SSHCertPath != "" {
+		node.SSH.SSHCertPath = ssh.SSHCertPath
+	}
+	if ssh.SSHKeyPassphrase != "" {
+		node.SSH.SSHKeyPassphrase = ssh.SSHKeyPassphrase
+	}
+	if ssh.SSHAgentAuth {
+		node.SSH.SSHAgentAuth = ssh.SSHAgentAuth
+	}
+	if node.PublicIPAddress == nil {
+		node.PublicIPAddress = []string{ip}
+	}
 	return terminal(&hosts.Host{Node: node})
 }
 
