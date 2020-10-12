@@ -593,13 +593,6 @@ func (p *Alibaba) startCluster() error {
 		}
 	}
 
-	for _, masterNode := range p.MasterNodes {
-		p.m.Store(masterNode.InstanceID, masterNode)
-	}
-	for _, workerNode := range p.WorkerNodes {
-		p.m.Store(workerNode.InstanceID, workerNode)
-	}
-
 	// wait ecs instances to be running status.
 	if err = p.getInstanceStatus(alibaba.StatusRunning); err != nil {
 		return err
@@ -642,13 +635,6 @@ func (p *Alibaba) stopCluster(f bool) error {
 		if _, err := p.c.StopInstances(request); err != nil {
 			return fmt.Errorf("[%s] calling stopInstance error, msg: [%v]", p.GetProviderName(), err)
 		}
-	}
-
-	for _, masterNode := range p.MasterNodes {
-		p.m.Store(masterNode.InstanceID, masterNode)
-	}
-	for _, workerNode := range p.WorkerNodes {
-		p.m.Store(workerNode.InstanceID, workerNode)
 	}
 
 	// wait ecs instances to be stopped status.
@@ -969,6 +955,7 @@ func (p *Alibaba) startAndStopCheck(aimStatus string) error {
 		return err
 	}
 	if response.IsSuccess() && len(response.Instances.Instance) > 0 {
+		masterCnt := 0
 		unexpectedStatusCnt := 0
 		for _, instance := range response.Instances.Instance {
 			if instance.Status != aimStatus {
@@ -976,10 +963,28 @@ func (p *Alibaba) startAndStopCheck(aimStatus string) error {
 				p.logger.Warnf("[%s] instance [%s] status is %s, but it is expected to be %s\n",
 					p.GetProviderName(), instance.InstanceId, instance.Status, aimStatus)
 			}
+			master := false
+			for _, tag := range instance.Tags.Tag {
+				if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
+					master = true
+					masterCnt++
+					break
+				}
+			}
+			p.m.Store(instance.InstanceId, types.Node{
+				Master:            master,
+				InstanceID:        instance.InstanceId,
+				InstanceStatus:    instance.Status,
+				InternalIPAddress: instance.InnerIpAddress.IpAddress,
+				PublicIPAddress:   []string{instance.EipAddress.IpAddress},
+				EipAllocationIds:  []string{instance.EipAddress.AllocationId},
+			})
 		}
 		if unexpectedStatusCnt > 0 {
 			return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
 		}
+		p.Master = strconv.Itoa(masterCnt)
+		p.Worker = strconv.Itoa(len(response.Instances.Instance) - masterCnt)
 		return nil
 	}
 	return fmt.Errorf("[%s] unable to confirm the current status of instance(s)", p.GetProviderName())
