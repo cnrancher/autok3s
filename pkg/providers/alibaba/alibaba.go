@@ -676,7 +676,7 @@ func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 	})
 
 	if len(ids) > 0 {
-		p.logger.Debugf("[%s] waiting for the instances %s to be in `Running` status...\n", p.GetProviderName(), ids)
+		p.logger.Debugf("[%s] waiting for the instances %s to be in `%s` status...\n", p.GetProviderName(), ids, aimStatus)
 		request := ecs.CreateDescribeInstanceStatusRequest()
 		request.Scheme = "https"
 		request.InstanceId = &ids
@@ -684,8 +684,8 @@ func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 			request.ZoneId = p.Zone
 		}
 
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not `Running` status",
-			p.GetProviderName(), p.Region, p.Zone, ids)
+		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not `%s` status",
+			p.GetProviderName(), p.Region, p.Zone, ids, aimStatus)
 
 		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 			response, err := p.c.DescribeInstanceStatus(request)
@@ -743,7 +743,7 @@ func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 		return true
 	})
 
-	p.logger.Debugf("[%s] instances %s are in `Running` status\n", p.GetProviderName(), ids)
+	p.logger.Debugf("[%s] instances %s are in `%s` status\n", p.GetProviderName(), ids, aimStatus)
 
 	return nil
 }
