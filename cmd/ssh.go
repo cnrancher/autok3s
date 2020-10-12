@@ -79,7 +79,7 @@ func SSHCommand() *cobra.Command {
 
 		sp.GenerateClusterName()
 
-		if err := sp.SSHK3sNode(); err != nil {
+		if err := sp.SSHK3sNode(sSSH); err != nil {
 			logrus.Fatalln(err)
 		}
 	}
