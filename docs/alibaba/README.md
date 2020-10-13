@@ -185,3 +185,23 @@ autok3s ssh \
     --access-key <access-key> \
     --access-secret <access-secret>
 ```
+
+## Advanced Usage
+Autok3s integration some advanced components related to the current provider, e.g. terway/ccm.
+
+### Enable Alibaba Terway CNI Plugin
+The instance's type determines the number of EIPs that a K3S cluster can assign to a cluster POD, more detail see [here](https://www.alibabacloud.com/help/zh/doc-detail/97467.htm).
+
+```bash
+autok3s create \
+    ... \
+    --terway "eni"
+```
+
+### Enable Alibaba Cloud Controller Manager
+
+```bash
+autok3s create \
+    ... \
+    --cloud-controller-manager "true"
+```
