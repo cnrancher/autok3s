@@ -63,6 +63,10 @@ func JoinCommand() *cobra.Command {
 	}
 
 	joinCmd.Run = func(cmd *cobra.Command, args []string) {
+		if jProvider == "" {
+			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+		}
+
 		// must bind after dynamic provider flags loaded.
 		common.BindPFlags(cmd, jp)
 

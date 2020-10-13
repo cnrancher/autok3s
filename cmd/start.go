@@ -29,7 +29,6 @@ func init() {
 }
 
 func StartCommand() *cobra.Command {
-
 	pStr := common.FlagHackLookup("--provider")
 
 	if pStr != "" {
@@ -44,6 +43,10 @@ func StartCommand() *cobra.Command {
 	}
 
 	startCmd.Run = func(cmd *cobra.Command, args []string) {
+		if stProvider == "" {
+			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+		}
+
 		common.BindPFlags(cmd, stP)
 
 		// read options from config.

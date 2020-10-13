@@ -31,7 +31,6 @@ func init() {
 }
 
 func DeleteCommand() *cobra.Command {
-
 	pStr := common.FlagHackLookup("--provider")
 
 	if pStr != "" {
@@ -46,6 +45,10 @@ func DeleteCommand() *cobra.Command {
 	}
 
 	deleteCmd.Run = func(cmd *cobra.Command, args []string) {
+		if dProvider == "" {
+			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+		}
+
 		common.BindPFlags(cmd, dp)
 
 		// read options from config.
