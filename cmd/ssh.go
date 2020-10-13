@@ -60,6 +60,10 @@ func SSHCommand() *cobra.Command {
 	}
 
 	sshCmd.Run = func(cmd *cobra.Command, args []string) {
+		if sProvider == "" {
+			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+		}
+
 		// must bind after dynamic provider flags loaded.
 		common.BindPFlags(cmd, sp)
 
