@@ -127,6 +127,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 					fmt.Printf("\nK3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
 				}
 			}
+			fmt.Println("")
 		}
 	}()
 
