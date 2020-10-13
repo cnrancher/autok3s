@@ -1131,6 +1131,15 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 		p.logger.Errorf("[%s] error when query eip address: %v\n", p.GetProviderName(), err)
 	}
 
+	// run delete command without a state file
+	if !rollBack && len(p.MasterNodes) == 0 && len(p.WorkerNodes) == 0 {
+		for _, allocationID := range allocationIds {
+			if err := p.unassociateEipAddress(allocationID); err != nil {
+				p.logger.Errorf("[%s] error when unassociating eip address %s: %v\n", p.GetProviderName(), allocationID, err)
+			}
+		}
+	}
+
 	// eip can be released only when status is `Available`.
 	// wait eip to be `Available` status.
 	if err := p.getEipStatus(allocationIds, eipStatusAvailable); err != nil {
