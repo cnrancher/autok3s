@@ -154,9 +154,8 @@ func InitK3sCluster(cluster *types.Cluster) error {
 
 	logrus.Infof("[%s] deploying additional manifests\n", cluster.Provider)
 
-	// deploy additional UI manifests. e.g. (none/dashboard).
-	switch cluster.UI {
-	case "dashboard":
+	// deploy additional UI manifests.
+	if cluster.UI {
 		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]}, false,
 			[]string{fmt.Sprintf(deployUICommand, base64.StdEncoding.EncodeToString(
 				[]byte(fmt.Sprintf(dashboardTmpl, cluster.Repo))), common.K3sManifestsDir)}); err != nil {

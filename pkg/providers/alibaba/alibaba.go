@@ -35,11 +35,11 @@ const (
 	diskSize                = "40"
 	master                  = "0"
 	worker                  = "0"
-	ui                      = "none"
+	ui                      = false
 	repo                    = "https://apphub.aliyuncs.com"
 	terway                  = "none"
 	terwayMaxPoolSize       = "5"
-	cloudControllerManager  = "false"
+	cloudControllerManager  = false
 	resourceTypeEip         = "EIP"
 	eipStatusAvailable      = "Available"
 	eipStatusInUse          = "InUse"
@@ -120,8 +120,8 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	defer func() {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(usageInfo, p.Name)
-			if p.UI != "none" {
-				if strings.EqualFold(p.CloudControllerManager, "true") {
+			if p.UI {
+				if p.CloudControllerManager {
 					fmt.Printf("\nK3s UI %s URL: https://<using `kubectl get svc -A` get UI address>:8999\n", p.UI)
 				} else {
 					fmt.Printf("\nK3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
@@ -160,7 +160,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			extraManifests = append(extraManifests, fmt.Sprintf(deployTerwayCommand,
 				base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
 		}
-		if strings.EqualFold(c.CloudControllerManager, "true") {
+		if c.CloudControllerManager {
 			// deploy additional Alibaba cloud-controller-manager manifests.
 			aliCCM := &alibaba.CloudControllerManager{
 				Region:       option.Region,
@@ -433,7 +433,7 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 
 func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(alibaba.Options); ok {
-		if strings.EqualFold(cluster.CloudControllerManager, "true") {
+		if cluster.CloudControllerManager {
 			extraArgs := fmt.Sprintf(" --kubelet-arg=provider-id=%s.%s --node-name=%s.%s",
 				option.Region, master.InstanceID, option.Region, master.InstanceID)
 			return extraArgs
@@ -1343,7 +1343,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 		if strings.EqualFold(option.Terway.Mode, "eni") {
 			c.Network = "none"
 		}
-		if strings.EqualFold(c.CloudControllerManager, "true") {
+		if c.CloudControllerManager {
 			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
 		}
 	}

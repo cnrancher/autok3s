@@ -203,5 +203,5 @@ autok3s create \
 ```bash
 autok3s create \
     ... \
-    --cloud-controller-manager "true"
+    --cloud-controller-manager
 ```

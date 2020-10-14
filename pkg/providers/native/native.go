@@ -21,7 +21,7 @@ const (
 	k3sVersion = "v1.19.2+k3s1"
 	master     = "0"
 	worker     = "0"
-	ui         = "none"
+	ui         = false
 	repo       = "https://apphub.aliyuncs.com"
 	usageInfo  = `=========================== Prompt Info ===========================
 Use 'autok3s kubectl config use-context %s'
@@ -96,7 +96,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	defer func() {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(usageInfo, p.Name)
-			if p.UI != "none" {
+			if p.UI {
 				fmt.Printf("\nK3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
 			}
 		}
