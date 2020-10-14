@@ -210,21 +210,21 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	errChan := make(chan error)
 	waitGroupDone := make(chan bool)
 	waitGroup := &sync.WaitGroup{}
-	waitGroup.Add(len(added.MasterNodes) + len(added.WorkerNodes))
+	waitGroup.Add(len(added.WorkerNodes))
 
 	for i := 0; i < len(added.Status.MasterNodes); i++ {
 		for _, full := range merged.MasterNodes {
 			extraArgs := merged.MasterExtraArgs
 			if added.Status.MasterNodes[i].InstanceID == full.InstanceID {
-				go func(i int, full types.Node) {
-					logrus.Infof("[%s] joining k3s master-%d...\n", merged.Provider, i+1)
-					additionalExtraArgs := p.GenerateMasterExtraArgs(added, full)
-					if additionalExtraArgs != "" {
-						extraArgs += additionalExtraArgs
-					}
-					joinMaster(waitGroup, errChan, k3sScript, k3sMirror, dockerMirror, extraArgs, merged, full)
-					logrus.Infof("[%s] successfully joined k3s master-%d\n", merged.Provider, i+1)
-				}(i, full)
+				logrus.Infof("[%s] joining k3s master-%d...\n", merged.Provider, i+1)
+				additionalExtraArgs := p.GenerateMasterExtraArgs(added, full)
+				if additionalExtraArgs != "" {
+					extraArgs += additionalExtraArgs
+				}
+				if err := joinMaster(k3sScript, k3sMirror, dockerMirror, extraArgs, merged, full); err != nil {
+					return err
+				}
+				logrus.Infof("[%s] successfully joined k3s master-%d\n", merged.Provider, i+1)
 				break
 			}
 		}
@@ -590,8 +590,8 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 	wg.Done()
 }
 
-func joinMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror,
-	extraArgs string, merged *types.Cluster, full types.Node) {
+func joinMaster(k3sScript, k3sMirror, dockerMirror,
+	extraArgs string, merged *types.Cluster, full types.Node) error {
 	sortedExtraArgs := ""
 
 	if !strings.Contains(extraArgs, "server --server") {
@@ -609,7 +609,7 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 	if strings.Contains(extraArgs, "--docker") {
 		if _, err := execute(&hosts.Host{Node: full}, false,
 			[]string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
-			errChan <- err
+			return err
 		}
 	}
 
@@ -619,10 +619,10 @@ func joinMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 	if _, err := execute(&hosts.Host{Node: full}, false,
 		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.IP, merged.Token,
 			strings.TrimSpace(sortedExtraArgs), merged.K3sVersion)}); err != nil {
-		errChan <- err
+		return err
 	}
 
-	wg.Done()
+	return nil
 }
 
 func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, extraArgs string,
