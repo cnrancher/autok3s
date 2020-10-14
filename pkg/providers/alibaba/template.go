@@ -14,6 +14,7 @@ spec:
     accessKey: %s
     accessSecret: %s
     clusterCIDR: %s
+    region: %s
     rbac:
       create: true
     serviceAccount:
