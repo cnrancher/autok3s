@@ -434,7 +434,7 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(alibaba.Options); ok {
 		if strings.EqualFold(cluster.CloudControllerManager, "true") {
-			extraArgs := fmt.Sprintf(" --kubelet-arg=provider-id=alicloud://%s.%s --node-name=%s.%s",
+			extraArgs := fmt.Sprintf(" --kubelet-arg=provider-id=%s.%s --node-name=%s.%s",
 				option.Region, master.InstanceID, option.Region, master.InstanceID)
 			return extraArgs
 		}
