@@ -17,11 +17,11 @@ type Metadata struct {
 	Master                 string `json:"master" yaml:"master"`
 	Worker                 string `json:"worker" yaml:"worker"`
 	Token                  string `json:"token,omitempty" yaml:"token,omitempty"`
-	UI                     string `json:"ui,omitempty" yaml:"ui,omitempty"`
+	UI                     bool   `json:"ui,omitempty" yaml:"ui,omitempty"`
 	IP                     string `json:"ip,omitempty" yaml:"ip,omitempty"`
 	Repo                   string `json:"repo,omitempty" yaml:"repo,omitempty"`
 	ClusterCIDR            string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
-	CloudControllerManager string `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
+	CloudControllerManager bool   `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
 	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
 	Registries             string `json:"registries,omitempty" yaml:"registries,omitempty"`
@@ -65,8 +65,8 @@ type SSH struct {
 
 type Flag struct {
 	Name      string
-	P         *string
-	V         string
+	P         interface{}
+	V         interface{}
 	ShortHand string
 	Usage     string
 	Required  bool

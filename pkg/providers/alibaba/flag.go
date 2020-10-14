@@ -19,7 +19,7 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Name:     "ui",
 			P:        &p.UI,
 			V:        p.UI,
-			Usage:    "Specify K3s UI. e.g.(none/dashboard)",
+			Usage:    "Enable K3s UI.",
 			Required: true,
 		},
 		{
@@ -48,11 +48,21 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
+				case string:
+					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
+				}
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
+				case string:
+					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
+				}
 			}
 		}
 	}
@@ -61,8 +71,11 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required {
-				if *f.P == "" && f.V == "" {
-					errFlags = append(errFlags, f.Name)
+				p, ok := f.P.(string)
+				if ok {
+					if p == "" && f.V.(string) == "" {
+						errFlags = append(errFlags, f.Name)
+					}
 				}
 			}
 		}
@@ -98,11 +111,21 @@ func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
+				case string:
+					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
+				}
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
+				case string:
+					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
+				}
 			}
 		}
 	}
@@ -132,8 +155,11 @@ func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				if *f.P == "" && f.V == "" {
-					errFlags = append(errFlags, f.Name)
+				p, ok := f.P.(string)
+				if ok {
+					if p == "" && f.V.(string) == "" {
+						errFlags = append(errFlags, f.Name)
+					}
 				}
 			}
 		}
@@ -169,11 +195,21 @@ func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
+				case string:
+					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
+				}
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
+				case string:
+					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
+				}
 			}
 		}
 	}
@@ -203,8 +239,11 @@ func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				if *f.P == "" && f.V == "" {
-					errFlags = append(errFlags, f.Name)
+				p, ok := f.P.(string)
+				if ok {
+					if p == "" && f.V.(string) == "" {
+						errFlags = append(errFlags, f.Name)
+					}
 				}
 			}
 		}
@@ -240,11 +279,21 @@ func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
+				case string:
+					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
+				}
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
+				case string:
+					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
+				}
 			}
 		}
 	}
@@ -274,8 +323,11 @@ func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				if *f.P == "" && f.V == "" {
-					errFlags = append(errFlags, f.Name)
+				p, ok := f.P.(string)
+				if ok {
+					if p == "" && f.V.(string) == "" {
+						errFlags = append(errFlags, f.Name)
+					}
 				}
 			}
 		}
@@ -296,11 +348,21 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
+				case string:
+					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
+				}
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
+				case string:
+					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
+				}
 			}
 		}
 	}
@@ -332,8 +394,11 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required {
-				if *f.P == "" && f.V == "" {
-					errFlags = append(errFlags, f.Name)
+				p, ok := f.P.(string)
+				if ok {
+					if p == "" && f.V.(string) == "" {
+						errFlags = append(errFlags, f.Name)
+					}
 				}
 			}
 		}
@@ -369,11 +434,21 @@ func (p *Alibaba) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
+				case string:
+					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
+				}
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
+				case string:
+					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
+				}
 			}
 		}
 	}
@@ -403,8 +478,11 @@ func (p *Alibaba) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				if *f.P == "" && f.V == "" {
-					errFlags = append(errFlags, f.Name)
+				p, ok := f.P.(string)
+				if ok {
+					if p == "" && f.V.(string) == "" {
+						errFlags = append(errFlags, f.Name)
+					}
 				}
 			}
 		}
@@ -440,13 +518,22 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 	for _, f := range fs {
 		if f.ShortHand == "" {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVar(f.P, f.Name, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
+				case string:
+					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
+				}
 			}
 		} else {
 			if cmd.Flags().Lookup(f.Name) == nil {
-				cmd.Flags().StringVarP(f.P, f.Name, f.ShortHand, f.V, f.Usage)
+				switch t := f.V.(type) {
+				case bool:
+					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
+				case string:
+					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
+				}
 			}
-
 		}
 	}
 
@@ -454,8 +541,11 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required {
-				if *f.P == "" && f.V == "" {
-					errFlags = append(errFlags, f.Name)
+				p, ok := f.P.(string)
+				if ok {
+					if p == "" && f.V.(string) == "" {
+						errFlags = append(errFlags, f.Name)
+					}
 				}
 			}
 		}
