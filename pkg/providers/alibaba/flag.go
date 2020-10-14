@@ -19,7 +19,7 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Name:     "ui",
 			P:        &p.UI,
 			V:        p.UI,
-			Usage:    "Specify K3s UI. e.g.(none/dashboard/octopus-ui)",
+			Usage:    "Specify K3s UI. e.g.(none/dashboard)",
 			Required: true,
 		},
 		{
