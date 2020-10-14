@@ -388,6 +388,8 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 			p.Status = matched.Status
 			p.Token = matched.Token
 			p.IP = matched.IP
+			p.UI = matched.UI
+			p.CloudControllerManager = matched.CloudControllerManager
 			p.mergeOptions(*matched)
 		}
 
