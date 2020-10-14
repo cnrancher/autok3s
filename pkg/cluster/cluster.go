@@ -99,38 +99,21 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	}
 	logrus.Infof("[%s] successfully created k3s master-%d\n", cluster.Provider, 1)
 
-	masterErrChan := make(chan error)
-	masterWaitGroupDone := make(chan bool)
-	masterWaitGroup := &sync.WaitGroup{}
-	masterWaitGroup.Add(len(cluster.MasterNodes) - 1)
-
 	for i, master := range cluster.MasterNodes {
 		// skip first master nodes
 		if i == 0 {
 			continue
 		}
-		go func(i int, master types.Node) {
-			logrus.Infof("[%s] creating k3s master-%d...\n", cluster.Provider, i+1)
-			masterNExtraArgs := masterExtraArgs
-			providerExtraArgs := p.GenerateMasterExtraArgs(cluster, master)
-			if providerExtraArgs != "" {
-				masterNExtraArgs += providerExtraArgs
-			}
-			initAdditionalMaster(masterWaitGroup, masterErrChan, k3sScript, k3sMirror, dockerMirror, publicIP, masterNExtraArgs, cluster, master)
-			logrus.Infof("[%s] successfully created k3s master-%d\n", cluster.Provider, i+1)
-		}(i, master)
-	}
-
-	go func() {
-		masterWaitGroup.Wait()
-		close(masterWaitGroupDone)
-	}()
-
-	select {
-	case <-masterWaitGroupDone:
-		break
-	case err := <-masterErrChan:
-		return err
+		logrus.Infof("[%s] creating k3s master-%d...\n", cluster.Provider, i+1)
+		masterNExtraArgs := masterExtraArgs
+		providerExtraArgs := p.GenerateMasterExtraArgs(cluster, master)
+		if providerExtraArgs != "" {
+			masterNExtraArgs += providerExtraArgs
+		}
+		if err := initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, publicIP, masterNExtraArgs, cluster, master); err != nil {
+			return err
+		}
+		logrus.Infof("[%s] successfully created k3s master-%d\n", cluster.Provider, i+1)
 	}
 
 	workerErrChan := make(chan error)
@@ -561,14 +544,13 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 	return nil
 }
 
-func initAdditionalMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, ip, extraArgs string,
-	cluster *types.Cluster, master types.Node) {
+func initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
 		if _, err := execute(&hosts.Host{Node: master}, false,
 			[]string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
-			errChan <- err
+			return err
 		}
 	}
 
@@ -581,10 +563,10 @@ func initAdditionalMaster(wg *sync.WaitGroup, errChan chan error, k3sScript, k3s
 	if _, err := execute(&hosts.Host{Node: master}, false,
 		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, ip, cluster.Token,
 			strings.TrimSpace(sortedExtraArgs), cluster.K3sVersion)}); err != nil {
-		errChan <- err
+		return err
 	}
 
-	wg.Done()
+	return nil
 }
 
 func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, dockerMirror, extraArgs string,
