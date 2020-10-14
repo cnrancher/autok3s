@@ -169,9 +169,9 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			}
 			var tmpl string
 			if c.ClusterCIDR == "" {
-				tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, "10.42.0.0/16")
+				tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, "10.42.0.0/16", aliCCM.Region)
 			} else {
-				tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, c.ClusterCIDR)
+				tmpl = fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, c.ClusterCIDR, aliCCM.Region)
 			}
 			extraManifests = append(extraManifests, fmt.Sprintf(deployCCMCommand,
 				base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
