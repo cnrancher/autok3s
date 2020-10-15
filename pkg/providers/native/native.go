@@ -97,7 +97,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(usageInfo, p.Name)
 			if p.UI {
-				fmt.Printf("\nK3s UI %s URL: https://%s:8999\n", p.UI, p.Status.MasterNodes[0].PublicIPAddress[0])
+				fmt.Printf("\nK3s UI URL: https://%s:8999\n", p.Status.MasterNodes[0].PublicIPAddress[0])
 			}
 		}
 	}()
