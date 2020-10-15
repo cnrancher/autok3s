@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	k3sVersion = "v1.19.2+k3s1"
+	k3sVersion = ""
+	k3sChannel = "v1.18"
 	master     = "0"
 	worker     = "0"
 	ui         = false
@@ -61,6 +62,7 @@ func NewProvider() *Native {
 			UI:         ui,
 			Repo:       repo,
 			K3sVersion: k3sVersion,
+			K3sChannel: k3sChannel,
 		},
 		Options: native.Options{
 			MasterIps: "",

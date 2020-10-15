@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	k3sVersion              = "v1.19.2+k3s1"
+	k3sVersion              = ""
+	k3sChannel              = "v1.18"
 	accessKeyID             = "access-key"
 	accessKeySecret         = "access-secret"
 	imageID                 = "ubuntu_18_04_x64_20G_alibase_20200618.vhd"
@@ -88,6 +89,7 @@ func NewProvider() *Alibaba {
 			Repo:                   repo,
 			CloudControllerManager: cloudControllerManager,
 			K3sVersion:             k3sVersion,
+			K3sChannel:             k3sChannel,
 		},
 		Options: alibaba.Options{
 			DiskCategory:            diskCategory,
