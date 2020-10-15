@@ -71,9 +71,9 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required {
-				p, ok := f.P.(string)
+				p, ok := f.P.(*string)
 				if ok {
-					if p == "" && f.V.(string) == "" {
+					if *p == "" && f.V.(string) == "" {
 						errFlags = append(errFlags, f.Name)
 					}
 				}
@@ -155,9 +155,9 @@ func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				p, ok := f.P.(string)
+				p, ok := f.P.(*string)
 				if ok {
-					if p == "" && f.V.(string) == "" {
+					if *p == "" && f.V.(string) == "" {
 						errFlags = append(errFlags, f.Name)
 					}
 				}
@@ -239,9 +239,9 @@ func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				p, ok := f.P.(string)
+				p, ok := f.P.(*string)
 				if ok {
-					if p == "" && f.V.(string) == "" {
+					if *p == "" && f.V.(string) == "" {
 						errFlags = append(errFlags, f.Name)
 					}
 				}
@@ -323,9 +323,9 @@ func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				p, ok := f.P.(string)
+				p, ok := f.P.(*string)
 				if ok {
-					if p == "" && f.V.(string) == "" {
+					if *p == "" && f.V.(string) == "" {
 						errFlags = append(errFlags, f.Name)
 					}
 				}
@@ -396,9 +396,9 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required {
-				p, ok := f.P.(string)
+				p, ok := f.P.(*string)
 				if ok {
-					if p == "" && f.V.(string) == "" {
+					if *p == "" && f.V.(string) == "" {
 						errFlags = append(errFlags, f.Name)
 					}
 				}
@@ -480,9 +480,9 @@ func (p *Alibaba) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required && f.Name == "name" {
-				p, ok := f.P.(string)
+				p, ok := f.P.(*string)
 				if ok {
-					if p == "" && f.V.(string) == "" {
+					if *p == "" && f.V.(string) == "" {
 						errFlags = append(errFlags, f.Name)
 					}
 				}
@@ -543,9 +543,9 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 		errFlags := make([]string, 0)
 		for _, f := range fs {
 			if f.Required {
-				p, ok := f.P.(string)
+				p, ok := f.P.(*string)
 				if ok {
-					if p == "" && f.V.(string) == "" {
+					if *p == "" && f.V.(string) == "" {
 						errFlags = append(errFlags, f.Name)
 					}
 				}
@@ -674,11 +674,10 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Usage: "Specify K3s master/lb ip",
 		},
 		{
-			Name:     "k3s-version",
-			P:        &p.K3sVersion,
-			V:        p.K3sVersion,
-			Usage:    "Used to specify the version of k3s cluster, overrides k3s-channel",
-			Required: true,
+			Name:  "k3s-version",
+			P:     &p.K3sVersion,
+			V:     p.K3sVersion,
+			Usage: "Used to specify the version of k3s cluster, overrides k3s-channel",
 		},
 		{
 			Name:     "k3s-channel",
