@@ -187,7 +187,7 @@ autok3s ssh \
 ```
 
 ## Advanced Usage
-Autok3s integration some advanced components related to the current provider, e.g. terway/ccm.
+Autok3s integration some advanced components related to the current provider, e.g. terway/ccm/ui.
 
 ### Enable Alibaba Terway CNI Plugin
 The instance's type determines the number of EIPs that a K3S cluster can assign to a cluster POD, more detail see [here](https://www.alibabacloud.com/help/zh/doc-detail/97467.htm).
@@ -204,4 +204,14 @@ autok3s create \
 autok3s create \
     ... \
     --cloud-controller-manager
+```
+
+### Enable UI Component
+This flags will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.
+Please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create user token.
+
+```bash
+autok3s create \
+    ... \
+    --ui
 ```
