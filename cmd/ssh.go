@@ -43,6 +43,7 @@ func init() {
 	sshCmd.Flags().StringVar(&sSSH.SSHKeyPassphrase, "ssh-key-pass", sSSH.SSHKeyPassphrase, "SSH passphrase of private key")
 	sshCmd.Flags().StringVar(&sSSH.SSHCertPath, "ssh-key-cert-path", sSSH.SSHCertPath, "SSH private key certificate path")
 	sshCmd.Flags().StringVar(&sSSH.Password, "ssh-password", sSSH.Password, "SSH login password")
+	sshCmd.Flags().BoolVar(&sSSH.SSHAgentAuth, "ssh-agent", sSSH.SSHAgentAuth, "Enable ssh agent")
 }
 
 func SSHCommand() *cobra.Command {
