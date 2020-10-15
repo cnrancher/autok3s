@@ -677,7 +677,14 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Name:     "k3s-version",
 			P:        &p.K3sVersion,
 			V:        p.K3sVersion,
-			Usage:    "Used to specify the version of k3s cluster",
+			Usage:    "Used to specify the version of k3s cluster, overrides k3s-channel",
+			Required: true,
+		},
+		{
+			Name:     "k3s-channel",
+			P:        &p.K3sChannel,
+			V:        p.K3sChannel,
+			Usage:    "Used to specify the release channel of k3s. e.g.(stable, latest, or i.e. v1.18)",
 			Required: true,
 		},
 		{
