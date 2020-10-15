@@ -85,3 +85,15 @@ autok3s ssh \
     --provider native \
     --name <cluster name>
 ```
+## Advanced Usage
+Autok3s integration some advanced components related to the current provider, e.g. ui.
+
+### Enable UI Component
+This flags will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.
+Please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create user token.
+
+```bash
+autok3s create \
+    ... \
+    --ui
+```
