@@ -9,9 +9,11 @@ import (
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/providers/alibaba"
 	"github.com/cnrancher/autok3s/pkg/providers/native"
+	"github.com/cnrancher/autok3s/pkg/providers/tencent"
 	"github.com/cnrancher/autok3s/pkg/types"
 	typesAli "github.com/cnrancher/autok3s/pkg/types/alibaba"
 	typesNative "github.com/cnrancher/autok3s/pkg/types/native"
+	typesTencent "github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
@@ -89,20 +91,27 @@ func listCluster() {
 				Metadata: r.Metadata,
 				Options:  *option,
 			}
+		case "tencent":
+			region := r.Name[strings.LastIndex(r.Name, ".")+1:]
 
-			isExist, ids, err := p.IsClusterExist()
+			b, err := yaml.Marshal(r.Options)
 			if err != nil {
-				logrus.Fatalln(err)
+				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
+				removeCtx = append(removeCtx, r.Name)
+				continue
 			}
 
-			if isExist && len(ids) > 0 {
-				filters = append(filters, &types.Cluster{
-					Metadata: r.Metadata,
-					Options:  r.Options,
-					Status:   r.Status,
-				})
-			} else {
+			option := &typesTencent.Options{}
+			if err := yaml.Unmarshal(b, option); err != nil {
 				removeCtx = append(removeCtx, r.Name)
+				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
+				continue
+			}
+			option.Region = region
+
+			p = &tencent.Tencent{
+				Metadata: r.Metadata,
+				Options:  *option,
 			}
 		case "native":
 			b, err := yaml.Marshal(r.Options)
@@ -122,21 +131,23 @@ func listCluster() {
 				Options:  *option,
 				Status:   r.Status,
 			}
+		}
+		if p == nil {
+			continue
+		}
+		isExist, ids, err := p.IsClusterExist()
+		if err != nil {
+			logrus.Fatalln(err)
+		}
 
-			isExist, ids, err := p.IsClusterExist()
-			if err != nil {
-				logrus.Fatalln(err)
-			}
-
-			if isExist && len(ids) > 0 {
-				filters = append(filters, &types.Cluster{
-					Metadata: r.Metadata,
-					Options:  r.Options,
-					Status:   r.Status,
-				})
-			} else {
-				removeCtx = append(removeCtx, r.Name)
-			}
+		if isExist && len(ids) > 0 {
+			filters = append(filters, &types.Cluster{
+				Metadata: r.Metadata,
+				Options:  r.Options,
+				Status:   r.Status,
+			})
+		} else {
+			removeCtx = append(removeCtx, r.Name)
 		}
 	}
 

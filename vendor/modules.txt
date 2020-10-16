@@ -215,6 +215,15 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.4.0
 github.com/spf13/viper
+# github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/http
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tag/v20180813
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20180525
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312
 # go.uber.org/atomic v1.4.0
 go.uber.org/atomic
 # go.uber.org/multierr v1.1.0

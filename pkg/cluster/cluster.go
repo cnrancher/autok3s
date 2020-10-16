@@ -17,6 +17,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
 	"github.com/cnrancher/autok3s/pkg/types/native"
+	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
@@ -349,6 +350,10 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 		case "native":
 			if _, ok := cluster.Options.(native.Options); ok {
 				name = cluster.Name
+			}
+		case "tencent":
+			if option, ok := cluster.Options.(tencent.Options); ok {
+				name = fmt.Sprintf("%s.%s", cluster.Name, option.Region)
 			}
 		}
 
