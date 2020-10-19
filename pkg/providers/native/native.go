@@ -306,7 +306,7 @@ func (p *Native) StopK3sCluster(f bool) error {
 }
 
 func (p *Native) CommandNotSupport(commandName string) error {
-	return fmt.Errorf("[%s]provider `native` dose not support command:[%s]", p.GetProviderName(), commandName)
+	return fmt.Errorf("[%s] dose not support command: [%s]", p.GetProviderName(), commandName)
 }
 
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {

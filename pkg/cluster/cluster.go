@@ -170,6 +170,8 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
+	cluster.Status.Status = common.StatusRunning
+
 	// write current cluster to state file.
 	if err := SaveState(cluster); err != nil {
 		return err

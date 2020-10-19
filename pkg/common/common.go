@@ -18,6 +18,8 @@ const (
 	MasterInstanceName = "autok3s.%s.master"
 	WorkerInstanceName = "autok3s.%s.worker"
 	TagClusterPrefix   = "autok3s-"
+	StatusRunning      = "Running"
+	StatusStopped      = "Stopped"
 )
 
 var (

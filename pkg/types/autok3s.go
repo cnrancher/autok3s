@@ -35,6 +35,7 @@ type Metadata struct {
 }
 
 type Status struct {
+	Status      string `json:"status,omitempty"`
 	MasterNodes []Node `json:"master-nodes,omitempty"`
 	WorkerNodes []Node `json:"worker-nodes,omitempty"`
 }

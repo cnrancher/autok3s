@@ -599,6 +599,8 @@ func (p *Alibaba) startCluster() error {
 		return err
 	}
 
+	p.Status.Status = common.StatusRunning
+
 	err = cluster.SaveState(&types.Cluster{
 		Metadata: p.Metadata,
 		Options:  p.Options,
@@ -642,6 +644,8 @@ func (p *Alibaba) stopCluster(f bool) error {
 	if err = p.getInstanceStatus(alibaba.StatusStopped); err != nil {
 		return err
 	}
+
+	p.Status.Status = common.StatusStopped
 
 	err = cluster.SaveState(&types.Cluster{
 		Metadata: p.Metadata,
