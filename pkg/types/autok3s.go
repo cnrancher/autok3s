@@ -17,11 +17,9 @@ type Metadata struct {
 	Master                 string `json:"master" yaml:"master"`
 	Worker                 string `json:"worker" yaml:"worker"`
 	Token                  string `json:"token,omitempty" yaml:"token,omitempty"`
-	UI                     bool   `json:"ui,omitempty" yaml:"ui,omitempty"`
 	IP                     string `json:"ip,omitempty" yaml:"ip,omitempty"`
 	Repo                   string `json:"repo,omitempty" yaml:"repo,omitempty"`
 	ClusterCIDR            string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
-	CloudControllerManager bool   `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
 	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
 	Registries             string `json:"registries,omitempty" yaml:"registries,omitempty"`
@@ -32,6 +30,8 @@ type Metadata struct {
 	Mirror                 string `json:"mirror,omitempty" yaml:"mirror,omitempty"`
 	DockerMirror           string `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
 	Network                string `json:"network,omitempty" yaml:"network,omitempty"`
+	UI                     bool   `json:"ui,omitempty" yaml:"ui,omitempty"`
+	CloudControllerManager bool   `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
 }
 
 type Status struct {
@@ -43,12 +43,12 @@ type Status struct {
 type Node struct {
 	SSH `json:",inline"`
 
-	Master            bool     `json:"master,omitempty" yaml:"master,omitempty"`
 	InstanceID        string   `json:"instance-id,omitempty" yaml:"instance-id,omitempty"`
 	InstanceStatus    string   `json:"instance-status,omitempty" yaml:"instance-status,omitempty"`
 	PublicIPAddress   []string `json:"public-ip-address,omitempty" yaml:"public-ip-address,omitempty"`
 	InternalIPAddress []string `json:"internal-ip-address,omitempty" yaml:"internal-ip-address,omitempty"`
 	EipAllocationIds  []string `json:"eip-allocation-ids,omitempty" yaml:"eip-allocation-ids,omitempty"`
+	Master            bool     `json:"master,omitempty" yaml:"master,omitempty"`
 	RollBack          bool     `json:"-" yaml:"-"`
 	Current           bool     `json:"-" yaml:"-"`
 }
