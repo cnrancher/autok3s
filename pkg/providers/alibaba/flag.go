@@ -148,7 +148,7 @@ func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 
 		if matched != nil {
 			// start command need merge status value.
-			p.Status = matched.Status
+			p.overwriteMetadata(matched)
 			p.mergeOptions(*matched)
 		}
 
@@ -232,7 +232,7 @@ func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 
 		if matched != nil {
 			// stop command need merge status value.
-			p.Status = matched.Status
+			p.overwriteMetadata(matched)
 			p.mergeOptions(*matched)
 		}
 
@@ -385,11 +385,7 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 
 		if matched != nil {
 			// join command need merge status & token value.
-			p.Status = matched.Status
-			p.Token = matched.Token
-			p.IP = matched.IP
-			p.UI = matched.UI
-			p.CloudControllerManager = matched.CloudControllerManager
+			p.overwriteMetadata(matched)
 			p.mergeOptions(*matched)
 		}
 
@@ -586,6 +582,38 @@ func (p *Alibaba) mergeValues(source, target reflect.Value) {
 				}
 			}
 		}
+	}
+}
+
+func (p *Alibaba) overwriteMetadata(matched *types.Cluster) {
+	// doesn't need to be overwrite.
+	p.Status = matched.Status
+	p.Token = matched.Token
+	p.IP = matched.IP
+	p.UI = matched.UI
+	p.CloudControllerManager = matched.CloudControllerManager
+	p.ClusterCIDR = matched.ClusterCIDR
+	p.DataStore = matched.DataStore
+	p.Mirror = matched.Mirror
+	p.DockerMirror = matched.DockerMirror
+	p.InstallScript = matched.InstallScript
+	p.Repo = matched.Repo
+	p.Network = matched.Network
+	// needed to be overwrite.
+	if p.K3sChannel == "" {
+		p.K3sChannel = matched.K3sChannel
+	}
+	if p.K3sVersion == "" {
+		p.K3sVersion = matched.K3sVersion
+	}
+	if p.Registries == "" {
+		p.Registries = matched.Registries
+	}
+	if p.MasterExtraArgs == "" {
+		p.MasterExtraArgs = matched.MasterExtraArgs
+	}
+	if p.WorkerExtraArgs == "" {
+		p.WorkerExtraArgs = matched.WorkerExtraArgs
 	}
 }
 
