@@ -41,7 +41,7 @@ func listCluster() {
 	table.SetHeaderLine(false)
 	table.SetColumnSeparator("")
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetHeader([]string{"Name", "Region", "Provider", "Masters", "Workers"})
+	table.SetHeader([]string{"Name", "Region", "Provider", "Status", "Masters", "Workers"})
 
 	v := common.CfgPath
 	if v == "" {
@@ -168,6 +168,7 @@ func listCluster() {
 			name,
 			region,
 			f.Provider,
+			strings.ToLower(f.Status.Status),
 			f.Master,
 			f.Worker,
 		})
