@@ -44,9 +44,6 @@ const (
 	resourceTypeEip         = "EIP"
 	eipStatusAvailable      = "Available"
 	eipStatusInUse          = "InUse"
-	usageInfo               = `=========================== Prompt Info ===========================
-Use 'autok3s kubectl config use-context %s'
-Use 'autok3s kubectl get pods -A' get POD status`
 )
 
 // ProviderName is the name of this provider.
@@ -121,7 +118,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 
 	defer func() {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
-			fmt.Printf(usageInfo, p.Name)
+			fmt.Printf(common.UsageInfo, p.Name)
 			if p.UI {
 				if p.CloudControllerManager {
 					fmt.Printf("\nK3s UI URL: https://<using `kubectl get svc -A` get UI address>:8999\n")

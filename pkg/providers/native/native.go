@@ -24,9 +24,6 @@ const (
 	worker     = "0"
 	ui         = false
 	repo       = "https://apphub.aliyuncs.com"
-	usageInfo  = `=========================== Prompt Info ===========================
-Use 'autok3s kubectl config use-context %s'
-Use 'autok3s kubectl get pods -A' get POD status`
 )
 
 // ProviderName is the name of this provider.
@@ -97,7 +94,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 
 	defer func() {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
-			fmt.Printf(usageInfo, p.Name)
+			fmt.Printf(common.UsageInfo, p.Name)
 			if p.UI {
 				fmt.Printf("\nK3s UI URL: https://%s:8999\n", p.Status.MasterNodes[0].PublicIPAddress[0])
 			}
