@@ -20,6 +20,9 @@ const (
 	TagClusterPrefix   = "autok3s-"
 	StatusRunning      = "Running"
 	StatusStopped      = "Stopped"
+	UsageInfo          = `=========================== Prompt Info ===========================
+Use 'autok3s kubectl config use-context %s'
+Use 'autok3s kubectl get pods -A' get POD status`
 )
 
 var (
