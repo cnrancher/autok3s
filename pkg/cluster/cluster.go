@@ -30,9 +30,9 @@ import (
 var (
 	initCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' %s sh -\n"
 	joinCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -\n"
-	catCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
+	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s\n"
-	deployUICommand        = "echo \"%s\" | base64 -d > \"%s/ui.yaml\""
+	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
 )
