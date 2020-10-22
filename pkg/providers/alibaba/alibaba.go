@@ -619,7 +619,7 @@ func (p *Alibaba) stopCluster(f bool) error {
 
 	if err == nil && len(ids) > 0 {
 		// ensure that the status of all instances is running.
-		if err := p.startAndStopCheck(alibaba.StatusRunning); err != nil {
+		if err := p.startAndStopCheck(alibaba.StatusRunning); err != nil && !f {
 			return err
 		}
 		request := ecs.CreateStopInstancesRequest()
@@ -632,7 +632,7 @@ func (p *Alibaba) stopCluster(f bool) error {
 			request.ForceStop = requests.NewBoolean(f)
 		}
 
-		if _, err := p.c.StopInstances(request); err != nil {
+		if _, err := p.c.StopInstances(request); err != nil && !f {
 			return fmt.Errorf("[%s] calling stopInstance error, msg: [%v]", p.GetProviderName(), err)
 		}
 	}
