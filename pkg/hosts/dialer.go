@@ -52,7 +52,7 @@ func (d *Dialer) OpenTunnel(timeout bool) (*Tunnel, error) {
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		conn, err = d.getSSHTunnelConnection(timeout)
 		if err != nil {
-			return false, err
+			return false, nil
 		}
 		return true, nil
 	}); err != nil {
