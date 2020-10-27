@@ -7,6 +7,11 @@ The following demo uses the `tencent` Provider, so you need to set the following
 ## Usage
 User can get the flags available for tencent providers according to the `autok3s <sub-command> --provider tencent --help`.
 
+**ENABLE CCM**
+
+When enabling CCM, if you customize the CIDR of the cluster, you may also need to create a routing table so that the POD can communicate with the VPC normally.
+You can create routing table manually from the Tencent Cloud console, or by the [route-ctl](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/tree/master/route-ctl).
+
 ### Setup K3s Cluster
 If already have access information in `$HOME/.autok3s/config.yaml` you can use the simplified command.
 ```bash
@@ -19,7 +24,7 @@ autok3s create \
     --vpc <vpc id> \
     --subnet <subnet id> \
     --key-pair <key-pair id> \
-    --ssh-user ubuntu \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --master 1
 ```
@@ -35,7 +40,7 @@ autok3s create \
     --vpc <vpc id> \
     --subnet <subnet id> \
     --key-pair <key-pair id> \
-    --ssh-user ubuntu \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --secret-id <secret-id> \
     --secret-key <secret-key> \
@@ -69,7 +74,7 @@ autok3s join \
     --region <region> \
     --zone <zone> \
     --name <cluster name> \
-    --ssh-user ubuntu \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --worker 1
 ```
@@ -85,7 +90,7 @@ autok3s join \
     --vpc <vpc id> \
     --subnet <subnet id> \
     --key-pair <key-pair id> \
-    --ssh-user ubuntu \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --token <k3s token> \
     --ip <k3s master/lb ip> \
@@ -190,7 +195,7 @@ autok3s ssh \
     --region <region> \
     --name <cluster name> \
     --ssh-key-path <ssh-key-path> \
-    --ssh-user ubuntu
+    --ssh-user <ssh-user>
 ```
 
 Generic commands can be used anywhere.
@@ -200,7 +205,7 @@ autok3s ssh \
     --region <region> \
     --name <cluster name> \
     --ssh-key-path <ssh-key-path> \
-    --ssh-user ubuntu \
+    --ssh-user <ssh-user> \
     --secret-id <secret-id> \
     --secret-key <secret-key>
 ```

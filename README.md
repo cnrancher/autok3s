@@ -21,6 +21,7 @@ It's also generated a state file `$HOME/.autok3s/.state` to record the clusters'
 See the providers' links below for more usage details:
 
 - [alibaba](docs/alibaba/README.md) - Uses Alibaba Cloud SDK manage hosts, then uses SSH to install or join K3s cluster and hosts.
+- [tencent](docs/tencent/README.md) - Uses Tencent Cloud SDK manage hosts, then uses SSH to install or join K3s cluster and hosts.
 - [native](docs/native/README.md) - Does not integrate the Cloud SDK, but only uses SSH to install or join K3s cluster and hosts.
 
 ## Demo Video
