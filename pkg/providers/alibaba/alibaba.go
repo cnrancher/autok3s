@@ -542,8 +542,13 @@ func (p *Alibaba) deleteCluster(f bool) error {
 		request.Force = requests.NewBoolean(true)
 		request.TerminateSubscription = requests.NewBoolean(true)
 
-		_, err := p.c.DeleteInstances(request)
-		if err != nil {
+		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
+			response, err := p.c.DeleteInstances(request)
+			if err != nil || !response.IsSuccess() {
+				return false, nil
+			}
+			return true, nil
+		}); err != nil {
 			return fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
 		}
 	}
