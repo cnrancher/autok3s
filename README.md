@@ -23,6 +23,11 @@ See the providers' links below for more usage details:
 - [alibaba](docs/alibaba/README.md) - Uses Alibaba Cloud SDK manage hosts, then uses SSH to install or join K3s cluster and hosts.
 - [native](docs/native/README.md) - Does not integrate the Cloud SDK, but only uses SSH to install or join K3s cluster and hosts.
 
+## Demo Video
+Using `autok3s -d create --provider alibaba` command create K3s cluster.
+
+[![asciicast](https://asciinema.org/a/whwyjSfGv7lZdjaenTDCRejDW.svg)](https://asciinema.org/a/whwyjSfGv7lZdjaenTDCRejDW)
+
 ## Developers' Guide
 Use `Makefile` to manage project compilation, testing and packaging.
 Of course, you can also choose to compile using `dapper`.
