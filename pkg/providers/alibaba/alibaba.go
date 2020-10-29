@@ -436,7 +436,7 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(alibaba.Options); ok {
 		if cluster.CloudControllerManager {
-			extraArgs := fmt.Sprintf(" --kubelet-arg=provider-id=%s.%s --node-name=%s.%s",
+			extraArgs := fmt.Sprintf(" --kubelet-arg=cloud-provider=external --kubelet-arg=provider-id=%s.%s --node-name=%s.%s",
 				option.Region, master.InstanceID, option.Region, master.InstanceID)
 			return extraArgs
 		}
@@ -1373,7 +1373,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 			c.Network = "none"
 		}
 		if c.CloudControllerManager {
-			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb --kubelet-arg=cloud-provider=external"
+			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb"
 		}
 	}
 
