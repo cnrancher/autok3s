@@ -1373,7 +1373,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 			c.Network = "none"
 		}
 		if c.CloudControllerManager {
-			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb"
+			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik"
 		}
 	}
 
