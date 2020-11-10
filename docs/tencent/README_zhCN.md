@@ -1,20 +1,21 @@
 # Tencent Provider
-It uses the Tencent Cloud SDK to create and manage hosts, and then uses SSH to install the K3s cluster to the remote host. You can also use it to join hosts as masters/agents to the K3s cluster.
+使用腾讯云SDK创建和管理主机，然后使用SSH将K3s群集安装到远程主机。 您也可以使用它将主机作为`masters/agents`加入K3s集群。
 
-## Pre-Requests
-The following demo uses the `tencent` Provider, so you need to set the following [RAMs](../tencent/ram.md).
-**Security group config:**
-Make sure that your security-group allowed port 22(ssh default),6443(kubectl default),8999(if enable ui).
+## 前置要求
+以下样例使用腾讯云 - `tencent`, 如果使用子账号权限请参考 [RAMs](../tencent/ram.md)。
 
-## Usage
-User can get the flags available for tencent providers according to the `autok3s <sub-command> --provider tencent --help`.
+## 使用
+使用命令 `autok3s <sub-command> --provider tencent --help` 获取可用参数帮助。
+**安全组配置:**
+请确保安全组至少开启了如下端口： 22(ssh默认使用),6443(kubectl默认使用),8999(如果开启ui需要使用)。
 
-**ENABLE CCM**
-When enabling CCM, if you customize the CIDR of the cluster, you may also need to create a routing table so that the POD can communicate with the VPC normally.
-You can create routing table manually from the Tencent Cloud console, or by the [route-ctl](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/tree/master/route-ctl).
+**启用CCM**
+启用CCM时，如果自定义群集的CIDR，则可能还需要创建路由表，以便POD可以通过VPC正常通信。
+您可以从腾讯云控制台手动创建路由表，也可以通过[route-ctl](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/tree/master/route-ctl)创建路由表。
 
-### Setup K3s Cluster
-If already have access information in `$HOME/.autok3s/config.yaml` you can use the simplified command.
+### Create
+创建实例并初始化一个K3s集群。
+如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
 ```bash
 autok3s create \
     --provider tencent \
@@ -30,7 +31,7 @@ autok3s create \
     --master 1
 ```
 
-Generic commands can be used anywhere.
+完整通用命令如下，可以在任何主机上执行。
 ```bash
 autok3s create \
     --provider tencent \
@@ -48,27 +49,28 @@ autok3s create \
     --master 1
 ```
 
-HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3 master nodes, e.g.
+高可用模式(嵌入式etcd: k3s版本 >= 1.19.1-k3s1) 要求 `--master` 至少为3。
 ```bash
 autok3s ... \
     --master 3
 ```
 
-HA(external database) mode need `--master` greater than 1 node, also need to specify `--datastore`, e.g.
+高可用模式(外部数据库) 要求 `--master` 至少为1, 并且需要指定参数 `--datastore`。
 ```bash
 autok3s ... \
     --master 2 \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-Enable eip need flag `--eip`, e.g.
+启用EIP使用`--eip`。
 ```bash
 autok3s ... \
     --eip
 ```
 
-### Join K3s Nodes
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+### Join
+为指定集群增加节点。
+如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
 ```bash
 autok3s join \
     --provider tencent \
@@ -80,7 +82,7 @@ autok3s join \
     --worker 1
 ```
 
-Generic commands can be used anywhere.
+完整通用命令如下，可以在任何主机上执行。
 ```bash
 autok3s join \
     --provider tencent \
@@ -100,21 +102,22 @@ autok3s join \
     --worker 1
 ```
 
-Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
+为高可用集群(嵌入式etcd: k3s版本 >= 1.19.1-k3s1)模式新增节点。
 ```bash
 autok3s ... \
     --master 2
 ```
 
-Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
+为高可用集群(外部数据库)新增节点，需要指定参数`--datastore`。
 ```bash
 autok3s ... \
     --master 2 \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-### Start K3s Cluster
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+### Start
+启动一个处于停止状态的K3s集群。
+如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
 ```bash
 autok3s start \
     --provider tencent \
@@ -122,7 +125,7 @@ autok3s start \
     --name <cluster name>
 ```
 
-Generic commands can be used anywhere.
+完整通用命令如下，可以在任何主机上执行。
 ```bash
 autok3s start \
     --provider tencent \
@@ -132,8 +135,9 @@ autok3s start \
     --secret-key <secret-key>
 ```
 
-### Stop K3s Cluster
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+### Stop
+停止一个处于运行状态的K3s集群。
+如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
 ```bash
 autok3s stop \
     --provider tencent \
@@ -141,7 +145,7 @@ autok3s stop \
     --name <cluster name>
 ```
 
-Generic commands can be used anywhere.
+完整通用命令如下，可以在任何主机上执行。
 ```bash
 autok3s stop \
     --provider tencent \
@@ -151,8 +155,8 @@ autok3s stop \
     --secret-key <secret-key>
 ```
 
-### Delete K3s Cluster
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+### Delete
+如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
 ```bash
 autok3s delete \
     --provider tencent \
@@ -160,7 +164,7 @@ autok3s delete \
     --name <cluster name>
 ```
 
-Generic commands can be used anywhere.
+完整通用命令如下，可以在任何主机上执行。
 ```bash
 autok3s delete \
     --provider tencent \
@@ -170,26 +174,26 @@ autok3s delete \
     --secret-key <secret-key>
 ```
 
-### List K3s Clusters
-This command will list the clusters that you have created on this machine.
+### List
+显示当前主机上管理的所有K3s集群列表。
 ```bash
 autok3s list
 ```
 
-### Access K3s Cluster
-After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
+### Kubectl
+集群创建完成后, `autok3s` 会自动合并 `kubeconfig` 文件。
 ```bash
 autok3s kubectl <sub-commands> <flags>
 ```
 
-In the scenario of multiple clusters, the access to different clusters can be completed by switching context.
+在多个群集的场景下，可以通过切换上下文来完成对不同群集的访问。
 ```bash
 autok3s kubectl config get-contexts
 autok3s kubectl config use-context <context>
 ```
 
-### SSH K3s Cluster's Node
-If you have ever created a cluster using `autok3s` on your current machine, you can use the simplified command.
+### SSH
+如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
 ```bash
 autok3s ssh \
     --provider tencent \
@@ -199,7 +203,7 @@ autok3s ssh \
     --ssh-user <ssh-user>
 ```
 
-Generic commands can be used anywhere.
+完整通用命令如下，可以在任何主机上执行。
 ```bash
 autok3s ssh \
     --provider tencent \
@@ -211,10 +215,10 @@ autok3s ssh \
     --secret-key <secret-key>
 ```
 
-## Advanced Usage
-Autok3s integration some advanced components related to the current provider, e.g. ccm/ui.
+## 进阶使用
+Autok3集成了一些与当前provider有关的高级组件，例如 ccm、ui。
 
-### Enable Tencent Cloud Controller Manager
+### 启用腾讯云CCM(Cloud Controller Manager)
 
 ```bash
 autok3s create \
@@ -222,9 +226,9 @@ autok3s create \
     --cloud-controller-manager
 ```
 
-### Enable UI Component
-This flags will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.
-Please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create user token.
+### 启用UI组件
+该参数会启用 [kubernetes/dashboard](https://github.com/kubernetes/dashboard) 图形界面。
+访问Token等设置请参考 [此文档](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) 。
 
 ```bash
 autok3s create \

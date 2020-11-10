@@ -3,6 +3,8 @@ It uses the Alibaba Cloud SDK to create and manage hosts, and then uses SSH to i
 
 ## Pre-Requests
 The following demo uses the `alibaba` Provider, so you need to set the following [RAMs](ram.md).
+**Security group config:**
+Make sure that your security-group allowed port 22(ssh default),6443(kubectl default),8999(if enable ui).
 
 ## Usage
 User can get the flags available for alibaba providers according to the `autok3s <sub-command> --provider alibaba --help`.

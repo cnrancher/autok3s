@@ -4,6 +4,8 @@ It does not integrate the Cloud SDK, but only uses SSH to install or join K3s cl
 ## Pre-Requests
 The following demo uses the `native` Provider, so you need to provision a new VM running a compatible operating system such as Ubuntu, Centos, etc.
 Registered or setup `SSH keys/password` to the new VM or host.
+**Firewall config:**
+Make sure that your firewall allowed port 22(ssh default),6443(kubectl default),8999(if enable ui).
 
 ## Usage
 User can get the flags available for native providers according to the `autok3s <sub-command> --provider native --help`.
