@@ -23,3 +23,4 @@ source "${ROOT_DIR}/hack/lib/ginkgo.sh"
 
 autok3s::log::install_errexit
 autok3s::version::get_version_vars
+

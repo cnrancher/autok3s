@@ -51,3 +51,4 @@ ENV HOME ${DAPPER_SOURCE}
 
 WORKDIR ${DAPPER_SOURCE}
 ENTRYPOINT ["make", "-se", "autok3s"]
+
