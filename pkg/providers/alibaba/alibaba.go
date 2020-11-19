@@ -1135,7 +1135,7 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 
 		// no eip need rollback
 		if len(releaseEipIds) == 0 {
-			p.logger.Debugf("[%s] no eip need rollback\n", p.GetProviderName())
+			p.logger.Debugf("[%s] no eip need execute rollback logic\n", p.GetProviderName())
 			return
 		}
 	}
