@@ -700,7 +700,7 @@ func execute(host *hosts.Host, print bool, cmds []string) (string, error) {
 	}
 
 	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil {
-		return stderr.String(), err
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
 	if print {
