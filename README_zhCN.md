@@ -7,6 +7,10 @@
 
 AutoK3s是用于在多个公有云平台上快速创建和管理K3s群集的轻量级工具。它可以帮助用户快速完成K3s集群的个性化配置，同时提供便捷的`kubectl`访问功能。
 
+其他语言:
+- [English](README.md)
+- [Chinese Simplified (中文简体)](README_zhCN.md)
+
 ## 设计理念
 该工具使用云厂商的SDK来创建和管理主机，然后使用SSH将K3s群集安装到远程主机。您也可以使用它将主机作为`masters/agents`节点加入K3s集群。同时自动将`kubeconfig`合并并存储在`$HOME/.autok3s/.kube/config`中，这对于用户访问群集是必需的。
 然后用户可以使用`autok3s kubectl`命令快速访问集群。

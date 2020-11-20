@@ -8,6 +8,10 @@
 AutoK3s is a lightweight tool for quickly creating and managing K3s clusters on multiple cloud providers.
 It can help users quickly complete the personalized configuration of the K3s cluster, while providing convenient kubectl access capabilities.
 
+Other languages:
+- [English](README.md)
+- [Chinese Simplified (中文简体)](README_zhCN.md)
+
 ## Design Ideas
 This tool uses the cloud provider's SDK to create and manage hosts, and then uses SSH to install the K3s cluster to the remote host.
 You can also use it to join hosts as masters/agents to the K3s cluster. It will automatically merge and store the `kubeconfig` in `$HOME/.autok3s/.kube/config` which necessary for user to access the cluster.
