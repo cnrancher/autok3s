@@ -117,10 +117,10 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 
 	// for rollback
 	for _, master := range c.MasterNodes {
-		p.m.Store(master.InstanceID, types.Node{Master: true, RollBack: true, InstanceID: master.InstanceID, InstanceStatus: master.InstanceStatus})
+		p.m.Store(master.InstanceID, types.Node{Master: true, RollBack: true, InstanceID: master.InstanceID, InstanceStatus: master.InstanceStatus, PublicIPAddress: master.PublicIPAddress, InternalIPAddress: master.InternalIPAddress, SSH: master.SSH})
 	}
 	for _, worker := range c.WorkerNodes {
-		p.m.Store(worker.InstanceID, types.Node{Master: false, RollBack: true, InstanceID: worker.InstanceID, InstanceStatus: worker.InstanceStatus})
+		p.m.Store(worker.InstanceID, types.Node{Master: false, RollBack: true, InstanceID: worker.InstanceID, InstanceStatus: worker.InstanceStatus, PublicIPAddress: worker.PublicIPAddress, InternalIPAddress: worker.InternalIPAddress, SSH: worker.SSH})
 	}
 
 	// initialize K3s cluster.
@@ -162,7 +162,7 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 				added.Status.WorkerNodes = append(added.Status.WorkerNodes, v)
 			}
 			// for rollback
-			p.m.Store(v.InstanceID, types.Node{Master: v.Master, RollBack: true, InstanceID: v.InstanceID, InstanceStatus: v.InstanceStatus})
+			p.m.Store(v.InstanceID, types.Node{Master: v.Master, RollBack: true, InstanceID: v.InstanceID, InstanceStatus: v.InstanceStatus, PublicIPAddress: v.PublicIPAddress, InternalIPAddress: v.InternalIPAddress, SSH: v.SSH})
 		}
 		return true
 	})
