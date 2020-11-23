@@ -12,6 +12,7 @@ User can get the flags available for tencent providers according to the `autok3s
 **ENABLE CCM**
 When enabling CCM, if you customize the CIDR of the cluster, you may also need to create a routing table so that the POD can communicate with the VPC normally.
 You can create routing table manually from the Tencent Cloud console, or by the [route-ctl](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/tree/master/route-ctl).
+> NOTE: The cluster route will **NOT** release automatically. You need to manually delete the cluster route after deleting cluster.
 
 ### Setup K3s Cluster
 If already have access information in `$HOME/.autok3s/config.yaml` you can use the simplified command.
