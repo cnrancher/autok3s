@@ -12,6 +12,7 @@
 **启用CCM**
 启用CCM时，如果自定义群集的CIDR，则可能还需要创建路由表，以便POD可以通过VPC正常通信。
 您可以从腾讯云控制台手动创建路由表，也可以通过[route-ctl](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/tree/master/route-ctl)创建路由表。
+> 注意：集群路由**不会自动删除**。删除集群后需要手动删除集群路由。
 
 ### Create
 创建实例并初始化一个K3s集群。
