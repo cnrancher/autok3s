@@ -1,9 +1,9 @@
 # autok3s
 [![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cnrancher/autok3s)](https://goreportcard.com/report/github.com/cnrancher/autok3s) 
-![GitHub release](https://img.shields.io/github/v/release/cnrancher/autok3s.svg?color=default)
-[![License: apache-2.0](https://img.shields.io/badge/License-apache2-default.svg)](https://opensource.org/licenses/Apache-2.0)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://github.com/cnrancher/autok3s/pulls)
+![GitHub release](https://img.shields.io/github/v/release/cnrancher/autok3s.svg?color=blue)
+[![License: apache-2.0](https://img.shields.io/badge/License-apache2-default.svg?color=blue)](https://opensource.org/licenses/Apache-2.0)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?color=blue)](http://github.com/cnrancher/autok3s/pulls)
 
 简体中文 / [English](README.md)
 
