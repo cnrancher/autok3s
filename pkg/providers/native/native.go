@@ -19,7 +19,7 @@ import (
 
 const (
 	k3sVersion = ""
-	k3sChannel = "v1.18"
+	k3sChannel = "latest"
 	master     = "0"
 	worker     = "0"
 	ui         = false

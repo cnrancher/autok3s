@@ -29,7 +29,7 @@ import (
 
 const (
 	k3sVersion              = ""
-	k3sChannel              = "v1.18"
+	k3sChannel              = "latest"
 	secretID                = "secret-id"
 	secretKey               = "secret-key"
 	imageID                 = "img-pi0ii46r" /* Ubuntu Server 18.04.1 LTS x64 */
