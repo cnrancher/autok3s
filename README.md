@@ -1,25 +1,22 @@
 # autok3s
 [![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cnrancher/autok3s)](https://goreportcard.com/report/github.com/cnrancher/autok3s) 
-![GitHub release](https://img.shields.io/github/v/release/cnrancher/autok3s.svg?color=default)
-[![License: apache-2.0](https://img.shields.io/badge/License-apache2-default.svg)](https://opensource.org/licenses/Apache-2.0)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://github.com/cnrancher/autok3s/pulls)
+![GitHub release](https://img.shields.io/github/v/release/cnrancher/autok3s.svg)
+[![License: apache-2.0](https://img.shields.io/badge/License-apache2-default.svg?color=blue)](https://opensource.org/licenses/Apache-2.0)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?color=blue)](http://github.com/cnrancher/autok3s/pulls)
+
+English / [简体中文](README_zhCN.md)
 
 AutoK3s is a lightweight tool for quickly creating and managing K3s clusters on multiple cloud providers.
 It can help users quickly complete the personalized configuration of the K3s cluster, while providing convenient kubectl access capabilities.
 
-Other languages:
-- [English](README.md)
-- [Chinese Simplified (中文简体)](README_zhCN.md)
-
-## Design Ideas
-This tool uses the cloud provider's SDK to create and manage hosts, and then uses SSH to install the K3s cluster to the remote host.
-You can also use it to join hosts as masters/agents to the K3s cluster. It will automatically merge and store the `kubeconfig` in `$HOME/.autok3s/.kube/config` which necessary for user to access the cluster.
-Then user can use `autok3s kubectl` command quickly access the cluster.
-
-Use [viper](https://github.com/spf13/viper) to bind flags and configuration file. `autok3s` will generate a configuration file to store cloud-providers' access information at the specified location(`$HOME/.autok3s/config.yaml`) to reduce the number of flags to be passed for multiple runs.
-
-It's also generated a state file `$HOME/.autok3s/.state` to record the clusters' information created on this host.
+## Key Features
+- A simple command can quickly generate and manage a custom k3s cluster.
+- Speed up the process of creating k3s instances on the public cloud platform.
+- Support for all the functions of Kubectl.
+- Support for enabling Kubernetes Cloud-Controller-Manager.
+- Support for enabling Kubernetes Dashboard UI.
+- Support for enabling additional public cloud platform's CNI plugin(e.g. Terway).
 
 ## Providers
 See the providers' links below for more usage details:
