@@ -1,6 +1,7 @@
 package common
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/cnrancher/autok3s/pkg/utils"
@@ -34,3 +35,11 @@ var (
 		Steps:    5,
 	} // retry 5 times, total 120 seconds.
 )
+
+func GetDefaultSSHKeyPath(clusterName, providerName string) string {
+	return filepath.Join(CfgPath, providerName, "clusters", clusterName, "id_rsa")
+}
+
+func GetClusterPath(clusterName, providerName string) string {
+	return filepath.Join(CfgPath, providerName, "clusters", clusterName)
+}

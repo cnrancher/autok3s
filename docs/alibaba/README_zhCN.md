@@ -4,36 +4,77 @@
 ## 前置要求
 以下样例使用阿里云 - `alibaba` ，如果使用子账号权限请参考 [RAMs](ram.md) 。
 **安全组配置:**
-请确保安全组至少开启了如下端口： 22(ssh默认使用),6443(kubectl默认使用),8999(如果开启ui需要使用)。
+请确保安全组至少开启了如下端口
+
+Protocol |  Port  | Source | Description
+---|---|---|---|
+TCP | 22 | all nodes | ssh 连接使用
+TCP | 6443 | k3s agent nodes | kubernetes API使用
+TCP | 10250 | k3s server and agent | kubelet 使用
+TCP | 8999 | k3s dashboard | (可选)仅开启dashboard ui使用
+UDP | 8472 | k3s server and agent | (可选)仅Flannel VXLAN使用
+TCP | 2379, 2380 | k3s server nodes | (可选)etcd使用（如果使用外部数据库可忽略此项）
+
+通常所有出站流量都被允许。
 
 ## 使用
-使用命令 `autok3s <sub-command> --provider alibaba --help` 获取可用参数帮助。
 
-### Create
-创建实例并初始化一个K3s集群。
-如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
+### 快速启动命令
+
+使用以下命令可以快速创建阿里云实例并初始化一个K3s集群。
 ```bash
-autok3s create \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --ssh-key-path <ssh-key-path> \
-    --master 1
+export ECS_ACCESS_KEY_ID='<Your access key ID>'
+export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
+
+autok3s create -p alibaba --name myk3s --master 1 --worker 1
 ```
 
-完整通用命令如下，可以在任何主机上执行。
+或者
+
+```
+autok3s create -p alibaba --access-key <access-key> --access-secret <access-secret> --name myk3s --master 1 --worker 1
+```
+
+### 参数说明
+
+使用命令 `autok3s <sub-command> --provider alibaba --help` 获取可用参数帮助。
+
+一些参数可以通过CLI传入，也可以通过环境变量设置，以下为CLI参数及环境变量对照表：
+
+参数 | 环境变量 | 描述 | 是否必填 | 默认值
+---|---|---|---|---|
+--access-key | ECS_ACCESS_KEY_ID | 访问阿里云API的access key | 是 |
+--access-secret | ECS_ACCESS_KEY_SECRET | 访问阿里云API的secret key | 是 |
+--name | | k3s集群名称 | 是 |
+--region | ECS_REGION | 阿里云ECS region | 否 | cn-hangzhou
+--zone | ECS_ZONE | 阿里云ECS region下的可用区 | 否 | cn-hangzhou-e
+--key-pair | ECS_SSH_KEYPAIR | 阿里云ECS ssh key-pair | 否 |
+--image | ECS_IMAGE_ID | ECS实例使用的操作系统镜像ID | 否 | ubuntu_18_04_x64_20G_alibase_20200618.vhd
+--type | ECS_INSTANCE_TYPE | ECS实例规格 | 否 | ecs.c6.large
+--v-switch | ECS_VSWITCH_ID | ECS使用交换机ID | 否 | autok3s-aliyun-vswitch
+--disk-category | ECS_DISK_CATEGORY | ECS实例使用数据盘类型，`cloud_efficiency` 或 `cloud_ssd` | 否 | cloud_ssd
+--disk-size | ECS_SYSTEM_DISK_SIZE | ECS实例系统盘大小 | 否 | 40GB
+--security-group | ECS_SECURITY_GROUP | ECS实例使用的安全组 | 否 | autok3s
+--cloud-controller-manager | | 是否开启cloud controller manager | 否 | false
+--master-extra-args | | k3s master节点自定义配置参数 | 否 |
+--worker-extra-args | | k3s worker节点自定义配置参数 | 否 |
+--registries | | 私有镜像仓库地址 | 否 |
+--datastore | | k3s集群使用的数据源（HA模式使用外部数据库时需要）| 否 |
+--token | | k3s master token | 否 |
+--master | | master节点数量 | 是 | 0
+--worker | | worker节点数量 | 是 | 0
+--repo | | helm 仓库地址 | 否 |
+--terway | | 是否使用terway网络插件 | 否 | false
+--terway-max-pool-size | | K3S集群可以分配给集群POD的EIP数量，如果`--terway`参数设置为`true`可以设置此项 | 否 | 5
+--ui | | 是否部署dashboard ui | 否 | false
+
+### Create
+创建一个k3s集群。
+
 ```bash
 autok3s create \
     --provider alibaba \
-    --region <region> \
     --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --ssh-key-path <ssh-key-path> \
     --access-key <access-key> \
     --access-secret <access-secret> \
     --master 1
@@ -54,29 +95,12 @@ autok3s ... \
 
 ### Join
 为指定集群增加节点。
-如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
-```bash
-autok3s join \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --ssh-key-path <ssh-key-path> \
-    --worker 1
-```
 
-完整通用命令如下，可以在任何主机上执行。
 ```bash
 autok3s join \
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --token <k3s token> \
-    --ip <k3s master/lb ip> \
-    --access-key <access-key> \
-    --access-secret <access-secret> \
     --worker 1
 ```
 
@@ -94,62 +118,33 @@ autok3s ... \
 ```
 
 ### Start
-启动一个处于停止状态的K3s集群。
-如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
+启动一个处于停止状态的k3s集群。
+
 ```bash
 autok3s start \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
-```
-
-完整通用命令如下，可以在任何主机上执行。
-```bash
-autok3s start \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
 ```
 
 ### Stop
-停止一个处于运行状态的K3s集群。
-如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
+停止一个处于运行状态的k3s集群。
+
 ```bash
 autok3s stop \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
-```
-
-完整通用命令如下，可以在任何主机上执行。
-```bash
-autok3s stop \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
 ```
 
 ### Delete
-如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
+删除一个k3s集群。
+
 ```bash
 autok3s delete \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
-```
-
-完整通用命令如下，可以在任何主机上执行。
-```bash
-autok3s delete \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
 ```
 
 ### List
@@ -171,25 +166,13 @@ autok3s kubectl config use-context <context>
 ```
 
 ### SSH
-如果在文件 `$HOME/.autok3s/config.yaml` 中已经有访问信息则可以使用以下简化命令。
+SSH连接到集群中的某个主机。
+
 ```bash
 autok3s ssh \
     --provider alibaba \
     --region <region> \
     --name <cluster name>
-```
-
-完整通用命令如下，可以在任何主机上执行。
-```bash
-autok3s ssh \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --ssh-key-path <ssh private key path> \
-    --ssh-user root \
-    --ssh-port 22 \
-    --access-key <access-key> \
-    --access-secret <access-secret>
 ```
 
 ## 进阶使用

@@ -29,11 +29,15 @@ import (
 )
 
 var (
+	DefaultScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
+)
+
+var (
 	logger                 *logrus.Logger
-	initCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' %s sh -\n"
-	joinCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -\n"
+	initCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' %s sh -"
+	joinCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
-	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s\n"
+	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s"
 	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
@@ -296,8 +300,12 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 		}
 	}
 
-	node.SSH.User = ssh.User
-	node.SSH.Port = ssh.Port
+	if ssh.User != "" {
+		node.SSH.User = ssh.User
+	}
+	if ssh.Port != "" {
+		node.SSH.Port = ssh.Port
+	}
 	if ssh.Password != "" {
 		node.SSH.Password = ssh.Password
 	}
@@ -322,6 +330,16 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 	if node.PublicIPAddress == nil {
 		node.PublicIPAddress = []string{ip}
 	}
+
+	if node.SSH.Port == "" {
+		node.SSH.Port = "22"
+	}
+
+	// preCheck ssh config
+	if node.SSH.User == "" || (node.SSH.Password == "" && node.SSH.SSHKeyPath == "") {
+		return fmt.Errorf("couldn't ssh to chosen node with current ssh config: --ssh-user %s --ssh-port %s --ssh-password %s --ssh-key-path %s", node.SSH.User, node.SSH.Port, node.SSH.Password, node.SSH.SSHKeyPath)
+	}
+
 	return terminal(&hosts.Host{Node: node})
 }
 
@@ -525,6 +543,10 @@ func OverwriteCfg(context string) error {
 	delete(c.Clusters, context)
 	delete(c.Contexts, context)
 	delete(c.AuthInfos, context)
+	// clear current context
+	if c.CurrentContext == context {
+		c.CurrentContext = ""
+	}
 
 	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 }
@@ -699,8 +721,12 @@ func execute(host *hosts.Host, print bool, cmds []string) (string, error) {
 		tunnel.Cmd(cmd)
 	}
 
-	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil {
+	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil || stderr.String() != "" {
 		return "", fmt.Errorf("%w: %s", err, stderr.String())
+	}
+
+	if common.Debug {
+		fmt.Println(stdout.String())
 	}
 
 	if print {

@@ -5,7 +5,18 @@ It does not integrate the Cloud SDK, but only uses SSH to install or join K3s cl
 The following demo uses the `native` Provider, so you need to provision a new VM running a compatible operating system such as Ubuntu, Centos, etc.
 Registered or setup `SSH keys/password` to the new VM or host.
 **Firewall config:**
-Make sure that your firewall allowed port 22(ssh default),6443(kubectl default),8999(if enable ui).
+Make sure that your firewall allowed port below.
+
+Protocol |  Port  | Source | Description
+---|---|---|---|
+TCP | 22 | all nodes | for ssh
+TCP | 6443 | k3s agent nodes | kubernetes API
+TCP | 10250 | k3s server and agent | kubelet
+TCP | 8999 | k3s dashboard | (Optional)Required only for dashboard ui
+UDP | 8472 | k3s server and agent | (Optional)Required only for Flannel VXLAN
+TCP | 2379, 2380 | k3s server nodes | (Optional)Required only for embedded etcd
+
+Typically all outbound traffic is allowed.
 
 ## Usage
 User can get the flags available for native providers according to the `autok3s <sub-command> --provider native --help`.

@@ -27,3 +27,4 @@ main
 ## Dapper temporary files
 **/Dockerfile.dapper*
 !**/Dockerfile.dapper
+.autok3s/

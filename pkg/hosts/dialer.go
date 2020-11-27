@@ -79,7 +79,7 @@ func newDialer(h *Host, kind string) (*Dialer, error) {
 		sshCert:         h.SSHCert,
 	}
 
-	if d.password == "" && d.sshKey == "" && !d.useSSHAgentAuth {
+	if d.password == "" && d.sshKey == "" && !d.useSSHAgentAuth && len(h.SSHKeyPath) > 0 {
 		var err error
 		d.sshKey, err = utils.SSHPrivateKeyPath(h.SSHKeyPath)
 		if err != nil {
