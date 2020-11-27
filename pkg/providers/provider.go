@@ -60,6 +60,7 @@ type Provider interface {
 	IsClusterExist() (bool, []string, error)
 	// Rollback when error occurs.
 	Rollback() error
+	MergeClusterOptions() error
 }
 
 // RegisterProvider registers a provider.Factory by name.

@@ -3,10 +3,8 @@ package cmd
 import (
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
-
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -15,8 +13,8 @@ var (
 		Short: "Stop k3s cluster",
 		Example: `  autok3s stop \
     --provider alibaba \
-    --region <region> \
     --name <cluster name> \
+    --region <region> \
     --access-key <access-key> \
     --access-secret <access-secret>`,
 	}
@@ -44,23 +42,20 @@ func StopCommand() *cobra.Command {
 		stopCmd.Flags().AddFlagSet(spP.GetStopFlags(stopCmd))
 	}
 
-	stopCmd.Run = func(cmd *cobra.Command, args []string) {
+	stopCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if spProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
-
-		common.BindPFlags(cmd, spP)
-
-		// read options from config.
-		if err := viper.ReadInConfig(); err != nil {
-			logrus.Fatalln(err)
+		common.InitPFlags(cmd, spP)
+		err := spP.MergeClusterOptions()
+		if err != nil {
+			return err
 		}
 
-		// sync config data to local cfg path.
-		if err := viper.WriteConfig(); err != nil {
-			logrus.Fatalln(err)
-		}
+		return common.MakeSureCredentialFlag(cmd.Flags(), spP)
+	}
 
+	stopCmd.Run = func(cmd *cobra.Command, args []string) {
 		spP.GenerateClusterName()
 
 		if err := spP.StopK3sCluster(spForce); err != nil {

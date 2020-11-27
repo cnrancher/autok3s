@@ -1,11 +1,22 @@
 # Native Provider
-它不集成Cloud SDK，而仅使用SSH来安装或加入K3s集群和主机。
+它不集成Cloud SDK，而仅使用SSH来安装或加入k3s集群。
 
 ## 前置要求
 以下演示使用了 `native` 提供程序，因此您需要配置一个新的VM，该VM运行兼容的操作系统，例如Ubuntu，CentOS等。
 向新的VM或主机注册或设置 `SSH密钥/密码`。
 **防火墙配置:**
-请确保防火墙至少放行了如下端口： 22(ssh默认使用),6443(kubectl默认使用),8999(如果开启ui需要使用)。
+请确保防火墙至少放行了如下端口：
+
+Protocol |  Port  | Source | Description
+---|---|---|---|
+TCP | 22 | all nodes | ssh 连接使用
+TCP | 6443 | k3s agent nodes | kubernetes API使用
+TCP | 10250 | k3s server and agent | kubelet 使用
+TCP | 8999 | k3s dashboard | (可选)仅开启dashboard ui使用
+UDP | 8472 | k3s server and agent | (可选)仅Flannel VXLAN使用
+TCP | 2379, 2380 | k3s server nodes | (可选)etcd使用(如果使用外部数据库可忽略此项)
+
+通常所有出站流量都被允许。
 
 ## 使用
 使用命令 `autok3s <sub-command> --provider native --help` 获取可用参数帮助。

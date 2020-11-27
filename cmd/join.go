@@ -4,10 +4,8 @@ import (
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
-
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -18,11 +16,6 @@ var (
     --provider alibaba \
     --region <region> \
     --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --token <k3s token> \
-    --ip <k3s master/lb ip> \
     --access-key <access-key> \
     --access-secret <access-secret> \
     --worker 1`,
@@ -32,9 +25,8 @@ var (
 	jp        providers.Provider
 
 	jSSH = &types.SSH{
-		SSHKeyPath: "~/.ssh/id_rsa",
-		User:       "root",
-		Port:       "22",
+		User: "root",
+		Port: "22",
 	}
 )
 
@@ -63,24 +55,20 @@ func JoinCommand() *cobra.Command {
 		joinCmd.Flags().AddFlagSet(jp.GetJoinFlags(joinCmd))
 	}
 
-	joinCmd.Run = func(cmd *cobra.Command, args []string) {
+	joinCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if jProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
-
-		// must bind after dynamic provider flags loaded.
-		common.BindPFlags(cmd, jp)
-
-		// read options from config.
-		if err := viper.ReadInConfig(); err != nil {
-			logrus.Fatalln(err)
+		common.InitPFlags(cmd, jp)
+		err := jp.MergeClusterOptions()
+		if err != nil {
+			return err
 		}
 
-		// sync config data to local cfg path.
-		if err := viper.WriteConfig(); err != nil {
-			logrus.Fatalln(err)
-		}
+		return common.MakeSureCredentialFlag(cmd.Flags(), jp)
+	}
 
+	joinCmd.Run = func(cmd *cobra.Command, args []string) {
 		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
 		jp.GenerateClusterName()
 

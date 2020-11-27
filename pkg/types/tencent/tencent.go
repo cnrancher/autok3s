@@ -23,7 +23,6 @@ type Options struct {
 	EndpointURL             string `json:"endpoint-url,omitempty" yaml:"endpoint-url,omitempty"`
 	SecurityGroupIds        string `json:"security-group-ids,omitempty" yaml:"security-group-ids,omitempty"`
 	KeyIds                  string `json:"key-ids,omitempty" yaml:"key-ids,omitempty"`
-	Password                string `json:"password,omitempty" yaml:"password,omitempty"`
 	VpcID                   string `json:"vpc-id,omitempty" yaml:"vpc-id,omitempty"`
 	SubnetID                string `json:"subnet-id,omitempty" yaml:"subnet-id,omitempty"`
 	ImageID                 string `json:"image-id,omitempty" yaml:"image-id,omitempty"`
@@ -32,6 +31,7 @@ type Options struct {
 	SystemDiskSize          string `json:"system-disk-size,omitempty" yaml:"system-disk-size,omitempty"`
 	InternetMaxBandwidthOut string `json:"internet-max-bandwidth-out,omitempty" yaml:"internet-max-bandwidth-out,omitempty"`
 	PublicIPAssignedEIP     bool   `json:"public-ip-assigned-eip" yaml:"public-ip-assigned-eip"`
+	NetworkRouteTableName   string `json:"network-route-table-name,omitempty" yaml:"network-route-table-name,omitempty"`
 }
 
 type CloudControllerManager struct {

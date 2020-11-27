@@ -30,6 +30,7 @@ func (t *Tunnel) Close() error {
 func (t *Tunnel) Cmd(cmd string) *Tunnel {
 	if t.cmd == nil {
 		t.cmd = bytes.NewBufferString(cmd + "\n")
+		return t
 	}
 
 	_, err := t.cmd.WriteString(cmd + "\n")

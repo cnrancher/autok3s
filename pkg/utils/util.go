@@ -9,8 +9,10 @@ import (
 	"os"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -81,4 +83,23 @@ func AskForSelectItem(s string, ss map[string]string) string {
 		logrus.Fatal(err)
 	}
 	return ss[strings.ToLower(strings.TrimSpace(response))]
+}
+
+func WaitFor(fn func() (bool, error)) error {
+	// retry 5 times, total 120 seconds.
+	backoff := wait.Backoff{
+		Duration: 30 * time.Second,
+		Factor:   1,
+		Steps:    5,
+	}
+	return WaitForBackoff(fn, backoff)
+}
+
+func WaitForBackoff(fn func() (bool, error), backoff wait.Backoff) error {
+	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		return fn()
+	}); err != nil {
+		return err
+	}
+	return nil
 }

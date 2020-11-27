@@ -7,7 +7,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -16,12 +15,7 @@ var (
 		Short: "Create k3s cluster",
 		Example: `  autok3s create \
     --provider alibaba \
-    --region <region> \
     --name <cluster name> \
-    --key-pair <key-pair id> \
-    --v-switch <v-switch id> \
-    --security-group <security-group id> \
-    --ssh-key-path <ssh-key-path> \
     --access-key <access-key> \
     --access-secret <access-secret> \
     --master 1`,
@@ -31,9 +25,8 @@ var (
 	cp        providers.Provider
 
 	cSSH = &types.SSH{
-		SSHKeyPath: "~/.ssh/id_rsa",
-		User:       "root",
-		Port:       "22",
+		User: "root",
+		Port: "22",
 	}
 )
 
@@ -62,24 +55,15 @@ func CreateCommand() *cobra.Command {
 		createCmd.Flags().AddFlagSet(cp.GetCreateFlags(createCmd))
 	}
 
-	createCmd.Run = func(cmd *cobra.Command, args []string) {
+	createCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if cProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
+		common.InitPFlags(cmd, cp)
+		return common.MakeSureCredentialFlag(cmd.Flags(), cp)
+	}
 
-		// must bind after dynamic provider flags loaded.
-		common.BindPFlags(cmd, cp)
-
-		// read options from config.
-		if err := viper.ReadInConfig(); err != nil {
-			logrus.Fatalln(err)
-		}
-
-		// sync config data to local cfg path.
-		if err := viper.WriteConfig(); err != nil {
-			logrus.Fatalln(err)
-		}
-
+	createCmd.Run = func(cmd *cobra.Command, args []string) {
 		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
 		cp.GenerateClusterName()
 

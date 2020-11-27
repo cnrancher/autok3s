@@ -7,6 +7,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -14,7 +15,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func BindPFlags(cmd *cobra.Command, p providers.Provider) {
+func bindPFlags(cmd *cobra.Command, p providers.Provider) {
 	name, err := cmd.Flags().GetString("provider")
 	if err != nil {
 		logrus.Fatalln(err)
@@ -25,6 +26,35 @@ func BindPFlags(cmd *cobra.Command, p providers.Provider) {
 			if err := viper.BindPFlag(fmt.Sprintf(common.BindPrefix, name, f.Name), f); err != nil {
 				logrus.Fatalln(err)
 			}
+		}
+	})
+}
+
+func InitPFlags(cmd *cobra.Command, p providers.Provider) {
+	// bind env to flags
+	bindEnvFlags(cmd)
+	bindPFlags(cmd, p)
+
+	// read options from config.
+	if err := viper.ReadInConfig(); err != nil {
+		logrus.Fatalln(err)
+	}
+
+	// sync config data to local cfg path.
+	if err := viper.WriteConfig(); err != nil {
+		logrus.Fatalln(err)
+	}
+}
+
+func bindEnvFlags(cmd *cobra.Command) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		envAnnotation := f.Annotations[utils.BashCompEnvVarFlag]
+		if len(envAnnotation) == 0 {
+			return
+		}
+
+		if os.Getenv(envAnnotation[0]) != "" {
+			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", os.Getenv(envAnnotation[0])))
 		}
 	})
 }
@@ -62,4 +92,15 @@ func IsCredentialFlag(s string, nfs *pflag.FlagSet) bool {
 		}
 	})
 	return found
+}
+
+func MakeSureCredentialFlag(flags *pflag.FlagSet, p providers.Provider) error {
+	flags.VisitAll(func(flag *pflag.Flag) {
+		// if viper has set the value, make sure flag has the value set to pass require check
+		if IsCredentialFlag(flag.Name, p.BindCredentialFlags()) && viper.IsSet(fmt.Sprintf(common.BindPrefix, p.GetProviderName(), flag.Name)) {
+			flags.Set(flag.Name, viper.GetString(fmt.Sprintf(common.BindPrefix, p.GetProviderName(), flag.Name)))
+		}
+	})
+
+	return nil
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -16,11 +15,8 @@ var (
 		Short: "SSH k3s node",
 		Example: `  autok3s ssh \
     --provider alibaba \
-    --region <region> \
     --name <cluster name> \
-    --ssh-key-path <ssh private key path> \
-    --ssh-user root \
-    --ssh-port 22 \
+    --region <region> \
     --access-key <access-key> \
     --access-secret <access-secret>`,
 	}
@@ -28,11 +24,7 @@ var (
 	sProvider = ""
 	sp        providers.Provider
 
-	sSSH = &types.SSH{
-		SSHKeyPath: "~/.ssh/id_rsa",
-		User:       "root",
-		Port:       "22",
-	}
+	sSSH = &types.SSH{}
 )
 
 func init() {
@@ -60,24 +52,19 @@ func SSHCommand() *cobra.Command {
 		sshCmd.Flags().AddFlagSet(sp.GetSSHFlags(sshCmd))
 	}
 
-	sshCmd.Run = func(cmd *cobra.Command, args []string) {
+	sshCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if sProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
-
-		// must bind after dynamic provider flags loaded.
-		common.BindPFlags(cmd, sp)
-
-		// read options from config.
-		if err := viper.ReadInConfig(); err != nil {
-			logrus.Fatalln(err)
+		common.InitPFlags(cmd, sp)
+		err := sp.MergeClusterOptions()
+		if err != nil {
+			return err
 		}
+		return common.MakeSureCredentialFlag(cmd.Flags(), sp)
+	}
 
-		// sync config data to local cfg path.
-		if err := viper.WriteConfig(); err != nil {
-			logrus.Fatalln(err)
-		}
-
+	sshCmd.Run = func(cmd *cobra.Command, args []string) {
 		sp.GenerateClusterName()
 
 		if err := sp.SSHK3sNode(sSSH); err != nil {

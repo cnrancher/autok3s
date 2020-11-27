@@ -6,7 +6,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -15,7 +14,6 @@ var (
 		Short: "Delete k3s cluster",
 		Example: `  autok3s delete \
     --provider alibaba \
-    --region <region> \
     --name <cluster name> \
     --access-key <access-key> \
     --access-secret <access-secret>`,
@@ -44,23 +42,20 @@ func DeleteCommand() *cobra.Command {
 		deleteCmd.Flags().AddFlagSet(dp.GetDeleteFlags(deleteCmd))
 	}
 
-	deleteCmd.Run = func(cmd *cobra.Command, args []string) {
+	deleteCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if dProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
-
-		common.BindPFlags(cmd, dp)
-
-		// read options from config.
-		if err := viper.ReadInConfig(); err != nil {
-			logrus.Fatalln(err)
+		common.InitPFlags(cmd, dp)
+		err := dp.MergeClusterOptions()
+		if err != nil {
+			return err
 		}
 
-		// sync config data to local cfg path.
-		if err := viper.WriteConfig(); err != nil {
-			logrus.Fatalln(err)
-		}
+		return common.MakeSureCredentialFlag(cmd.Flags(), dp)
+	}
 
+	deleteCmd.Run = func(cmd *cobra.Command, args []string) {
 		dp.GenerateClusterName()
 
 		if err := dp.DeleteK3sCluster(force); err != nil {

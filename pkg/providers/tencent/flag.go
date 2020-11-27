@@ -7,6 +7,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -16,18 +17,16 @@ func (p *Tencent) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{
 		{
-			Name:     "ui",
-			P:        &p.UI,
-			V:        p.UI,
-			Usage:    "Enable K3s UI.",
-			Required: true,
+			Name:  "ui",
+			P:     &p.UI,
+			V:     p.UI,
+			Usage: "Enable K3s UI.",
 		},
 		{
-			Name:     "repo",
-			P:        &p.Repo,
-			V:        p.Repo,
-			Usage:    "Specify helm repo",
-			Required: true,
+			Name:  "repo",
+			P:     &p.Repo,
+			V:     p.Repo,
+			Usage: "Specify helm repo",
 		},
 		{
 			Name:  "eip",
@@ -37,118 +36,12 @@ func (p *Tencent) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 		},
 	}...)
 
-	for _, f := range fs {
-		if f.ShortHand == "" {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
-				case string:
-					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
-				}
-			}
-		} else {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
-				case string:
-					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
-				}
-			}
-		}
-	}
-
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		errFlags := make([]string, 0)
-		for _, f := range fs {
-			if f.Required {
-				p, ok := f.P.(*string)
-				if ok {
-					if *p == "" && f.V.(string) == "" {
-						errFlags = append(errFlags, f.Name)
-					}
-				}
-			}
-		}
-
-		if len(errFlags) == 0 {
-			return nil
-		}
-
-		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
-	}
-
-	return cmd.Flags()
+	return utils.ConvertFlags(cmd, fs)
 }
 
 func (p *Tencent) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
-
-	for _, f := range fs {
-		if f.ShortHand == "" {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
-				case string:
-					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
-				}
-			}
-		} else {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
-				case string:
-					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
-				}
-			}
-		}
-	}
-
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		clusters, err := cluster.ReadFromState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-		})
-		if err != nil {
-			return err
-		}
-
-		var matched *types.Cluster
-		for _, c := range clusters {
-			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
-				matched = &c
-			}
-		}
-
-		if matched != nil {
-			p.Status = matched.Status
-			p.overwriteMetadata(matched)
-			p.mergeOptions(*matched)
-		}
-
-		errFlags := make([]string, 0)
-		for _, f := range fs {
-			if f.Required {
-				p, ok := f.P.(*string)
-				if ok {
-					if *p == "" && f.V.(string) == "" {
-						errFlags = append(errFlags, f.Name)
-					}
-				}
-			}
-		}
-
-		if len(errFlags) == 0 {
-			return nil
-		}
-
-		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
-	}
-
-	return cmd.Flags()
+	return utils.ConvertFlags(cmd, fs)
 }
 
 func (p *Tencent) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -166,72 +59,11 @@ func (p *Tencent) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 			V:        p.Region,
 			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
 			Required: true,
+			EnvVar:   "CVM_REGION",
 		},
 	}
 
-	for _, f := range fs {
-		if f.ShortHand == "" {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
-				case string:
-					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
-				}
-			}
-		} else {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
-				case string:
-					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
-				}
-			}
-		}
-	}
-
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		clusters, err := cluster.ReadFromState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-		})
-		if err != nil {
-			return err
-		}
-
-		var matched *types.Cluster
-		for _, c := range clusters {
-			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
-				matched = &c
-			}
-		}
-
-		if matched != nil {
-			p.Status = matched.Status
-			p.mergeOptions(*matched)
-		}
-
-		errFlags := make([]string, 0)
-		for _, f := range fs {
-			if f.Required && f.Name == "name" {
-				p, ok := f.P.(*string)
-				if ok {
-					if *p == "" && f.V.(string) == "" {
-						errFlags = append(errFlags, f.Name)
-					}
-				}
-			}
-		}
-
-		if len(errFlags) == 0 {
-			return nil
-		}
-
-		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
-	}
-
-	return cmd.Flags()
+	return utils.ConvertFlags(cmd, fs)
 }
 
 func (p *Tencent) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -244,77 +76,15 @@ func (p *Tencent) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Required: true,
 		},
 		{
-			Name:     "region",
-			P:        &p.Region,
-			V:        p.Region,
-			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
-			Required: true,
+			Name:   "region",
+			P:      &p.Region,
+			V:      p.Region,
+			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
+			EnvVar: "CVM_REGION",
 		},
 	}
 
-	for _, f := range fs {
-		if f.ShortHand == "" {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
-				case string:
-					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
-				}
-			}
-		} else {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
-				case string:
-					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
-				}
-			}
-		}
-	}
-
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		clusters, err := cluster.ReadFromState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-		})
-		if err != nil {
-			return err
-		}
-
-		var matched *types.Cluster
-		for _, c := range clusters {
-			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
-				matched = &c
-			}
-		}
-
-		if matched != nil {
-			p.overwriteMetadata(matched)
-			p.mergeOptions(*matched)
-		}
-
-		errFlags := make([]string, 0)
-		for _, f := range fs {
-			if f.Required && f.Name == "name" {
-				p, ok := f.P.(*string)
-				if ok {
-					if *p == "" && f.V.(string) == "" {
-						errFlags = append(errFlags, f.Name)
-					}
-				}
-			}
-		}
-
-		if len(errFlags) == 0 {
-			return nil
-		}
-
-		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
-	}
-
-	return cmd.Flags()
+	return utils.ConvertFlags(cmd, fs)
 }
 
 func (p *Tencent) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -327,160 +97,59 @@ func (p *Tencent) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Required: true,
 		},
 		{
-			Name:     "region",
-			P:        &p.Region,
-			V:        p.Region,
-			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
-			Required: true,
+			Name:   "region",
+			P:      &p.Region,
+			V:      p.Region,
+			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
+			EnvVar: "CVM_REGION",
 		},
 	}
 
-	for _, f := range fs {
-		if f.ShortHand == "" {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
-				case string:
-					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
-				}
-			}
-		} else {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
-				case string:
-					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
-				}
-			}
-		}
-	}
-
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		clusters, err := cluster.ReadFromState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-		})
-		if err != nil {
-			return err
-		}
-
-		var matched *types.Cluster
-		for _, c := range clusters {
-			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
-				matched = &c
-			}
-		}
-
-		if matched != nil {
-			p.overwriteMetadata(matched)
-			p.mergeOptions(*matched)
-		}
-
-		errFlags := make([]string, 0)
-		for _, f := range fs {
-			if f.Required && f.Name == "name" {
-				p, ok := f.P.(*string)
-				if ok {
-					if *p == "" && f.V.(string) == "" {
-						errFlags = append(errFlags, f.Name)
-					}
-				}
-			}
-		}
-
-		if len(errFlags) == 0 {
-			return nil
-		}
-
-		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
-	}
-
-	return cmd.Flags()
+	return utils.ConvertFlags(cmd, fs)
 }
 
 func (p *Tencent) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:  "name",
-			P:     &p.Name,
-			V:     p.Name,
-			Usage: "Cluster name",
-		},
-		{
-			Name:     "region",
-			P:        &p.Region,
-			V:        p.Region,
-			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
+			Name:     "name",
+			P:        &p.Name,
+			V:        p.Name,
+			Usage:    "Cluster name",
 			Required: true,
 		},
+		{
+			Name:   "region",
+			P:      &p.Region,
+			V:      p.Region,
+			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
+			EnvVar: "CVM_REGION",
+		},
 	}
 
-	for _, f := range fs {
-		if f.ShortHand == "" {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
-				case string:
-					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
-				}
-			}
-		} else {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
-				case string:
-					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
-				}
-			}
+	return utils.ConvertFlags(cmd, fs)
+}
+
+func (p *Tencent) MergeClusterOptions() error {
+	clusters, err := cluster.ReadFromState(&types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+	})
+	if err != nil {
+		return err
+	}
+
+	var matched *types.Cluster
+	for _, c := range clusters {
+		if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
+			matched = &c
 		}
 	}
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		clusters, err := cluster.ReadFromState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-		})
-		if err != nil {
-			return err
-		}
-
-		var matched *types.Cluster
-		for _, c := range clusters {
-			if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
-				matched = &c
-			}
-		}
-
-		if matched != nil {
-			p.Status = matched.Status
-			p.mergeOptions(*matched)
-			p.overwriteMetadata(matched)
-		}
-
-		errFlags := make([]string, 0)
-		for _, f := range fs {
-			if f.Required && f.Name == "name" {
-				p, ok := f.P.(*string)
-				if ok {
-					if *p == "" && f.V.(string) == "" {
-						errFlags = append(errFlags, f.Name)
-					}
-				}
-			}
-		}
-
-		if len(errFlags) == 0 {
-			return nil
-		}
-
-		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
+	if matched != nil {
+		p.overwriteMetadata(matched)
+		p.mergeOptions(*matched)
 	}
-
-	return cmd.Flags()
+	return nil
 }
 
 func (p *Tencent) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -491,6 +160,7 @@ func (p *Tencent) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 			V:        p.SecretID,
 			Usage:    "User access key ID",
 			Required: true,
+			EnvVar:   "CVM_SECRET_ID",
 		},
 		{
 			Name:     secretKey,
@@ -498,51 +168,11 @@ func (p *Tencent) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 			V:        p.SecretKey,
 			Usage:    "User access key secret",
 			Required: true,
+			EnvVar:   "CVM_SECRET_KEY",
 		},
 	}
 
-	for _, f := range fs {
-		if f.ShortHand == "" {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVar(f.P.(*bool), f.Name, t, f.Usage)
-				case string:
-					cmd.Flags().StringVar(f.P.(*string), f.Name, t, f.Usage)
-				}
-			}
-		} else {
-			if cmd.Flags().Lookup(f.Name) == nil {
-				switch t := f.V.(type) {
-				case bool:
-					cmd.Flags().BoolVarP(f.P.(*bool), f.Name, f.ShortHand, t, f.Usage)
-				case string:
-					cmd.Flags().StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
-				}
-			}
-		}
-	}
-
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		errFlags := make([]string, 0)
-		for _, f := range fs {
-			if f.Required {
-				p, ok := f.P.(*string)
-				if ok {
-					if *p == "" && f.V.(string) == "" {
-						errFlags = append(errFlags, f.Name)
-					}
-				}
-			}
-		}
-		if len(errFlags) == 0 {
-			return nil
-		}
-
-		return fmt.Errorf("required flags(s) \"%s\" not set", errFlags)
-	}
-
-	return cmd.Flags()
+	return utils.ConvertFlags(cmd, fs)
 }
 
 func (p *Tencent) BindCredentialFlags() *pflag.FlagSet {
@@ -620,79 +250,73 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Required: true,
 		},
 		{
-			Name:     "region",
-			P:        &p.Region,
-			V:        p.Region,
-			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
-			Required: true,
+			Name:   "region",
+			P:      &p.Region,
+			V:      p.Region,
+			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
+			EnvVar: "CVM_REGION",
 		},
 		{
-			Name:     "zone",
-			P:        &p.Zone,
-			V:        p.Zone,
-			Usage:    "Zone is physical areas with independent power grids and networks within one region. e.g.(ap-beijing-1)",
-			Required: true,
+			Name:   "zone",
+			P:      &p.Zone,
+			V:      p.Zone,
+			Usage:  "Zone is physical areas with independent power grids and networks within one region. e.g.(ap-beijing-1)",
+			EnvVar: "CVM_ZONE",
 		},
 		{
-			Name:     "vpc",
-			P:        &p.VpcID,
-			V:        p.VpcID,
-			Usage:    "Private network id",
-			Required: true,
+			Name:   "vpc",
+			P:      &p.VpcID,
+			V:      p.VpcID,
+			Usage:  "Private network id",
+			EnvVar: "CVM_VPC_ID",
 		},
 		{
-			Name:     "subnet",
-			P:        &p.SubnetID,
-			V:        p.SubnetID,
-			Usage:    "Private network subnet id",
-			Required: true,
+			Name:   "subnet",
+			P:      &p.SubnetID,
+			V:      p.SubnetID,
+			Usage:  "Private network subnet id",
+			EnvVar: "CVM_SUBNET_ID",
 		},
 		{
-			Name:  "key-pair",
-			P:     &p.KeyIds,
-			V:     p.KeyIds,
-			Usage: "Used to connect to an instance",
+			Name:   "key-pair",
+			P:      &p.KeyIds,
+			V:      p.KeyIds,
+			Usage:  "Used to connect to an instance",
+			EnvVar: "CVM_SSH_KEYPAIR",
 		},
 		{
-			Name:  "password",
-			P:     &p.Password,
-			V:     p.Password,
-			Usage: "Used to connect to an instance",
+			Name:  "image",
+			P:     &p.ImageID,
+			V:     p.ImageID,
+			Usage: "Used to specify the image to be used by the instance",
 		},
 		{
-			Name:     "image",
-			P:        &p.ImageID,
-			V:        p.ImageID,
-			Usage:    "Used to specify the image to be used by the instance",
-			Required: true,
+			Name:   "type",
+			P:      &p.InstanceType,
+			V:      p.InstanceType,
+			Usage:  "Used to specify the type to be used by the instance",
+			EnvVar: "CVM_INSTANCE_TYPE",
 		},
 		{
-			Name:     "type",
-			P:        &p.InstanceType,
-			V:        p.InstanceType,
-			Usage:    "Used to specify the type to be used by the instance",
-			Required: true,
+			Name:   "disk-category",
+			P:      &p.SystemDiskType,
+			V:      p.SystemDiskType,
+			Usage:  "Used to specify the system disk category used by the instance",
+			EnvVar: "CVM_DISK_CATEGORY",
 		},
 		{
-			Name:     "disk-category",
-			P:        &p.SystemDiskType,
-			V:        p.SystemDiskType,
-			Usage:    "Used to specify the system disk category used by the instance",
-			Required: true,
+			Name:   "disk-size",
+			P:      &p.SystemDiskSize,
+			V:      p.SystemDiskSize,
+			Usage:  "Used to specify the system disk size used by the instance",
+			EnvVar: "CVM_DISK_SIZE",
 		},
 		{
-			Name:     "disk-size",
-			P:        &p.SystemDiskSize,
-			V:        p.SystemDiskSize,
-			Usage:    "Used to specify the system disk size used by the instance",
-			Required: true,
-		},
-		{
-			Name:     "security-group",
-			P:        &p.SecurityGroupIds,
-			V:        p.SecurityGroupIds,
-			Usage:    "Used to specify the security group used by the instance",
-			Required: true,
+			Name:   "security-group",
+			P:      &p.SecurityGroupIds,
+			V:      p.SecurityGroupIds,
+			Usage:  "Used to specify the security group used by the instance",
+			EnvVar: "CVM_SECURITY_GROUP",
 		},
 		{
 			Name:  "internet-max-bandwidth-out",
@@ -713,18 +337,16 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Usage: "Used to specify the version of k3s cluster, overrides k3s-channel",
 		},
 		{
-			Name:     "k3s-channel",
-			P:        &p.K3sChannel,
-			V:        p.K3sChannel,
-			Usage:    "Used to specify the release channel of k3s. e.g.(stable, latest, or i.e. v1.18)",
-			Required: true,
+			Name:  "k3s-channel",
+			P:     &p.K3sChannel,
+			V:     p.K3sChannel,
+			Usage: "Used to specify the release channel of k3s. e.g.(stable, latest, or i.e. v1.18)",
 		},
 		{
-			Name:     "cloud-controller-manager",
-			P:        &p.CloudControllerManager,
-			V:        p.CloudControllerManager,
-			Usage:    "Enable cloud-controller-manager component",
-			Required: true,
+			Name:  "cloud-controller-manager",
+			P:     &p.CloudControllerManager,
+			V:     p.CloudControllerManager,
+			Usage: "Enable cloud-controller-manager component",
 		},
 		{
 			Name:  "master-extra-args",
@@ -757,18 +379,22 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Usage: "K3s master token, if empty will automatically generated",
 		},
 		{
-			Name:     "master",
-			P:        &p.Master,
-			V:        p.Master,
-			Usage:    "Number of master node",
-			Required: true,
+			Name:  "master",
+			P:     &p.Master,
+			V:     p.Master,
+			Usage: "Number of master node",
 		},
 		{
-			Name:     "worker",
-			P:        &p.Worker,
-			V:        p.Worker,
-			Usage:    "Number of worker node",
-			Required: true,
+			Name:  "worker",
+			P:     &p.Worker,
+			V:     p.Worker,
+			Usage: "Number of worker node",
+		},
+		{
+			Name:  "router",
+			P:     &p.NetworkRouteTableName,
+			V:     p.NetworkRouteTableName,
+			Usage: "Network route table name for tencent cloud manager, must set with --cloud-controller-manager",
 		},
 	}
 

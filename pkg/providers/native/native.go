@@ -9,6 +9,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
+	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
 	"github.com/cnrancher/autok3s/pkg/utils"
@@ -30,7 +31,6 @@ const (
 const ProviderName = "native"
 
 var (
-	k3sScript    = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 	k3sMirror    = "INSTALL_K3S_MIRROR=cn"
 	dockerMirror = ""
 )
@@ -53,7 +53,7 @@ func init() {
 func NewProvider() *Native {
 	return &Native{
 		Metadata: types.Metadata{
-			Provider:   "native",
+			Provider:   ProviderName,
 			Master:     master,
 			Worker:     worker,
 			UI:         ui,
@@ -111,17 +111,9 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 		return err
 	}
 
-	c.InstallScript = k3sScript
+	c.InstallScript = cluster.DefaultScript
 	c.Mirror = k3sMirror
 	c.DockerMirror = dockerMirror
-
-	// for rollback
-	for _, master := range c.MasterNodes {
-		p.m.Store(master.InstanceID, types.Node{Master: true, RollBack: true, InstanceID: master.InstanceID, InstanceStatus: master.InstanceStatus, PublicIPAddress: master.PublicIPAddress, InternalIPAddress: master.InternalIPAddress, SSH: master.SSH})
-	}
-	for _, worker := range c.WorkerNodes {
-		p.m.Store(worker.InstanceID, types.Node{Master: false, RollBack: true, InstanceID: worker.InstanceID, InstanceStatus: worker.InstanceStatus, PublicIPAddress: worker.PublicIPAddress, InternalIPAddress: worker.InternalIPAddress, SSH: worker.SSH})
-	}
 
 	// initialize K3s cluster.
 	if err = cluster.InitK3sCluster(c); err != nil {
@@ -141,10 +133,6 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 	if merged, err = p.assembleNodeStatus(ssh); err != nil {
 		return err
 	}
-
-	merged.InstallScript = k3sScript
-	merged.Mirror = k3sMirror
-	merged.DockerMirror = dockerMirror
 
 	added := &types.Cluster{
 		Metadata: merged.Metadata,
@@ -196,6 +184,11 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 func (p *Native) SSHK3sNode(ssh *types.SSH) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
+
+	// check cluster exist
+	if ok, _, _ := p.IsClusterExist(); !ok {
+		return fmt.Errorf("[%s] cluster %s is not exist", p.GetProviderName(), p.Name)
+	}
 
 	c := &types.Cluster{
 		Metadata: p.Metadata,
@@ -289,6 +282,11 @@ func (p *Native) DeleteK3sCluster(f bool) error {
 			return err
 		}
 
+		err := cluster.OverwriteCfg(p.Name)
+		if err != nil && !f {
+			return fmt.Errorf("[%s] synchronizing .cfg file error, msg: %v", p.GetProviderName(), err)
+		}
+
 		p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
 	}
 	return nil
@@ -309,66 +307,32 @@ func (p *Native) CommandNotSupport(commandName string) error {
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 	if p.MasterIps != "" {
 		masterIps := strings.Split(p.MasterIps, ",")
-		for _, masterIP := range masterIps {
-			currentID := strings.Replace(masterIP, ".", "-", -1)
-			p.m.Store(currentID, types.Node{
-				Master:            true,
-				RollBack:          false,
-				InstanceID:        currentID,
-				InstanceStatus:    native.StatusRunning,
-				InternalIPAddress: []string{masterIP},
-				PublicIPAddress:   []string{masterIP},
-				Current:           true,
-			})
-		}
+		p.syncNodesMap(masterIps, true, ssh)
 	}
 
 	if p.WorkerIps != "" {
 		workerIps := strings.Split(p.WorkerIps, ",")
-
-		for _, workerIP := range workerIps {
-			currentID := strings.Replace(workerIP, ".", "-", -1)
-			p.m.Store(currentID, types.Node{
-				Master:            false,
-				RollBack:          false,
-				InstanceID:        currentID,
-				InstanceStatus:    native.StatusRunning,
-				InternalIPAddress: []string{workerIP},
-				PublicIPAddress:   []string{workerIP},
-				Current:           true,
-			})
-		}
+		p.syncNodesMap(workerIps, false, ssh)
 	}
 
 	p.m.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
-		v.SSH = *ssh
+		nodes := p.Status.WorkerNodes
 		if v.Master {
-			index := -1
-			for i, n := range p.Status.MasterNodes {
-				if n.InstanceID == v.InstanceID {
-					index = i
-					break
-				}
-			}
-			if index > -1 {
-				p.Status.MasterNodes[index] = v
-			} else {
-				p.Status.MasterNodes = append(p.Status.MasterNodes, v)
-			}
+			nodes = p.Status.MasterNodes
+		}
+		index, b := putil.IsExistedNodes(nodes, v.InstanceID)
+		if !b {
+			nodes = append(nodes, v)
 		} else {
-			index := -1
-			for i, n := range p.Status.WorkerNodes {
-				if n.InstanceID == v.InstanceID {
-					index = i
-					break
-				}
-			}
-			if index > -1 {
-				p.Status.WorkerNodes[index] = v
-			} else {
-				p.Status.WorkerNodes = append(p.Status.WorkerNodes, v)
-			}
+			nodes[index].Current = false
+			nodes[index].RollBack = false
+		}
+
+		if v.Master {
+			p.Status.MasterNodes = nodes
+		} else {
+			p.Status.WorkerNodes = nodes
 		}
 		return true
 	})
@@ -381,4 +345,20 @@ func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 		Options:  p.Options,
 		Status:   p.Status,
 	}, nil
+}
+
+func (p *Native) syncNodesMap(ipList []string, master bool, ssh *types.SSH) {
+	for _, ip := range ipList {
+		currentID := strings.Replace(ip, ".", "-", -1)
+		p.m.Store(currentID, types.Node{
+			Master:            master,
+			RollBack:          true,
+			InstanceID:        currentID,
+			InstanceStatus:    native.StatusRunning,
+			InternalIPAddress: []string{ip},
+			PublicIPAddress:   []string{ip},
+			Current:           true,
+			SSH:               *ssh,
+		})
+	}
 }
