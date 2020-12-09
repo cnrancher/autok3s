@@ -7,12 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/cnrancher/autok3s/pkg/common"
-
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"k8s.io/client-go/tools/clientcmd"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/logs"
 	"k8s.io/kubernetes/pkg/kubectl/cmd"
@@ -35,18 +31,8 @@ func Main() {
 }
 
 func EmbedCommand() *cobra.Command {
-	cfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
-
 	c := cmd.NewDefaultKubectlCommand()
 	c.Short = "Kubectl controls the Kubernetes cluster manager"
-	_ = c.PersistentFlags().Set("kubeconfig", cfg)
-
-	f := c.PersistentFlags().Lookup("kubeconfig")
-	f.DefValue = cfg
-
-	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, cfg); err != nil {
-		logrus.Errorf("[kubectl] failed to set %s=%s env\n", clientcmd.RecommendedConfigPathEnvVar, cfg)
-	}
 
 	return c
 }

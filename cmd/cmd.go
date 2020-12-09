@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const ascIIStr = `
@@ -58,6 +59,11 @@ func initCfg() {
 
 	if err := utils.EnsureFileExist(common.CfgPath, common.ConfigFile); err != nil {
 		logrus.Fatalln(err)
+	}
+
+	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeCfg); err != nil {
+		logrus.Errorf("[kubectl] failed to set %s=%s env\n", clientcmd.RecommendedConfigPathEnvVar, kubeCfg)
 	}
 }
 
