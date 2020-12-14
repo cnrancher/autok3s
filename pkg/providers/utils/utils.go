@@ -2,12 +2,13 @@ package utils
 
 import (
 	"crypto/rand"
-	"fmt"
 	"io/ioutil"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Borrowed from https://github.com/AliyunContainerService/docker-machine-driver-aliyunecs/blob/master/aliyunecs/utils.go#L38
@@ -51,7 +52,7 @@ func IsExistedNodes(nodes []types.Node, instance string) (int, bool) {
 func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) (string, error) {
 	var keyPath string
 	if ssh.SSHKeyPath == "" && keypair == "" {
-		fmt.Printf("[%s] generate default key-pair \n", providerName)
+		logrus.Infof("[%s] generate default key-pair \n", providerName)
 		if err := utils.GenerateSSHKey(common.GetDefaultSSHKeyPath(name, providerName)); err != nil {
 			return "", err
 		}
@@ -59,7 +60,7 @@ func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) (string, 
 	} else {
 		keyPath = ssh.SSHKeyPath
 		if keypair != "" {
-			fmt.Printf("[%s] Using existing key pair %s \n", providerName, keypair)
+			logrus.Infof("[%s] Using existing key pair %s \n", providerName, keypair)
 			return "", nil
 		}
 	}
