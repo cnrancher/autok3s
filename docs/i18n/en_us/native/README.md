@@ -29,7 +29,7 @@ autok3s create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip>
+    --master-ips <master0-ip> \
     --worker-ips <worker0-ip,worker1-ip>
 ```
 ### Setup K3s HA Cluster
