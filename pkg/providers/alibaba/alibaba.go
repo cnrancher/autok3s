@@ -30,7 +30,7 @@ import (
 
 const (
 	k3sVersion               = ""
-	k3sChannel               = "latest"
+	k3sChannel               = "stable"
 	accessKeyID              = "access-key"
 	accessKeySecret          = "access-secret"
 	imageID                  = "ubuntu_18_04_x64_20G_alibase_20200618.vhd"
