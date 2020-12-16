@@ -144,68 +144,53 @@ autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3, e.g.
 
 ```bash
-autok3s -d ... \
-    --master 3
+autok3s -d create -p alibaba --name myk3s --master 3
 ```
 
 HA(external database) mode need `--master` greater than 1, also need to specify `--datastore`, e.g.
 
 ```bash
-autok3s -d ... \
-    --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+autok3s -d create -p alibaba --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
 ### Join K3s Nodes
 To join master/agent nodes, specify the cluster you want to add, e.g myk3s.
 
 ```bash
-autok3s -d join \
-    --provider alibaba \
-    --name myk3s \
-    --worker 1
+autok3s -d join --provider alibaba --name myk3s --worker 1
 ```
 
 Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
 
 ```bash
-autok3s -d ... \
-    --master 2
+autok3s -d join --provider alibaba --name myk3s --master 2
 ```
 
 Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
 
 ```bash
-autok3s -d ... \
-    --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+autok3s -d join --provider alibaba --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
 ### Start K3s Cluster
 This command will start a stopped k3s cluster, e.g myk3s.
 
 ```bash
-autok3s -d start \
-    --provider alibaba \
-    --name myk3s
+autok3s -d start --provider alibaba --name myk3s
 ```
 
 ### Stop K3s Cluster
 This command will stop a running k3s cluster, e.g myk3s.
 
 ```bash
-autok3s -d stop \
-    --provider alibaba \
-    --name myk3s
+autok3s -d stop --provider alibaba --name myk3s
 ```
 
 ### Delete K3s Cluster
 This command will delete a k3s cluster, e.g myk3s.
 
 ```bash
-autok3s -d delete \
-    --provider alibaba \
-    --name myk3s
+autok3s -d delete --provider alibaba --name myk3s
 ```
 
 ### List K3s Clusters
@@ -234,9 +219,7 @@ autok3s kubectl config use-context <context>
 Login to specified k3s cluster node via ssh, e.g myk3s.
 
 ```bash
-autok3s ssh \
-    --provider alibaba \
-    --name myk3s
+autok3s ssh --provider alibaba --name myk3s
 ```
 
 ## Advanced Usage

@@ -25,7 +25,7 @@ More usage details please running `autok3s <sub-command> --provider native --hel
 This command will create a k3s cluster, e.g myk3s.
 
 ```bash
-autok3s create \
+autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
@@ -36,14 +36,20 @@ autok3s create \
 HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master-ips` at least 3, e.g.
 
 ```bash
-autok3s ... \
+autok3s -d create \
+    --provider native \
+    --name myk3s \
+    --ssh-key-path <ssh-key-path> \
     --master-ips <master0-ip,master1-ip,master2-ip>
 ```
 
 HA(external database) mode need `--master-ips` greater than 1, also need to specify `--datastore`, e.g.
 
 ```bash
-autok3s ... \
+autok3s -d create \
+    --provider native \
+    --name myk3s \
+    --ssh-key-path <ssh-key-path> \
     --master-ips <master0-ip,master1-ip> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
@@ -52,26 +58,31 @@ autok3s ... \
 To join master/agent nodes, specify the cluster you want to add, e.g myk3s.
 
 ```bash
-autok3s join \
+autok3s -d join \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --worker-ips <worker0-ip,worker1-ip>
+    --worker-ips <worker1-ip,worker2-ip>
 ```
 
 
 Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
 
 ```bash
-autok3s ... \
-    --master-ips <master0-ip,master1-ip>
+autok3s -d join \
+    --provider native \
+    --name myk3s \
+    --ssh-key-path <ssh-key-path> \
+    --master-ips <master1-ip,master2-ip>
 ```
 
 Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
 
 ```bash
-autok3s ... \
-    --master-ips <master0-ip,master1-ip> \
+autok3s -d join \
+    --provider native \
+    --name myk3s \
+    --master-ips <master1-ip,master2-ip> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
@@ -79,9 +90,7 @@ autok3s ... \
 This command will delete a k3s cluster, e.g myk3s.
 
 ```bash
-autok3s delete \
-    --provider native \
-    --name myk3s
+autok3s delete --provider native --name myk3s
 ```
 
 ### List K3s Clusters
@@ -110,9 +119,7 @@ autok3s kubectl config use-context <context>
 Login to specified k3s cluster node via ssh, e.g myk3s.
 
 ```bash
-autok3s ssh \
-    --provider native \
-    --name myk3s
+autok3s ssh --provider native --name myk3s
 ```
 ## Advanced Usage
 Autok3s integration some advanced components related to the current provider, e.g. ui.
