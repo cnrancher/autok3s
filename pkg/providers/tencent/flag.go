@@ -229,8 +229,8 @@ func (p *Tencent) overwriteMetadata(matched *types.Cluster) {
 	if p.K3sVersion == "" {
 		p.K3sVersion = matched.K3sVersion
 	}
-	if p.Registries == "" {
-		p.Registries = matched.Registries
+	if p.Registry == "" {
+		p.Registry = matched.Registry
 	}
 	if p.MasterExtraArgs == "" {
 		p.MasterExtraArgs = matched.MasterExtraArgs
@@ -361,10 +361,10 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute')",
 		},
 		{
-			Name:  "registries",
-			P:     &p.Registries,
-			V:     p.Registries,
-			Usage: "K3s registries, use commas to separate multiple entries",
+			Name:  "registry",
+			P:     &p.Registry,
+			V:     p.Registry,
+			Usage: "K3s registry file, see: https://rancher.com/docs/k3s/latest/en/installation/private-registry",
 		},
 		{
 			Name:  "datastore",

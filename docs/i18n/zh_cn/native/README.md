@@ -123,7 +123,38 @@ SSH连接到集群中的某个主机，这里选择的集群为myk3s。
 autok3s ssh --provider native --name myk3s
 ```
 ## 进阶使用
-Autok3s集成了一些与当前provider有关的高级组件，例如 ccm、ui。
+我们集成了一些与当前provider有关的高级组件，例如 ccm、ui。
+
+### Setup Private Registry
+下面是将本地的`/etc/autok3s/registries.yaml`启用TLS的`registry`配置文件，应用到通过`autok3s`命令应创建的k3s集群中。
+
+```bash
+mirrors:
+  docker.io:
+    endpoint:
+      - "https://mycustomreg.com:5000"
+configs:
+  "mycustomreg:5000":
+    auth:
+      username: xxxxxx # this is the registry username
+      password: xxxxxx # this is the registry password
+    tls:
+      cert_file: # path to the cert file used in the registry
+      key_file:  # path to the key file used in the registry
+      ca_file:   # path to the ca file used in the registry
+```
+
+在运行`autok3s create`或`autok3s join`时，通过传递`--registry /etc/autok3s/registries.yaml`参数使其生效，例如：
+
+```bash
+autok3s -d create \
+    --provider native \
+    --name myk3s \
+    --ssh-key-path <ssh-key-path> \
+    --master-ips <master0-ip> \
+    --worker-ips <worker0-ip,worker1-ip> \
+    --registry /etc/autok3s/registries.yaml
+```
 
 ### 启用UI组件
 该参数会启用 [kubernetes/dashboard](https://github.com/kubernetes/dashboard) 图形界面。

@@ -22,7 +22,7 @@ type Metadata struct {
 	ClusterCIDR            string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
 	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
-	Registries             string `json:"registries,omitempty" yaml:"registries,omitempty"`
+	Registry               string `json:"registry,omitempty" yaml:"registry,omitempty"`
 	DataStore              string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
 	K3sVersion             string `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
 	K3sChannel             string `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`

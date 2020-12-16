@@ -21,7 +21,9 @@ import (
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/ghodss/yaml"
+	"github.com/rancher/k3s/pkg/agent/templates"
 	"github.com/sirupsen/logrus"
+	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubectl/pkg/cmd/config"
@@ -34,8 +36,8 @@ var (
 
 var (
 	logger                 *logrus.Logger
-	initCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' %s sh -"
-	joinCommand            = "curl -sLS %s | %s INSTALL_K3S_REGISTRIES='%s' K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
+	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' %s sh -"
+	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s"
 	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
@@ -55,12 +57,6 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	k3sScript := cluster.InstallScript
 	k3sMirror := cluster.Mirror
 	dockerMirror := cluster.DockerMirror
-
-	if cluster.Registries != "" {
-		if !strings.Contains(cluster.Registries, "https://registry-1.docker.io") {
-			cluster.Registries += ",https://registry-1.docker.io"
-		}
-	}
 
 	if cluster.Token == "" {
 		token, err := utils.RandomToken(16)
@@ -199,12 +195,6 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	k3sScript := merged.InstallScript
 	k3sMirror := merged.Mirror
 	dockerMirror := merged.DockerMirror
-
-	if merged.Registries != "" {
-		if !strings.Contains(merged.Registries, "https://registry-1.docker.io") {
-			merged.Registries += ",https://registry-1.docker.io"
-		}
-	}
 
 	if merged.Token == "" {
 		return errors.New("[cluster] k3s token can not be empty")
@@ -566,11 +556,17 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 		}
 	}
 
-	logger.Debugf("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Registries,
-		cluster.Token, "--cluster-init", ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+	if cluster.Registry != "" {
+		if err := handleRegistry(&hosts.Host{Node: master}, cluster.Registry); err != nil {
+			return err
+		}
+	}
+
+	logger.Debugf("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
+		"--cluster-init", ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: master}, false,
-		[]string{fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Registries, cluster.Token, "--cluster-init", ip,
+		[]string{fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token, "--cluster-init", ip,
 			strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		return err
 	}
@@ -588,6 +584,12 @@ func initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs stri
 		}
 	}
 
+	if cluster.Registry != "" {
+		if err := handleRegistry(&hosts.Host{Node: master}, cluster.Registry); err != nil {
+			return err
+		}
+	}
+
 	if !strings.Contains(extraArgs, "server --server") {
 		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", ip), master.PublicIPAddress[0])
 	}
@@ -595,11 +597,11 @@ func initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs stri
 	sortedExtraArgs += " " + extraArgs
 
 	logger.Debugf("[cluster] k3s additional master command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror,
-		cluster.Registries, ip, cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+		ip, cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: master}, false,
-		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, ip, cluster.Token,
-			strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
+		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, ip, cluster.Token, strings.TrimSpace(sortedExtraArgs),
+			genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		return err
 	}
 
@@ -617,14 +619,20 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
+	if cluster.Registry != "" {
+		if err := handleRegistry(&hosts.Host{Node: worker}, cluster.Registry); err != nil {
+			errChan <- err
+		}
+	}
+
 	sortedExtraArgs += " " + extraArgs
 
-	logger.Debugf("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries,
-		cluster.IP, cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+	logger.Debugf("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
+		cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: worker}, false,
-		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.Registries, cluster.IP, cluster.Token,
-			strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
+		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP, cluster.Token, strings.TrimSpace(sortedExtraArgs),
+			genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		errChan <- err
 	}
 
@@ -654,15 +662,21 @@ func joinMaster(k3sScript, k3sMirror, dockerMirror,
 		}
 	}
 
+	if merged.Registry != "" {
+		if err := handleRegistry(&hosts.Host{Node: full}, merged.Registry); err != nil {
+			return err
+		}
+	}
+
 	sortedExtraArgs += " " + extraArgs
 
-	logger.Debugf("[cluster] k3s master command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries,
-		merged.IP, merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
+	logger.Debugf("[cluster] k3s master command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
+		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
 
 	// for now, use the workerCommand to join the additional master server node.
 	if _, err := execute(&hosts.Host{Node: full}, false,
-		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.IP, merged.Token,
-			strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel))}); err != nil {
+		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP, merged.Token, strings.TrimSpace(sortedExtraArgs),
+			genK3sVersion(merged.K3sVersion, merged.K3sChannel))}); err != nil {
 		return err
 	}
 
@@ -680,14 +694,20 @@ func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
+	if merged.Registry != "" {
+		if err := handleRegistry(&hosts.Host{Node: full}, merged.Registry); err != nil {
+			errChan <- err
+		}
+	}
+
 	sortedExtraArgs += " " + extraArgs
 
-	logger.Debugf("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries,
-		merged.IP, merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
+	logger.Debugf("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
+		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: full}, false,
-		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.Registries, merged.IP, merged.Token,
-			strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel))}); err != nil {
+		[]string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP, merged.Token, strings.TrimSpace(sortedExtraArgs),
+			genK3sVersion(merged.K3sVersion, merged.K3sChannel))}); err != nil {
 		errChan <- err
 	}
 
@@ -833,4 +853,137 @@ func genK3sVersion(version, channel string) string {
 		return fmt.Sprintf("INSTALL_K3S_VERSION='%s'", version)
 	}
 	return fmt.Sprintf("INSTALL_K3S_CHANNEL='%s'", channel)
+}
+
+func handleRegistry(host *hosts.Host, file string) error {
+	registry, err := unmarshalRegistryFile(file)
+	if err != nil {
+		return err
+	}
+
+	tls, err := registryTLSMap(registry)
+	if err != nil {
+		return err
+	}
+
+	registry, cmd, err := saveRegistryTLS(registry, tls)
+	if err != nil {
+		return err
+	}
+
+	registryContent, err := registryToString(registry)
+	if err != nil {
+		return err
+	}
+
+	cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"/etc/rancher/k3s/registries.yaml\"", base64.StdEncoding.EncodeToString([]byte(registryContent))))
+	_, err = execute(host, false, cmd)
+	return err
+}
+
+func unmarshalRegistryFile(file string) (*templates.Registry, error) {
+	registry := &templates.Registry{}
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return registry, nil
+		}
+		return nil, err
+	}
+
+	if len(b) == 0 {
+		return nil, fmt.Errorf("registry file %s is empty", file)
+	}
+
+	err = yamlv3.Unmarshal(b, registry)
+	if err != nil {
+		return nil, err
+	}
+
+	return registry, nil
+}
+
+func registryTLSMap(registry *templates.Registry) (m map[string]map[string][]byte, err error) {
+	m = make(map[string]map[string][]byte)
+	if registry == nil {
+		err = fmt.Errorf("registry is nil")
+		return
+	}
+
+	for r, c := range registry.Configs {
+		if _, ok := m[r]; !ok {
+			m[r] = map[string][]byte{}
+		}
+		if c.TLS.CertFile != "" {
+			b, err := ioutil.ReadFile(c.TLS.CertFile)
+			if err != nil {
+				return m, err
+			}
+			m[r]["cert"] = b
+		}
+		if c.TLS.KeyFile != "" {
+			b, err := ioutil.ReadFile(c.TLS.KeyFile)
+			if err != nil {
+				return m, err
+			}
+			m[r]["key"] = b
+		}
+		if c.TLS.CAFile != "" {
+			b, err := ioutil.ReadFile(c.TLS.CAFile)
+			if err != nil {
+				return m, err
+			}
+			m[r]["ca"] = b
+		}
+	}
+
+	return
+}
+
+func saveRegistryTLS(registry *templates.Registry, m map[string]map[string][]byte) (*templates.Registry, []string, error) {
+	cmd := make([]string, 0)
+	if m == nil || len(m) == 0 {
+		return nil, cmd, fmt.Errorf("registry map is nil")
+	}
+
+	for r, c := range m {
+		if r != "" {
+			if _, ok := registry.Configs[r]; !ok {
+				return nil, cmd, fmt.Errorf("registry map is not match the struct: %s", r)
+			}
+
+			// e.g /etc/rancher/k3s/mycustomreg:5000/
+			path := fmt.Sprintf("/etc/rancher/k3s/%s", r)
+			cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", path))
+
+			for f, b := range c {
+				// e.g /etc/rancher/k3s/mycustomreg:5000/{ca,key,cert}
+				file := fmt.Sprintf("%s/%s", path, f)
+				cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s\"", base64.StdEncoding.EncodeToString(b), file))
+				cmd = append(cmd, fmt.Sprintf("sudo chmod 755 %s", file))
+
+				switch f {
+				case "cert":
+					registry.Configs[r].TLS.CertFile = file
+				case "key":
+					registry.Configs[r].TLS.KeyFile = file
+				case "ca":
+					registry.Configs[r].TLS.CAFile = file
+				}
+			}
+		}
+	}
+
+	return registry, cmd, nil
+}
+
+func registryToString(registry *templates.Registry) (string, error) {
+	if registry == nil {
+		return "", fmt.Errorf("can't save registry file: registry is nil")
+	}
+	b, err := yamlv3.Marshal(registry)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

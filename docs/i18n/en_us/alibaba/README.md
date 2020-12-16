@@ -223,7 +223,37 @@ autok3s ssh --provider alibaba --name myk3s
 ```
 
 ## Advanced Usage
-Autok3s integration some advanced components related to the current provider, e.g. terway/ccm/ui.
+We integrate some advanced components related to the current provider, e.g. terway/ccm/ui.
+
+### Setup Private Registry
+Below are examples showing how you may configure `/etc/autok3s/registries.yaml` on your current node when using TLS, and make it take effect on k3s cluster by `autok3s`.
+
+```bash
+mirrors:
+  docker.io:
+    endpoint:
+      - "https://mycustomreg.com:5000"
+configs:
+  "mycustomreg:5000":
+    auth:
+      username: xxxxxx # this is the registry username
+      password: xxxxxx # this is the registry password
+    tls:
+      cert_file: # path to the cert file used in the registry
+      key_file:  # path to the key file used in the registry
+      ca_file:   # path to the ca file used in the registry
+```
+
+When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+
+```bash
+autok3s -d create \
+    --provider alibaba \
+    --name myk3s \
+    --master 1 \
+    --worker 1 \
+    --registry /etc/autok3s/registries.yaml
+```
 
 ### Enable Alibaba Terway CNI Plugin
 The instance's type determines the number of EIPs that a K3S cluster can assign to a cluster POD, more detail see [here](https://www.alibabacloud.com/help/zh/doc-detail/97467.htm).

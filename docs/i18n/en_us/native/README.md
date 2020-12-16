@@ -122,7 +122,38 @@ Login to specified k3s cluster node via ssh, e.g myk3s.
 autok3s ssh --provider native --name myk3s
 ```
 ## Advanced Usage
-Autok3s integration some advanced components related to the current provider, e.g. ui.
+We integrate some advanced components related to the current provider, e.g. ui.
+
+### Setup Private Registry
+Below are examples showing how you may configure `/etc/autok3s/registries.yaml` on your current node when using TLS, and make it take effect on k3s cluster by `autok3s`.
+
+```bash
+mirrors:
+  docker.io:
+    endpoint:
+      - "https://mycustomreg.com:5000"
+configs:
+  "mycustomreg:5000":
+    auth:
+      username: xxxxxx # this is the registry username
+      password: xxxxxx # this is the registry password
+    tls:
+      cert_file: # path to the cert file used in the registry
+      key_file:  # path to the key file used in the registry
+      ca_file:   # path to the ca file used in the registry
+```
+
+When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+
+```bash
+autok3s -d create \
+    --provider native \
+    --name myk3s \
+    --ssh-key-path <ssh-key-path> \
+    --master-ips <master0-ip> \
+    --worker-ips <worker0-ip,worker1-ip> \
+    --registry /etc/autok3s/registries.yaml
+```
 
 ### Enable UI Component
 This flags will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.

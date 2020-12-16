@@ -178,7 +178,32 @@ autok3s ssh --provider tencent --name myk3s
 ```
 
 ## Advanced Usage
-Autok3s integration some advanced components related to the current provider, e.g. ccm/ui.
+We integrate some advanced components related to the current provider, e.g. ccm/ui.
+
+### Setup Private Registry
+Below are examples showing how you may configure `/etc/autok3s/registries.yaml` on your current node when using TLS, and make it take effect on k3s cluster by `autok3s`.
+
+```bash
+mirrors:
+  docker.io:
+    endpoint:
+      - "https://mycustomreg.com:5000"
+configs:
+  "mycustomreg:5000":
+    auth:
+      username: xxxxxx # this is the registry username
+      password: xxxxxx # this is the registry password
+    tls:
+      cert_file: # path to the cert file used in the registry
+      key_file:  # path to the key file used in the registry
+      ca_file:   # path to the ca file used in the registry
+```
+
+When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+
+```bash
+autok3s -d create -p tencent --name myk3s --master 3 --registry /etc/autok3s/registries.yaml
+```
 
 ### Enable Tencent Cloud Controller Manager
 You should create cluster route table if enabled CCM, and set `--router` with you router table name.

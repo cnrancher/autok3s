@@ -3,6 +3,7 @@ module github.com/cnrancher/autok3s
 go 1.13
 
 replace (
+	github.com/kubernetes-sigs/cri-tools => github.com/k3s-io/cri-tools v1.19.0-k3s1
 	k8s.io/api => github.com/rancher/kubernetes/staging/src/k8s.io/api v1.19.4-k3s1
 	k8s.io/apiextensions-apiserver => github.com/rancher/kubernetes/staging/src/k8s.io/apiextensions-apiserver v1.19.4-k3s1
 	k8s.io/apimachinery => github.com/rancher/kubernetes/staging/src/k8s.io/apimachinery v1.19.4-k3s1
@@ -33,13 +34,20 @@ replace (
 require (
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
+	github.com/benmoss/go-powershell v0.0.0-20190925205200-09527df358ca // indirect
 	github.com/briandowns/spinner v1.11.1
-	github.com/docker/docker v1.4.2-0.20200309214505-aa6a9891b09c
+	github.com/docker/docker v17.12.0-ce-rc1.0.20200821074627-7ae5222c72cc+incompatible
+	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/ghodss/yaml v1.0.0
+	github.com/gogo/googleapis v1.4.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.0 // indirect
+	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f // indirect
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
+	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0 // indirect
+	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
@@ -47,10 +55,11 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	k8s.io/apimachinery v0.0.0
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+	k8s.io/apimachinery v0.19.0
 	k8s.io/cli-runtime v0.0.0
-	k8s.io/client-go v0.0.0
-	k8s.io/component-base v0.0.0
+	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
+	k8s.io/component-base v0.19.0
 	k8s.io/kubectl v0.0.0
-	k8s.io/kubernetes v0.0.0-00010101000000-000000000000
+	k8s.io/kubernetes v1.19.4
 )
