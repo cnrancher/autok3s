@@ -98,69 +98,53 @@ autok3s -d create -p tencent --name myk3s --master 1 --worker 1 --ssh-user ubunt
 高可用模式(嵌入式etcd: k3s版本 >= 1.19.1-k3s1) 要求 `--master` 至少为3。
 
 ```bash
-autok3s -d ... \
-    --master 3
+autok3s -d create -p tencent --name myk3s --master 3 --ssh-user ubuntu
 ```
 
 高可用模式(外部数据库) 要求 `--master` 至少为1, 并且需要指定参数 `--datastore`。
 
 ```bash
-autok3s -d ... \
-    --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+autok3s -d create -p tencent --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" --ssh-user ubuntu
 ```
 
 ### 添加K3s节点
 请指定你要添加K3s master/agent节点的集群, 这里为myk3s集群添加节点。
 
 ```bash
-autok3s -d join \
-    --provider tencent \
-    --name myk3s \
-    --ssh-user ubuntu \
-    --worker 1
+autok3s -d join --provider tencent --name myk3s --worker 1 --ssh-user ubuntu
 ```
 
 为高可用集群(嵌入式etcd: k3s版本 >= 1.19.1-k3s1)模式新增节点。
 
 ```bash
-autok3s -d ... \
-    --master 2
+autok3s -d join --provider tencent --name myk3s --master 2 --ssh-user ubuntu
 ```
 
 为高可用集群(外部数据库)新增节点，需要指定参数`--datastore`。
 
 ```bash
-autok3s -d ... \
-    --master 2 \
-    --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+autok3s -d join --provider tencent --name myk3s --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>" --ssh-user ubuntu
 ```
 
 ### 启动K3s集群
 启动一个处于停止状态的k3s集群，这里启动的集群为myk3s。
 
 ```bash
-autok3s -d start \
-    --provider tencent \
-    --name myk3s
+autok3s -d start --provider tencent --name myk3s
 ```
 
 ### 停止K3s集群
 停止一个处于运行状态的k3s集群，这里停止的集群为myk3s。
 
 ```bash
-autok3s -d stop \
-    --provider tencent \
-    --name myk3s
+autok3s -d stop --provider tencent --name myk3s
 ```
 
 ### 删除K3s集群
 删除一个k3s集群，这里删除的集群为myk3s。
 
 ```bash
-autok3s -d delete \
-    --provider tencent \
-    --name myk3s
+autok3s -d delete --provider tencent --name myk3s
 ```
 
 ### 查看集群列表
@@ -189,10 +173,7 @@ autok3s kubectl config use-context <context>
 SSH连接到集群中的某个主机，这里选择的集群为myk3s。
 
 ```bash
-autok3s ssh \
-    --provider tencent \
-    --name myk3s \
-    --ssh-user ubuntu
+autok3s ssh --provider tencent --name myk3s --ssh-user ubuntu
 ```
 
 ## 进阶使用
