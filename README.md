@@ -15,6 +15,7 @@ It can help users quickly complete the personalized configuration of the k3s clu
 - Automatically generate `kubeconfig` file for the cluster which you created
 - Integrate `kubectl` to provide access to the cluster
 - Bootstrap a HA Kubernetes with k3s cluster
+- Support `containerd` private registry with `--registry` flag
 - Provide additional option to enable Kubernetes Cloud-Controller-Manager with `--cloud-controller-manager`
 - Provide additional option to enable Kubernetes Dashboard UI with `--ui`
 - Provide additional option to enable cloud platform's CNI plugin, e.g `--terway 'eni'`

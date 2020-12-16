@@ -14,6 +14,7 @@
 - 自动为创建的 Kubernetes (k3s) 集群生成可供访问的 `kubeconfig` 文件
 - 集成 `kubectl` 以提供访问集群的能力
 - 支持创建 Kubernetes k3s HA 集群
+- 使用`--registry`以支持配置`containerd`私有镜像仓库
 - 集成扩展参数 `--cloud-controller-manager` 以开启 Kubernetes Cloud-Controller-Manager 组件
 - 集成扩展参数 `--ui` 以开启 Kubernetes Dashboard UI 组件
 - 集成扩展参数 `例如 --terway 'eni'` 以开启公有云 CNI 网络插件
