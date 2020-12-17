@@ -31,8 +31,10 @@ const (
 const ProviderName = "native"
 
 var (
-	k3sMirror    = "INSTALL_K3S_MIRROR=cn"
-	dockerMirror = ""
+	k3sMirror         = "INSTALL_K3S_MIRROR=cn"
+	dockerMirror      = ""
+	defaultUser       = "root"
+	defaultSSHKeyPath = "~/.ssh/id_rsa"
 )
 
 type Native struct {
@@ -92,6 +94,14 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
 
+	// set ssh default value
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
+	if ssh.Password == "" && ssh.SSHKeyPath == "" {
+		ssh.SSHKeyPath = defaultSSHKeyPath
+	}
+
 	defer func() {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(common.UsageInfo, p.Name)
@@ -127,6 +137,13 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
+	// set ssh default value
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
+	if ssh.Password == "" && ssh.SSHKeyPath == "" {
+		ssh.SSHKeyPath = defaultSSHKeyPath
+	}
 
 	// assemble node status.
 	var merged *types.Cluster

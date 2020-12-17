@@ -57,6 +57,7 @@ const (
 	vpcCidrBlock             = "192.168.0.0/16"
 	subnetCidrBlock          = "192.168.3.0/24"
 	ipRange                  = "0.0.0.0/0"
+	defaultUser              = "ubuntu"
 )
 
 // ProviderName is the name of this provider.
@@ -129,6 +130,9 @@ func (p *Tencent) GenerateClusterName() {
 func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
 
 	defer func() {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
@@ -188,6 +192,9 @@ func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 func (p *Tencent) JoinK3sNode(ssh *types.SSH) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
 
 	merged, err := p.generateInstance(p.joinCheck, ssh)
 	if err != nil {
