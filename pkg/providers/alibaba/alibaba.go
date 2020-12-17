@@ -382,6 +382,10 @@ func (p *Alibaba) SSHK3sNode(ssh *types.SSH) error {
 			ids[instance.InstanceId] = instanceInfo
 		}
 	}
+
+	// sync master/worker count
+	p.Metadata.Master = strconv.Itoa(len(p.Status.MasterNodes))
+	p.Metadata.Worker = strconv.Itoa(len(p.Status.WorkerNodes))
 	c := &types.Cluster{
 		Metadata: p.Metadata,
 		Options:  p.Options,
