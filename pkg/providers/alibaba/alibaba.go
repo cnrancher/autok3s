@@ -58,6 +58,7 @@ const (
 	defaultSecurityGroupName = "autok3s"
 	vpcStatusAvailable       = "Available"
 	defaultCidr              = "10.42.0.0/16"
+	defaultUser              = "root"
 )
 
 // ProviderName is the name of this provider.
@@ -130,6 +131,9 @@ func (p *Alibaba) GenerateClusterName() {
 func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
 
 	if p.KeyPair != "" && ssh.SSHKeyPath == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --key-pair %s", p.GetProviderName(), p.KeyPair)
@@ -205,6 +209,9 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
 
 	merged, err := p.generateInstance(p.joinCheck, ssh)
 	if err != nil {

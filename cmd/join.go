@@ -25,7 +25,6 @@ var (
 	jp        providers.Provider
 
 	jSSH = &types.SSH{
-		User: "root",
 		Port: "22",
 	}
 )

@@ -25,7 +25,6 @@ var (
 	cp        providers.Provider
 
 	cSSH = &types.SSH{
-		User: "root",
 		Port: "22",
 	}
 )
