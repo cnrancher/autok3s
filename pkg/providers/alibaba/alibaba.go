@@ -1254,7 +1254,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 
 func (p *Alibaba) assignEIPToInstance(num int, master bool) ([]string, error) {
 	var e error
-	eipIds := []string{}
+	eipIds := make([]string, 0)
 	eips, err := p.allocateEipAddresses(num)
 	if err != nil {
 		return nil, err
@@ -1278,9 +1278,6 @@ func (p *Alibaba) assignEIPToInstance(num int, master bool) ([]string, error) {
 			}
 			return true
 		})
-		if err != nil {
-			return nil, err
-		}
 		p.logger.Debugf("[%s] associated %d eip(s) for instance(s) successfully\n", p.GetProviderName(), num)
 	}
 
@@ -1613,7 +1610,7 @@ func (p *Alibaba) configDefaultSecurityPermissions(sg *ecs.DescribeSecurityGroup
 		}
 	}
 
-	perms := []ecs.Permission{}
+	perms := make([]ecs.Permission, 0)
 
 	if !hasSSHPort {
 		perms = append(perms, ecs.Permission{
