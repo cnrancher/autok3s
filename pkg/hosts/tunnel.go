@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"sync"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
@@ -136,12 +137,35 @@ func (t *Tunnel) executeCommand(cmd string) error {
 		_ = session.Close()
 	}()
 
-	session.Stdout = t.Stdout
-	session.Stderr = t.Stderr
-
-	if err := session.Run(cmd); err != nil {
+	stdoutPipe, err := session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderrPipe, err := session.StderrPipe()
+	if err != nil {
 		return err
 	}
 
-	return nil
+	outWriter := io.MultiWriter(os.Stdout, t.Stdout)
+	errWriter := io.MultiWriter(os.Stderr, t.Stderr)
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		io.Copy(outWriter, stdoutPipe)
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		io.Copy(errWriter, stderrPipe)
+		wg.Done()
+	}()
+
+	err = session.Run(cmd)
+
+	wg.Wait()
+
+	return err
 }
