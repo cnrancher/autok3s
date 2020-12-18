@@ -34,6 +34,7 @@ import (
 const (
 	k3sVersion               = ""
 	k3sChannel               = "stable"
+	k3sInstallScript         = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 	secretID                 = "secret-id"
 	secretKey                = "secret-key"
 	imageID                  = "img-pi0ii46r" /* Ubuntu Server 18.04.1 LTS x64 */
@@ -93,13 +94,14 @@ func init() {
 func NewProvider() *Tencent {
 	return &Tencent{
 		Metadata: types.Metadata{
-			Provider:   ProviderName,
-			Master:     master,
-			Worker:     worker,
-			UI:         ui,
-			Repo:       repo,
-			K3sVersion: k3sVersion,
-			K3sChannel: k3sChannel,
+			Provider:      ProviderName,
+			Master:        master,
+			Worker:        worker,
+			UI:            ui,
+			Repo:          repo,
+			K3sVersion:    k3sVersion,
+			K3sChannel:    k3sChannel,
+			InstallScript: k3sInstallScript,
 		},
 		Options: tencent.Options{
 			ImageID:                 imageID,
@@ -606,7 +608,6 @@ func (p *Tencent) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 		return nil, err
 	}
 
-	c.InstallScript = cluster.DefaultScript
 	c.Mirror = k3sMirror
 	c.DockerMirror = dockerMirror
 

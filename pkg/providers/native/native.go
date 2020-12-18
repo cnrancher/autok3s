@@ -19,12 +19,13 @@ import (
 )
 
 const (
-	k3sVersion = ""
-	k3sChannel = "stable"
-	master     = "0"
-	worker     = "0"
-	ui         = false
-	repo       = "https://apphub.aliyuncs.com"
+	k3sVersion       = ""
+	k3sChannel       = "stable"
+	k3sInstallScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
+	master           = "0"
+	worker           = "0"
+	ui               = false
+	repo             = "https://apphub.aliyuncs.com"
 )
 
 // ProviderName is the name of this provider.
@@ -55,13 +56,14 @@ func init() {
 func NewProvider() *Native {
 	return &Native{
 		Metadata: types.Metadata{
-			Provider:   ProviderName,
-			Master:     master,
-			Worker:     worker,
-			UI:         ui,
-			Repo:       repo,
-			K3sVersion: k3sVersion,
-			K3sChannel: k3sChannel,
+			Provider:      ProviderName,
+			Master:        master,
+			Worker:        worker,
+			UI:            ui,
+			Repo:          repo,
+			K3sVersion:    k3sVersion,
+			K3sChannel:    k3sChannel,
+			InstallScript: k3sInstallScript,
 		},
 		Options: native.Options{
 			MasterIps: "",
@@ -121,7 +123,6 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 		return err
 	}
 
-	c.InstallScript = cluster.DefaultScript
 	c.Mirror = k3sMirror
 	c.DockerMirror = dockerMirror
 
