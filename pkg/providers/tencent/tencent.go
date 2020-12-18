@@ -1589,9 +1589,6 @@ func (p *Tencent) allocateEIPForInstance(num int, master bool) ([]uint64, error)
 			}
 			return true
 		})
-		if err != nil {
-			return nil, err
-		}
 		p.logger.Debugf("[%s] successfully associated %d eip(s) for instance(s)\n", p.GetProviderName(), num)
 	}
 
