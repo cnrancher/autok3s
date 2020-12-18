@@ -12,13 +12,6 @@ var (
 	joinCmd = &cobra.Command{
 		Use:   "join",
 		Short: "Join k3s node",
-		Example: `  autok3s join \
-    --provider alibaba \
-    --region <region> \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret> \
-    --worker 1`,
 	}
 
 	jProvider = ""
@@ -52,6 +45,7 @@ func JoinCommand() *cobra.Command {
 
 		joinCmd.Flags().AddFlagSet(jp.GetCredentialFlags(joinCmd))
 		joinCmd.Flags().AddFlagSet(jp.GetJoinFlags(joinCmd))
+		joinCmd.Example = jp.GetUsageExample("join")
 	}
 
 	joinCmd.PreRunE = func(cmd *cobra.Command, args []string) error {

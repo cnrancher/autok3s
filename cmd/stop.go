@@ -11,12 +11,6 @@ var (
 	stopCmd = &cobra.Command{
 		Use:   "stop",
 		Short: "Stop k3s cluster",
-		Example: `  autok3s stop \
-    --provider alibaba \
-    --name <cluster name> \
-    --region <region> \
-    --access-key <access-key> \
-    --access-secret <access-secret>`,
 	}
 	spProvider = ""
 	spForce    = false
@@ -40,6 +34,7 @@ func StopCommand() *cobra.Command {
 
 		stopCmd.Flags().AddFlagSet(spP.GetCredentialFlags(stopCmd))
 		stopCmd.Flags().AddFlagSet(spP.GetStopFlags(stopCmd))
+		stopCmd.Example = spP.GetUsageExample("stop")
 	}
 
 	stopCmd.PreRunE = func(cmd *cobra.Command, args []string) error {

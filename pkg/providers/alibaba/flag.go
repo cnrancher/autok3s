@@ -13,6 +13,70 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const createUsageExample = `  autok3s -d create \
+    --provider alibaba \
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret> \
+    --master 1
+`
+
+const joinUsageExample = `  autok3s -d join \
+    --provider alibaba \
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret> \
+    --master 1
+`
+
+const deleteUsageExample = `  autok3s -d delete \
+    --provider alibaba \
+    --name <cluster name>
+    --access-key <access-key> \
+    --access-secret <access-secret>
+`
+
+const startUsageExample = `  autok3s -d start \
+    --provider alibaba \
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>
+`
+
+const stopUsageExample = `  autok3s -d stop \
+    --provider alibaba \
+    --name <cluster name> \
+    --access-key <access-key> \
+    --access-secret <access-secret>
+`
+
+const sshUsageExample = `  autok3s ssh \
+    --provider alibaba \
+    --name <cluster name> \
+    --region <region> \
+    --access-key <access-key> \
+    --access-secret <access-secret>
+`
+
+func (p *Alibaba) GetUsageExample(action string) string {
+	switch action {
+	case "create":
+		return createUsageExample
+	case "join":
+		return joinUsageExample
+	case "delete":
+		return deleteUsageExample
+	case "start":
+		return startUsageExample
+	case "stop":
+		return stopUsageExample
+	case "ssh":
+		return sshUsageExample
+	default:
+		return ""
+	}
+}
+
 func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{

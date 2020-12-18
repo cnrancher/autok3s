@@ -12,11 +12,6 @@ var (
 	deleteCmd = &cobra.Command{
 		Use:   "delete",
 		Short: "Delete k3s cluster",
-		Example: `  autok3s delete \
-    --provider alibaba \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>`,
 	}
 	dProvider = ""
 	force     = false
@@ -40,6 +35,7 @@ func DeleteCommand() *cobra.Command {
 
 		deleteCmd.Flags().AddFlagSet(dp.GetCredentialFlags(deleteCmd))
 		deleteCmd.Flags().AddFlagSet(dp.GetDeleteFlags(deleteCmd))
+		joinCmd.Example = dp.GetUsageExample("delete")
 	}
 
 	deleteCmd.PreRunE = func(cmd *cobra.Command, args []string) error {

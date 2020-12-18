@@ -22,6 +22,8 @@ var (
 // Provider is an abstract, pluggable interface for k3s provider
 type Provider interface {
 	GetProviderName() string
+	// Get command usage example.
+	GetUsageExample(action string) string
 	// Create command flags.
 	GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Join command flags.
