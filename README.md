@@ -9,6 +9,17 @@ English / [简体中文](docs/i18n/zh_cn/README.md)
 AutoK3s is a lightweight tool for quickly creating and managing k3s clusters on multiple cloud providers.
 It can help users quickly complete the personalized configuration of the k3s cluster, while providing convenient kubectl access capabilities.
 
+<!-- toc -->
+
+- [Key Features](#key-features)
+- [Providers](#providers)
+- [Quick Start](#quick-start)
+- [Demo Video](#demo-video)
+- [Developers' Guide](#developers-guide)
+- [License](#license)
+
+<!-- /toc -->
+
 ## Key Features
 - Bootstrap Kubernetes with k3s onto multiple cloud providers with `autok3s create`
 - Join nodes into an existing k3s cluster with `autok3s join`
