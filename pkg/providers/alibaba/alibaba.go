@@ -31,6 +31,7 @@ import (
 const (
 	k3sVersion               = ""
 	k3sChannel               = "stable"
+	k3sInstallScript         = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 	accessKeyID              = "access-key"
 	accessKeySecret          = "access-secret"
 	imageID                  = "ubuntu_18_04_x64_20G_alibase_20200618.vhd"
@@ -101,6 +102,7 @@ func NewProvider() *Alibaba {
 			CloudControllerManager: cloudControllerManager,
 			K3sVersion:             k3sVersion,
 			K3sChannel:             k3sChannel,
+			InstallScript:          k3sInstallScript,
 		},
 		Options: alibaba.Options{
 			DiskCategory:            diskCategory,
@@ -1235,7 +1237,6 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 		return nil, err
 	}
 
-	c.InstallScript = cluster.DefaultScript
 	c.Mirror = k3sMirror
 	c.DockerMirror = dockerMirror
 

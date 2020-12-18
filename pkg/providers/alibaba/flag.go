@@ -295,6 +295,9 @@ func (p *Alibaba) overwriteMetadata(matched *types.Cluster) {
 	if p.K3sVersion == "" {
 		p.K3sVersion = matched.K3sVersion
 	}
+	if p.InstallScript == "" {
+		p.InstallScript = matched.InstallScript
+	}
 	if p.Registry == "" {
 		p.Registry = matched.Registry
 	}
@@ -401,6 +404,12 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			P:     &p.K3sChannel,
 			V:     p.K3sChannel,
 			Usage: "Used to specify the release channel of k3s. e.g.(stable, latest, or i.e. v1.18)",
+		},
+		{
+			Name:  "k3s-install-script",
+			P:     &p.InstallScript,
+			V:     p.InstallScript,
+			Usage: "Change the default upstream k3s install script address",
 		},
 		{
 			Name:  "cloud-controller-manager",

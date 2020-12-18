@@ -31,10 +31,6 @@ import (
 )
 
 var (
-	DefaultScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
-)
-
-var (
 	logger                 *logrus.Logger
 	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' %s sh -"
 	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
