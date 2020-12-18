@@ -547,7 +547,7 @@ func (p *Tencent) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 	if ssh.Password == "" && p.KeyIds == "" {
 		needUploadKeyPair = true
 		ssh.Password = putil.RandomPassword()
-		p.logger.Infof("[%s] launching instance with auto-generated password, please update password in console or log in with ssh key.", p.GetProviderName())
+		p.logger.Infof("[%s] launching instance with auto-generated password...", p.GetProviderName())
 	}
 
 	// run ecs master instances.
