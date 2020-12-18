@@ -11,12 +11,6 @@ var (
 	startCmd = &cobra.Command{
 		Use:   "start",
 		Short: "Start k3s cluster",
-		Example: `  autok3s start \
-    --provider alibaba \
-    --name <cluster name> \
-    --region <region> \
-    --access-key <access-key> \
-    --access-secret <access-secret>`,
 	}
 	stProvider = ""
 	stP        providers.Provider
@@ -38,6 +32,7 @@ func StartCommand() *cobra.Command {
 
 		startCmd.Flags().AddFlagSet(stP.GetCredentialFlags(startCmd))
 		startCmd.Flags().AddFlagSet(stP.GetStartFlags(startCmd))
+		startCmd.Example = stP.GetUsageExample("start")
 	}
 
 	startCmd.PreRunE = func(cmd *cobra.Command, args []string) error {

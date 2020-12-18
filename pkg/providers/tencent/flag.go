@@ -13,6 +13,69 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const createUsageExample = `  autok3s -d create \
+    --provider tencent \
+    --name <cluster name> \
+    --secret-id <secret-id> \
+    --secret-key <secret-key> \
+    --master 1
+`
+
+const joinUsageExample = `  autok3s -d join \
+    --provider tencent \
+    --name <cluster name> \
+    --secret-id <secret-id> \
+    --secret-key <secret-key> \
+    --master 1
+`
+
+const deleteUsageExample = `  autok3s -d delete \
+    --provider tencent \
+    --name <cluster name>
+    --secret-id <secret-id> \
+    --secret-key <secret-key>
+`
+
+const startUsageExample = `  autok3s -d start \
+    --provider tencent \
+    --name <cluster name> \
+    --secret-id <secret-id> \
+    --secret-key <secret-key>
+`
+
+const stopUsageExample = `  autok3s -d stop \
+    --provider tencent \
+    --name <cluster name> \
+    --secret-id <secret-id> \
+    --secret-key <secret-key>
+`
+
+const sshUsageExample = `  autok3s ssh \
+    --provider tencent \
+    --name <cluster name> \
+    --secret-id <secret-id> \
+    --secret-key <secret-key>
+`
+
+func (p *Tencent) GetUsageExample(action string) string {
+	switch action {
+	case "create":
+		return createUsageExample
+	case "join":
+		return joinUsageExample
+	case "delete":
+		return deleteUsageExample
+	case "start":
+		return startUsageExample
+	case "stop":
+		return stopUsageExample
+	case "ssh":
+		return sshUsageExample
+	default:
+		return ""
+	}
+}
+
 func (p *Tencent) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{

@@ -9,6 +9,48 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const createUsageExample = `  autok3s -d create \
+    --provider native \
+    --name <cluster name> \
+    --ssh-key-path <ssh-key-path> \
+    --master-ips <master0-ip> \
+    --worker-ips <worker0-ip,worker1-ip>
+`
+
+const joinUsageExample = `  autok3s -d join \
+    --provider native \
+    --name <cluster name> \
+    --ssh-key-path <ssh-key-path> \
+    --master-ips <master1-ip> \
+    --worker-ips <worker2-ip,worker3-ip>
+`
+
+const deleteUsageExample = `  autok3s -d delete \
+    --provider native \
+    --name <cluster name>
+`
+
+const sshUsageExample = `  autok3s ssh \
+    --provider native \
+    --name <cluster name> \
+    --ssh-key-path <ssh-key-path>
+`
+
+func (p *Native) GetUsageExample(action string) string {
+	switch action {
+	case "create":
+		return createUsageExample
+	case "join":
+		return joinUsageExample
+	case "delete":
+		return deleteUsageExample
+	case "ssh":
+		return sshUsageExample
+	default:
+		return "not support"
+	}
+}
+
 func (p *Native) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{

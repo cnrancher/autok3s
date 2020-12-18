@@ -13,12 +13,6 @@ var (
 	sshCmd = &cobra.Command{
 		Use:   "ssh",
 		Short: "SSH k3s node",
-		Example: `  autok3s ssh \
-    --provider alibaba \
-    --name <cluster name> \
-    --region <region> \
-    --access-key <access-key> \
-    --access-secret <access-secret>`,
 	}
 
 	sProvider = ""
@@ -50,6 +44,7 @@ func SSHCommand() *cobra.Command {
 
 		sshCmd.Flags().AddFlagSet(sp.GetCredentialFlags(sshCmd))
 		sshCmd.Flags().AddFlagSet(sp.GetSSHFlags(sshCmd))
+		sshCmd.Example = sp.GetUsageExample("ssh")
 	}
 
 	sshCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
