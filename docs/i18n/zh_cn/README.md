@@ -8,6 +8,17 @@
 
 快速创建并启动k3s集群，同时可以使用它来为k3s集群添加节点，提升公有云体验的同时，继承kubectl从而提供便捷的集群能力。
 
+<!-- toc -->
+
+- [关键特性](#关键特性)
+- [支持的云提供商](#支持的云提供商)
+- [快速体验](#快速体验)
+- [演示视频](#演示视频)
+- [开发者指南](#开发者指南)
+- [开源协议](#开源协议)
+
+<!-- /toc -->
+
 ## 关键特性
 - 使用 `autok3s create` 命令，在多个公有云提供商中快速启动 Kubernetes (k3s) 集群
 - 使用 `autok3s join` 命令，添加节点至已存在的 Kubernetes (k3s) 集群
@@ -19,6 +30,13 @@
 - 集成扩展参数 `--ui` 以开启 Kubernetes Dashboard UI 组件
 - 集成扩展参数 `例如 --terway 'eni'` 以开启公有云 CNI 网络插件
 
+## 支持的云提供商
+有关更多用法的详细信息，请参见下面的链接：
+
+- [alibaba](alibaba/README.md) - 在阿里云的 ECS 中初始化 Kubernetes (k3s) 集群
+- [tencent](tencent/README.md) - 在腾讯云 CVM 中初始化 Kubernetes (k3s) 集群
+- [native](native/README.md) - 在任意类型 VM 实例中初始化 Kubernetes (k3s) 集群
+
 ## 快速体验
 以下命令使用`alibaba`作为云提供商，相关的前置条件请参考[alibaba](alibaba/README.md)云提供商文档。
 
@@ -28,13 +46,6 @@ export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
 
 autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
-
-## 支持的创建类型
-有关更多用法的详细信息，请参见下面的链接：
-
-- [alibaba](alibaba/README.md) - 在阿里云的 ECS 中初始化 Kubernetes (k3s) 集群
-- [tencent](tencent/README.md) - 在腾讯云 CVM 中初始化 Kubernetes (k3s) 集群
-- [native](native/README.md) - 在任意类型 VM 实例中初始化 Kubernetes (k3s) 集群
 
 ## 演示视频
 示程序在1分钟左右就能将Kubernetes (k3s)安装到阿里云的ECS实例上。
