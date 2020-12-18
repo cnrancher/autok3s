@@ -730,7 +730,7 @@ func execute(host *hosts.Host, cmds []string) (string, error) {
 		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
-	return "", nil
+	return stdout.String(), nil
 }
 
 func terminal(host *hosts.Host) error {
