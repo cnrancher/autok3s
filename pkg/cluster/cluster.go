@@ -418,36 +418,45 @@ func DeleteState(name string, provider string) error {
 	return utils.WriteYaml(r, v, common.StateFile)
 }
 
-func UninstallK3sCluster(cluster *types.Cluster) error {
+func UninstallK3sCluster(cluster *types.Cluster) (debugMsg []string, warnMsg []string, err error) {
 	for _, workerNode := range cluster.WorkerNodes {
-		_, _ = execute(&hosts.Host{Node: workerNode}, []string{workerUninstallCommand})
+		m, e := execute(&hosts.Host{Node: workerNode}, []string{workerUninstallCommand})
+		if e == nil {
+			debugMsg = append(debugMsg, fmt.Sprintf("worker node %s: %s", workerNode.InstanceID, m))
+		} else {
+			warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on worker node %s: %s", workerNode.InstanceID, e.Error()))
+		}
 	}
 	for _, masterNode := range cluster.MasterNodes {
-		_, _ = execute(&hosts.Host{Node: masterNode}, []string{masterUninstallCommand})
+		if m, e := execute(&hosts.Host{Node: masterNode}, []string{masterUninstallCommand}); e == nil {
+			debugMsg = append(debugMsg, fmt.Sprintf("master node %s: %s", masterNode.InstanceID, m))
+		} else {
+			warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on master node %s: %s", masterNode.InstanceID, e.Error()))
+		}
 	}
 
-	return DeleteState(cluster.Name, cluster.Provider)
+	err = DeleteState(cluster.Name, cluster.Provider)
+	return
 }
 
-func UninstallK3sNodes(nodes []types.Node) error {
-	var errInfo []string
+func UninstallK3sNodes(nodes []types.Node) (debugMsg []string, warnMsg []string) {
 	for _, node := range nodes {
 		if node.Master {
-			if _, e := execute(&hosts.Host{Node: node}, []string{masterUninstallCommand}); e != nil {
-				errInfo = append(errInfo, e.Error())
+			if m, e := execute(&hosts.Host{Node: node}, []string{masterUninstallCommand}); e == nil {
+				debugMsg = append(debugMsg, fmt.Sprintf("master node %s: %s", node.InstanceID, m))
+			} else {
+				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on master node %s: %s", node.InstanceID, e.Error()))
 			}
 		} else {
-			if _, e := execute(&hosts.Host{Node: node}, []string{workerUninstallCommand}); e != nil {
-				errInfo = append(errInfo, e.Error())
+			if m, e := execute(&hosts.Host{Node: node}, []string{workerUninstallCommand}); e == nil {
+				debugMsg = append(debugMsg, fmt.Sprintf("worker node %s: %s", node.InstanceID, m))
+			} else {
+				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on worker node %s: %s", node.InstanceID, e.Error()))
 			}
 		}
-
-	}
-	if len(errInfo) > 0 {
-		return fmt.Errorf("[cluster] error when uninstall k3s nodes: %s", strings.Join(errInfo, ","))
 	}
 
-	return nil
+	return
 }
 
 func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
