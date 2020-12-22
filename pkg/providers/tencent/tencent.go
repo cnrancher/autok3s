@@ -682,7 +682,7 @@ func (p *Tencent) deleteCluster(f bool) error {
 	}
 
 	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
+		return fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
 	}
 
 	err = cluster.OverwriteCfg(p.Name)
@@ -860,7 +860,7 @@ func (p *Tencent) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			v.SSH = *ssh
 			// check upload keypair
 			if uploadKeyPair {
-				p.logger.Debugf("[%s] waiting for upload keypair...", p.GetProviderName())
+				p.logger.Debugf("[%s] waiting for upload keypair...\n", p.GetProviderName())
 				if err := p.uploadKeyPair(v, publicKey); err != nil {
 					return nil, err
 				}
@@ -1234,7 +1234,7 @@ func (p *Tencent) configNetwork() error {
 	}
 
 	if response != nil && response.Response != nil && len(response.Response.VpcSet) > 0 {
-		p.logger.Debugf("[%s] find existed default vpc %s for autok3s", p.GetProviderName(), vpcName)
+		p.logger.Debugf("[%s] find existed default vpc %s for autok3s\n", p.GetProviderName(), vpcName)
 		defaultVPC := response.Response.VpcSet[0]
 		p.VpcID = *defaultVPC.VpcId
 		// find default subnet
@@ -1257,7 +1257,7 @@ func (p *Tencent) configNetwork() error {
 		}
 
 		if resp != nil && resp.Response != nil && len(resp.Response.SubnetSet) > 0 {
-			p.logger.Debugf("[%s] find existed default subnet %s for vpc %s", p.GetProviderName(), subnetName, vpcName)
+			p.logger.Debugf("[%s] find existed default subnet %s for vpc %s\n", p.GetProviderName(), subnetName, vpcName)
 			p.SubnetID = *resp.Response.SubnetSet[0].SubnetId
 		} else {
 			return p.generateDefaultSubnet()
@@ -1278,7 +1278,7 @@ func (p *Tencent) configNetwork() error {
 }
 
 func (p *Tencent) generateDefaultVPC() error {
-	p.logger.Debugf("[%s] generate default vpc %s in region %s", p.GetProviderName(), vpcName, p.Region)
+	p.logger.Debugf("[%s] generate default vpc %s in region %s\n", p.GetProviderName(), vpcName, p.Region)
 	request := vpc.NewCreateVpcRequest()
 	request.VpcName = tencentCommon.StringPtr(vpcName)
 	request.CidrBlock = tencentCommon.StringPtr(vpcCidrBlock)
@@ -1294,13 +1294,13 @@ func (p *Tencent) generateDefaultVPC() error {
 	}
 
 	p.VpcID = *response.Response.Vpc.VpcId
-	p.logger.Debugf("[%s] generate default vpc %s in region %s successfully", p.GetProviderName(), vpcName, p.Region)
+	p.logger.Debugf("[%s] generate default vpc %s in region %s successfully\n", p.GetProviderName(), vpcName, p.Region)
 
 	return err
 }
 
 func (p *Tencent) generateDefaultSubnet() error {
-	p.logger.Debugf("[%s] generate default subnet %s for vpc %s in region %s", p.GetProviderName(), subnetName, vpcName, p.Region)
+	p.logger.Debugf("[%s] generate default subnet %s for vpc %s in region %s\n", p.GetProviderName(), subnetName, vpcName, p.Region)
 	request := vpc.NewCreateSubnetRequest()
 
 	request.Tags = []*vpc.Tag{
@@ -1319,12 +1319,12 @@ func (p *Tencent) generateDefaultSubnet() error {
 		return fmt.Errorf("[%s] fail to create default subnet for vpc %s in region %s, zone %s: %v", p.GetProviderName(), p.VpcID, p.Region, p.Zone, err)
 	}
 	p.SubnetID = *response.Response.Subnet.SubnetId
-	p.logger.Debugf("[%s] generate default subnet %s for vpc %s in region %s successfully", p.GetProviderName(), subnetName, vpcName, p.Region)
+	p.logger.Debugf("[%s] generate default subnet %s for vpc %s in region %s successfully\n", p.GetProviderName(), subnetName, vpcName, p.Region)
 	return nil
 }
 
 func (p *Tencent) configSecurityGroup() error {
-	p.logger.Debugf("[%s] check default security group %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Region)
+	p.logger.Debugf("[%s] check default security group %s in region %s\n", p.GetProviderName(), defaultSecurityGroupName, p.Region)
 	// find default security group
 	request := vpc.NewDescribeSecurityGroupsRequest()
 
@@ -1351,7 +1351,7 @@ func (p *Tencent) configSecurityGroup() error {
 
 	if securityGroupID == "" {
 		// create default security group
-		p.logger.Debugf("[%s] create default security group %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Region)
+		p.logger.Debugf("[%s] create default security group %s in region %s\n", p.GetProviderName(), defaultSecurityGroupName, p.Region)
 		err = p.generateDefaultSecurityGroup()
 		if err != nil {
 			return fmt.Errorf("[%s] fail to create default security group %s: %v", p.GetProviderName(), defaultSecurityGroupName, err)
@@ -1385,7 +1385,7 @@ func (p *Tencent) generateDefaultSecurityGroup() error {
 }
 
 func (p *Tencent) configDefaultSecurityPermission() error {
-	p.logger.Debugf("[%s] check rules of security group %s", p.GetProviderName(), defaultSecurityGroupName)
+	p.logger.Debugf("[%s] check rules of security group %s\n", p.GetProviderName(), defaultSecurityGroupName)
 	// get security group rules
 	request := vpc.NewDescribeSecurityGroupPoliciesRequest()
 	request.SecurityGroupId = tencentCommon.StringPtr(p.SecurityGroupIds)
@@ -1613,14 +1613,14 @@ func (p *Tencent) uploadKeyPair(node types.Node, publicKey string) error {
 	)
 	command := fmt.Sprintf("mkdir -p ~/.ssh; echo '%s' > ~/.ssh/authorized_keys", strings.Trim(publicKey, "\n"))
 
-	p.logger.Debugf("[%s] upload the public key with command: %s", p.GetProviderName(), command)
+	p.logger.Debugf("[%s] upload the public key with command: %s\n", p.GetProviderName(), command)
 
 	tunnel.Cmd(command)
 
 	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil || stderr.String() != "" {
 		return fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	p.logger.Debugf("[%s] upload keypair with output: %s", p.GetProviderName(), stdout.String())
+	p.logger.Debugf("[%s] upload keypair with output: %s\n", p.GetProviderName(), stdout.String())
 	return nil
 }
 

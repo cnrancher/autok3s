@@ -418,19 +418,16 @@ func DeleteState(name string, provider string) error {
 	return utils.WriteYaml(r, v, common.StateFile)
 }
 
-func UninstallK3sCluster(cluster *types.Cluster) (debugMsg []string, warnMsg []string, err error) {
+func UninstallK3sCluster(cluster *types.Cluster) (warnMsg []string, err error) {
 	for _, workerNode := range cluster.WorkerNodes {
-		m, e := execute(&hosts.Host{Node: workerNode}, []string{workerUninstallCommand})
-		if e == nil {
-			debugMsg = append(debugMsg, fmt.Sprintf("worker node %s: %s", workerNode.InstanceID, m))
-		} else {
+		_, e := execute(&hosts.Host{Node: workerNode}, []string{workerUninstallCommand})
+		if e != nil {
 			warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on worker node %s: %s", workerNode.InstanceID, e.Error()))
 		}
 	}
 	for _, masterNode := range cluster.MasterNodes {
-		if m, e := execute(&hosts.Host{Node: masterNode}, []string{masterUninstallCommand}); e == nil {
-			debugMsg = append(debugMsg, fmt.Sprintf("master node %s: %s", masterNode.InstanceID, m))
-		} else {
+		_, e := execute(&hosts.Host{Node: masterNode}, []string{masterUninstallCommand})
+		if e != nil {
 			warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on master node %s: %s", masterNode.InstanceID, e.Error()))
 		}
 	}
@@ -439,18 +436,16 @@ func UninstallK3sCluster(cluster *types.Cluster) (debugMsg []string, warnMsg []s
 	return
 }
 
-func UninstallK3sNodes(nodes []types.Node) (debugMsg []string, warnMsg []string) {
+func UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {
 	for _, node := range nodes {
 		if node.Master {
-			if m, e := execute(&hosts.Host{Node: node}, []string{masterUninstallCommand}); e == nil {
-				debugMsg = append(debugMsg, fmt.Sprintf("master node %s: %s", node.InstanceID, m))
-			} else {
+			_, e := execute(&hosts.Host{Node: node}, []string{masterUninstallCommand})
+			if e != nil {
 				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on master node %s: %s", node.InstanceID, e.Error()))
 			}
 		} else {
-			if m, e := execute(&hosts.Host{Node: node}, []string{workerUninstallCommand}); e == nil {
-				debugMsg = append(debugMsg, fmt.Sprintf("worker node %s: %s", node.InstanceID, m))
-			} else {
+			_, e := execute(&hosts.Host{Node: node}, []string{workerUninstallCommand})
+			if e != nil {
 				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on worker node %s: %s", node.InstanceID, e.Error()))
 			}
 		}
@@ -565,7 +560,7 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 		}
 	}
 
-	logger.Debugf("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
+	logger.Debugf("[cluster] k3s master command: %s\n", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
 		"--cluster-init", ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(initCommand, k3sScript, k3sMirror,
@@ -597,7 +592,7 @@ func initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs stri
 
 	sortedExtraArgs += " " + extraArgs
 
-	logger.Debugf("[cluster] k3s additional master command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror,
+	logger.Debugf("[cluster] k3s additional master command: %s\n", fmt.Sprintf(joinCommand, k3sScript, k3sMirror,
 		ip, cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, ip,
@@ -626,7 +621,7 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 
 	sortedExtraArgs += " " + extraArgs
 
-	logger.Debugf("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
+	logger.Debugf("[cluster] k3s worker command: %s\n", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
 		cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: worker}, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
@@ -667,7 +662,7 @@ func joinMaster(k3sScript, k3sMirror, dockerMirror,
 
 	sortedExtraArgs += " " + extraArgs
 
-	logger.Debugf("[cluster] k3s master command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
+	logger.Debugf("[cluster] k3s master command: %s\n", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
 		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
 
 	// for now, use the workerCommand to join the additional master server node.
@@ -697,7 +692,7 @@ func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 
 	sortedExtraArgs += " " + extraArgs
 
-	logger.Debugf("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
+	logger.Debugf("[cluster] k3s worker command: %s\n", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
 		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: full}, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,

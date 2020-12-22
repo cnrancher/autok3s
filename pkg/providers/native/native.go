@@ -271,12 +271,9 @@ func (p *Native) Rollback() error {
 	p.logger.Debugf("[%s] nodes %s will be rollback\n", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
-		debugMsg, warnMsg := cluster.UninstallK3sNodes(nodes)
-		for _, d := range debugMsg {
-			p.logger.Debugf("[%s] %s", p.GetProviderName(), d)
-		}
+		warnMsg := cluster.UninstallK3sNodes(nodes)
 		for _, w := range warnMsg {
-			p.logger.Warnf("[%s] %s", p.GetProviderName(), w)
+			p.logger.Warnf("[%s] %s\n", p.GetProviderName(), w)
 		}
 	}
 
@@ -288,6 +285,14 @@ func (p *Native) Rollback() error {
 func (p *Native) DeleteK3sCluster(f bool) error {
 	isConfirmed := true
 
+	exist, _, err := p.IsClusterExist()
+	if err != nil && !f {
+		return fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
+	}
+	if !exist {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+	}
+
 	if !f {
 		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.GetProviderName(), p.Name))
 	}
@@ -296,18 +301,15 @@ func (p *Native) DeleteK3sCluster(f bool) error {
 		p.logger = common.NewLogger(common.Debug)
 		p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
 
-		debugMsg, warnMsg, uninstallErr := cluster.UninstallK3sCluster(&types.Cluster{
+		warnMsg, uninstallErr := cluster.UninstallK3sCluster(&types.Cluster{
 			Metadata: p.Metadata,
 			Options:  p.Options,
 			Status:   p.Status,
 		})
 
-		// show debug and warn messages before return error
-		for _, d := range debugMsg {
-			p.logger.Debugf("[%s] %s", p.GetProviderName(), d)
-		}
+		// show warn messages before return error
 		for _, w := range warnMsg {
-			p.logger.Warnf("[%s] %s", p.GetProviderName(), w)
+			p.logger.Warnf("[%s] %s\n", p.GetProviderName(), w)
 		}
 		if uninstallErr != nil {
 			return uninstallErr

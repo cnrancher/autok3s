@@ -70,7 +70,7 @@ func RegisterProvider(name string, p Factory) {
 	providersMutex.Lock()
 	defer providersMutex.Unlock()
 	if _, found := providers[name]; !found {
-		logrus.Debugf("registered provider %s", name)
+		logrus.Debugf("registered provider %s\n", name)
 		providers[name] = p
 	}
 }
