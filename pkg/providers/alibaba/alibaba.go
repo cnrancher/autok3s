@@ -531,7 +531,7 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 func (p *Alibaba) deleteCluster(f bool) error {
 	exist, ids, err := p.IsClusterExist()
 	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
+		return fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
 	}
 	if !exist {
 		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
@@ -673,7 +673,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			v.SSH = *ssh
 			// check upload keypair
 			if uploadKeyPair {
-				p.logger.Debugf("[%s] Waiting for upload keypair...", p.GetProviderName())
+				p.logger.Debugf("[%s] Waiting for upload keypair...\n", p.GetProviderName())
 				if err := p.uploadKeyPair(v, publicKey); err != nil {
 					return nil, err
 				}
@@ -1328,7 +1328,7 @@ func (p *Alibaba) createKeyPair(ssh *types.SSH) (string, error) {
 }
 
 func (p *Alibaba) generateDefaultVPC() error {
-	p.logger.Debugf("[%s] generate default vpc %s in region %s", p.GetProviderName(), vpcName, p.Region)
+	p.logger.Debugf("[%s] generate default vpc %s in region %s\n", p.GetProviderName(), vpcName, p.Region)
 	request := vpc.CreateCreateVpcRequest()
 	request.Scheme = "https"
 	request.RegionId = p.Region
@@ -1359,7 +1359,7 @@ func (p *Alibaba) generateDefaultVPC() error {
 		return fmt.Errorf("[%s] error tag default vpc %s, got error: %v", p.GetProviderName(), response.VpcId, err)
 	}
 
-	p.logger.Debugf("[%s] waiting for vpc %s available", p.GetProviderName(), p.Vpc)
+	p.logger.Debugf("[%s] waiting for vpc %s available\n", p.GetProviderName(), p.Vpc)
 	// wait for vpc available
 	err = utils.WaitFor(p.isVPCAvailable)
 
@@ -1397,7 +1397,7 @@ func (p *Alibaba) isVSwitchAvailable() (bool, error) {
 }
 
 func (p *Alibaba) generateDefaultVSwitch() error {
-	p.logger.Debugf("[%s] generate default vswitch %s for vpc %s in region %s, zone %s", p.GetProviderName(), vSwitchName, vpcName, p.Region, p.Zone)
+	p.logger.Debugf("[%s] generate default vswitch %s for vpc %s in region %s, zone %s\n", p.GetProviderName(), vSwitchName, vpcName, p.Region, p.Zone)
 	request := vpc.CreateCreateVSwitchRequest()
 	request.Scheme = "https"
 
@@ -1431,7 +1431,7 @@ func (p *Alibaba) generateDefaultVSwitch() error {
 		return fmt.Errorf("[%s] error tag default vswitch %s, got error: %v", p.GetProviderName(), p.VSwitch, err)
 	}
 
-	p.logger.Debugf("[%s] waiting for vswitch %s available", p.GetProviderName(), p.VSwitch)
+	p.logger.Debugf("[%s] waiting for vswitch %s available\n", p.GetProviderName(), p.VSwitch)
 	// wait for vswitch available
 	err = utils.WaitFor(p.isVSwitchAvailable)
 
@@ -1501,7 +1501,7 @@ func (p *Alibaba) configNetwork() error {
 }
 
 func (p *Alibaba) configSecurityGroup() error {
-	p.logger.Debugf("[%s] config default security group for %s in region %s", p.GetProviderName(), p.Vpc, p.Region)
+	p.logger.Debugf("[%s] config default security group for %s in region %s\n", p.GetProviderName(), p.Vpc, p.Region)
 
 	if p.Vpc == "" {
 		// if user didn't set security group, get vpc from vswitch to config default security group
@@ -1535,7 +1535,7 @@ func (p *Alibaba) configSecurityGroup() error {
 
 	if securityGroup == nil {
 		// create default security group
-		p.logger.Debugf("[%s] create default security group %s for %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Vpc, p.Region)
+		p.logger.Debugf("[%s] create default security group %s for %s in region %s\n", p.GetProviderName(), defaultSecurityGroupName, p.Vpc, p.Region)
 		req := ecs.CreateCreateSecurityGroupRequest()
 		req.Scheme = "https"
 		req.RegionId = p.Region
@@ -1553,7 +1553,7 @@ func (p *Alibaba) configSecurityGroup() error {
 			return fmt.Errorf("[%s] create default security group %s for %s in region %s error: %v", p.GetProviderName(), defaultSecurityGroupName, p.Vpc, p.Region, err)
 		}
 		securityGroupID := resp.SecurityGroupId
-		p.logger.Debugf("[%s] waiting for security group %s available", p.GetProviderName(), securityGroupID)
+		p.logger.Debugf("[%s] waiting for security group %s available\n", p.GetProviderName(), securityGroupID)
 		err = utils.WaitFor(func() (bool, error) {
 			s, err := p.getSecurityGroup(securityGroupID)
 			if s != nil && err == nil {
@@ -1598,7 +1598,7 @@ func (p *Alibaba) configDefaultSecurityPermissions(sg *ecs.DescribeSecurityGroup
 	for _, perm := range sg.Permissions.Permission {
 		portRange := strings.Split(perm.PortRange, "/")
 
-		p.logger.Debugf("[%s] get portRange %v for security group %s", p.GetProviderName(), portRange, sg.SecurityGroupId)
+		p.logger.Debugf("[%s] get portRange %v for security group %s\n", p.GetProviderName(), portRange, sg.SecurityGroupId)
 		fromPort, _ := strconv.Atoi(portRange[0])
 		switch fromPort {
 		case 22:
@@ -1684,14 +1684,14 @@ func (p *Alibaba) uploadKeyPair(node types.Node, publicKey string) error {
 	)
 	command := fmt.Sprintf("mkdir -p ~/.ssh; echo '%s' > ~/.ssh/authorized_keys", strings.Trim(publicKey, "\n"))
 
-	p.logger.Debugf("[%s] upload the public key with command: %s", p.GetProviderName(), command)
+	p.logger.Debugf("[%s] upload the public key with command: %s\n", p.GetProviderName(), command)
 
 	tunnel.Cmd(command)
 
 	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil || stderr.String() != "" {
 		return fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	p.logger.Debugf("[%s] upload keypair with output: %s", p.GetProviderName(), stdout.String())
+	p.logger.Debugf("[%s] upload keypair with output: %s\n", p.GetProviderName(), stdout.String())
 	return nil
 }
 
