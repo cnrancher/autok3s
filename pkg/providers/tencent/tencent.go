@@ -457,6 +457,87 @@ func (p *Tencent) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.N
 	return p.GenerateMasterExtraArgs(cluster, worker)
 }
 
+func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
+	p.logger = common.NewLogger(common.Debug)
+	c := &types.ClusterInfo{
+		Name:     p.Name,
+		Region:   p.Region,
+		Zone:     p.Zone,
+		Provider: p.GetProviderName(),
+	}
+	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
+	if err != nil {
+		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		c.Status = types.ClusterStatusUnknown
+		c.Version = types.ClusterStatusUnknown
+		return c
+	}
+	c.Status = cluster.GetClusterStatus(client)
+	c.Version = cluster.GetClusterVersion(client)
+	nodes, err := cluster.DescribeClusterNodes(client)
+	if err != nil {
+		p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
+		return c
+	}
+
+	if p.c == nil {
+		if err := p.generateClientSDK(); err != nil {
+			p.logger.Errorf("[%s] failed to generate tencent client sdk for cluster %s: %v", p.GetProviderName(), p.Name, err)
+			c.Master = "0"
+			c.Worker = "0"
+			return c
+		}
+	}
+	result, err := p.describeInstances()
+	if err != nil || result == nil || result.Response == nil || result.Response.InstanceSet == nil {
+		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		c.Master = "0"
+		c.Worker = "0"
+		return c
+	}
+
+	// get instance nodes
+	masterCount := 0
+	workerCount := 0
+	for _, instance := range result.Response.InstanceSet {
+		addresses := tencentCommon.StringValues(instance.PrivateIpAddresses)
+		for index, n := range nodes {
+			isCurrentInstance := false
+			for _, address := range addresses {
+				if address == n.InternalIP {
+					isCurrentInstance = true
+					break
+				}
+			}
+			if isCurrentInstance {
+				n.InstanceID = *instance.InstanceId
+				n.InstanceStatus = *instance.InstanceState
+				if n.ExternalIP == "" {
+					publicAddresses := tencentCommon.StringValues(instance.PublicIpAddresses)
+					n.ExternalIP = publicAddresses[0]
+				}
+				nodes[index] = n
+				break
+			}
+		}
+		master := false
+		for _, tagPtr := range instance.Tags {
+			if strings.EqualFold(*tagPtr.Key, "master") && strings.EqualFold(*tagPtr.Value, "true") {
+				master = true
+				masterCount++
+				break
+			}
+		}
+		if !master {
+			workerCount++
+		}
+	}
+	c.Master = strconv.Itoa(masterCount)
+	c.Worker = strconv.Itoa(workerCount)
+	c.Nodes = nodes
+	return c
+}
+
 func (p *Tencent) generateClientSDK() error {
 	if p.SecretID == "" {
 		p.SecretID = viper.GetString(p.GetProviderName(), secretID)

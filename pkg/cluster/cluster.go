@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/hosts"
@@ -24,7 +26,11 @@ import (
 	"github.com/rancher/k3s/pkg/agent/templates"
 	"github.com/sirupsen/logrus"
 	yamlv3 "gopkg.in/yaml.v3"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubectl/pkg/cmd/config"
 	"k8s.io/kubectl/pkg/scheme"
@@ -32,13 +38,17 @@ import (
 
 var (
 	logger                 *logrus.Logger
-	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s %s' %s sh -"
+	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s --node-external-ip %s %s' %s sh -"
 	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s"
 	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
+)
+
+const (
+	LabelNodeRoleMaster = "node-role.kubernetes.io/master"
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
@@ -561,10 +571,10 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 	}
 
 	logger.Debugf("[cluster] k3s master command: %s\n", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
-		"--cluster-init", ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+		"--cluster-init", ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(initCommand, k3sScript, k3sMirror,
-		cluster.Token, "--cluster-init", ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
+		cluster.Token, "--cluster-init", ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		return err
 	}
 
@@ -587,7 +597,7 @@ func initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs stri
 	}
 
 	if !strings.Contains(extraArgs, "server --server") {
-		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", ip), master.PublicIPAddress[0])
+		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s --node-external-ip %s", fmt.Sprintf("https://%s:6443", ip), master.PublicIPAddress[0], master.PublicIPAddress[0])
 	}
 
 	sortedExtraArgs += " " + extraArgs
@@ -618,7 +628,7 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 			errChan <- err
 		}
 	}
-
+	sortedExtraArgs += fmt.Sprintf(" --node-external-ip %s", worker.PublicIPAddress[0])
 	sortedExtraArgs += " " + extraArgs
 
 	logger.Debugf("[cluster] k3s worker command: %s\n", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
@@ -637,7 +647,7 @@ func joinMaster(k3sScript, k3sMirror, dockerMirror,
 	sortedExtraArgs := ""
 
 	if !strings.Contains(extraArgs, "server --server") {
-		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s", fmt.Sprintf("https://%s:6443", merged.IP), full.PublicIPAddress[0])
+		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s --node-external-ip %s", fmt.Sprintf("https://%s:6443", merged.IP), full.PublicIPAddress[0], full.PublicIPAddress[0])
 	}
 
 	if merged.DataStore != "" {
@@ -690,6 +700,7 @@ func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
+	sortedExtraArgs += fmt.Sprintf(" --node-external-ip %s", full.PublicIPAddress[0])
 	sortedExtraArgs += " " + extraArgs
 
 	logger.Debugf("[cluster] k3s worker command: %s\n", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
@@ -968,4 +979,99 @@ func registryToString(registry *templates.Registry) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func buildConfigFromFlags(context, kubeconfigPath string) (*rest.Config, error) {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: context,
+		}).ClientConfig()
+}
+
+func GetClusterConfig(name, kubeconfig string) (*kubernetes.Clientset, error) {
+	config, err := buildConfigFromFlags(name, kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	config.Timeout = 20 * time.Second
+	c, err := kubernetes.NewForConfig(config)
+	return c, err
+}
+
+func GetClusterStatus(c *kubernetes.Clientset) string {
+	_, err := c.RESTClient().Get().RequestURI("/readyz").DoRaw(context.TODO())
+	if err != nil {
+		return types.ClusterStatusStopped
+	}
+	return types.ClusterStatusRunning
+}
+
+func GetClusterVersion(c *kubernetes.Clientset) string {
+	v, err := c.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return types.ClusterStatusUnknown
+	}
+	return v.GitVersion
+}
+
+func DescribeClusterNodes(client *kubernetes.Clientset) ([]types.ClusterNode, error) {
+	// list cluster nodes
+	nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil || nodeList == nil {
+		return nil, err
+	}
+	nodes := []types.ClusterNode{}
+	for _, n := range nodeList.Items {
+		node := types.ClusterNode{
+			ContainerRuntimeVersion: n.Status.NodeInfo.ContainerRuntimeVersion,
+			Version:                 n.Status.NodeInfo.KubeletVersion,
+		}
+		// get address
+		addressList := n.Status.Addresses
+		for _, address := range addressList {
+			switch address.Type {
+			case v1.NodeHostName:
+				node.HostName = address.Address
+			case v1.NodeInternalIP:
+				node.InternalIP = address.Address
+			case v1.NodeExternalIP:
+				node.ExternalIP = address.Address
+			default:
+				continue
+			}
+		}
+		// get roles
+		labels := n.Labels
+		_, ok := labels[LabelNodeRoleMaster]
+		node.Master = ok
+		roles := []string{}
+		for role := range labels {
+			if strings.HasPrefix(role, "node-role.kubernetes.io") {
+				roleArray := strings.Split(role, "/")
+				if len(roleArray) > 1 {
+					roles = append(roles, roleArray[1])
+				}
+			}
+		}
+		if len(roles) == 0 {
+			roles = append(roles, "<none>")
+		}
+		node.Roles = strings.Join(roles, ",")
+		// get status
+		conditions := n.Status.Conditions
+		for _, c := range conditions {
+			if c.Type == v1.NodeReady {
+				if c.Status == v1.ConditionTrue {
+					node.Status = "Ready"
+				} else {
+					node.Status = "NotReady"
+				}
+				break
+			}
+		}
+		nodes = append(nodes, node)
+	}
+
+	return nodes, nil
 }
