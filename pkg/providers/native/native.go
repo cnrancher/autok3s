@@ -349,6 +349,44 @@ func (p *Native) CommandNotSupport(commandName string) error {
 	return fmt.Errorf("[%s] dose not support command: [%s]", p.GetProviderName(), commandName)
 }
 
+func (p *Native) GetCluster(kubecfg string) *types.ClusterInfo {
+	p.logger = common.NewLogger(common.Debug)
+	c := &types.ClusterInfo{
+		Name:     p.Name,
+		Region:   "-",
+		Zone:     "-",
+		Provider: p.GetProviderName(),
+	}
+	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
+	if err != nil {
+		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		c.Status = types.ClusterStatusUnknown
+		c.Version = types.ClusterStatusUnknown
+	}
+	c.Status = cluster.GetClusterStatus(client)
+	c.Version = cluster.GetClusterVersion(client)
+	nodes, err := cluster.DescribeClusterNodes(client)
+	if err != nil {
+		p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
+		return c
+	}
+	if nodes != nil {
+		c.Nodes = nodes
+		masterCount := 0
+		workerCount := 0
+		for _, n := range nodes {
+			if n.Master {
+				masterCount++
+			} else {
+				workerCount++
+			}
+		}
+		c.Master = strconv.Itoa(masterCount)
+		c.Worker = strconv.Itoa(workerCount)
+	}
+	return c
+}
+
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 	if p.MasterIps != "" {
 		masterIps := strings.Split(p.MasterIps, ",")

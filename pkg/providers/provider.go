@@ -63,6 +63,7 @@ type Provider interface {
 	// Rollback when error occurs.
 	Rollback() error
 	MergeClusterOptions() error
+	GetCluster(kubecfg string) *types.ClusterInfo
 }
 
 // RegisterProvider registers a provider.Factory by name.

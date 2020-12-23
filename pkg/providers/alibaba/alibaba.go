@@ -462,6 +462,83 @@ func (p *Alibaba) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.N
 	return p.GenerateMasterExtraArgs(cluster, worker)
 }
 
+func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
+	p.logger = common.NewLogger(common.Debug)
+	c := &types.ClusterInfo{
+		Name:     p.Name,
+		Region:   p.Region,
+		Zone:     p.Zone,
+		Provider: p.GetProviderName(),
+	}
+	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
+	if err != nil {
+		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		c.Status = types.ClusterStatusUnknown
+		c.Version = types.ClusterStatusUnknown
+		return c
+	}
+	c.Status = cluster.GetClusterStatus(client)
+	c.Version = cluster.GetClusterVersion(client)
+	nodes, err := cluster.DescribeClusterNodes(client)
+	if err != nil {
+		p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
+		return c
+	}
+	if p.c == nil {
+		if err := p.generateClientSDK(); err != nil {
+			p.logger.Errorf("[%s] failed to generate alibaba client sdk for cluster %s: %v", p.GetProviderName(), p.Name, err)
+			c.Master = "0"
+			c.Worker = "0"
+			return c
+		}
+	}
+	result, err := p.describeInstances()
+	if err != nil || result == nil {
+		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		c.Master = "0"
+		c.Worker = "0"
+		return c
+	}
+	masterCount := 0
+	workerCount := 0
+	for _, instance := range result.Instances.Instance {
+		addresses := instance.VpcAttributes.PrivateIpAddress.IpAddress
+		for index, n := range nodes {
+			isCurrentInstance := false
+			for _, address := range addresses {
+				if address == n.InternalIP {
+					isCurrentInstance = true
+					break
+				}
+			}
+			if isCurrentInstance {
+				n.InstanceID = instance.InstanceId
+				n.InstanceStatus = instance.Status
+				if n.ExternalIP == "" {
+					n.ExternalIP = instance.EipAddress.IpAddress
+				}
+				nodes[index] = n
+				break
+			}
+		}
+		master := false
+		for _, tag := range instance.Tags.Tag {
+			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
+				master = true
+				masterCount++
+				break
+			}
+		}
+		if !master {
+			workerCount++
+		}
+	}
+	c.Master = strconv.Itoa(masterCount)
+	c.Worker = strconv.Itoa(workerCount)
+	c.Nodes = nodes
+	return c
+}
+
 func (p *Alibaba) generateClientSDK() error {
 	if p.AccessKey == "" {
 		p.AccessKey = viper.GetString(p.GetProviderName(), accessKeyID)
@@ -697,7 +774,6 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
 			EipAllocationIds:  []string{status.EipAddress.AllocationId},
 			PublicIPAddress:   []string{status.EipAddress.IpAddress}})
-
 	}
 
 	p.syncNodeStatusWithInstance(ssh)

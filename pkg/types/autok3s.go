@@ -74,3 +74,34 @@ type Flag struct {
 	Required  bool
 	EnvVar    string
 }
+
+const (
+	ClusterStatusRunning = "Running"
+	ClusterStatusStopped = "Stopped"
+	ClusterStatusUnknown = "Unknown"
+)
+
+type ClusterInfo struct {
+	Name     string        `json:"name,omitempty"`
+	Region   string        `json:"region,omitempty"`
+	Zone     string        `json:"zone,omitempty"`
+	Provider string        `json:"provider,omitempty"`
+	Status   string        `json:"status,omitempty"`
+	Master   string        `json:"master,omitempty"`
+	Worker   string        `json:"worker,omitempty"`
+	Version  string        `json:"version,omitempty"`
+	Nodes    []ClusterNode `json:"nodes,omitempty"`
+}
+
+type ClusterNode struct {
+	InstanceID              string `json:"instance-id,omitempty"`
+	InstanceStatus          string `json:"instance-status,omitempty"`
+	ExternalIP              string `json:"external-ip,omitempty"`
+	InternalIP              string `json:"internal-ip,omitempty"`
+	Roles                   string `json:"roles,omitempty"`
+	Status                  string `json:"status,omitempty"`
+	HostName                string `json:"hostname,omitempty"`
+	ContainerRuntimeVersion string `json:"containerRuntimeVersion,omitempty"`
+	Version                 string `json:"version,omitempty"`
+	Master                  bool   `json:"-"`
+}

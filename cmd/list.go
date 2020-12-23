@@ -1,22 +1,16 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
-	"strings"
 
+	c "github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
-	"github.com/cnrancher/autok3s/pkg/providers/alibaba"
-	"github.com/cnrancher/autok3s/pkg/providers/native"
-	"github.com/cnrancher/autok3s/pkg/providers/tencent"
 	"github.com/cnrancher/autok3s/pkg/types"
-	typesAli "github.com/cnrancher/autok3s/pkg/types/alibaba"
-	typesNative "github.com/cnrancher/autok3s/pkg/types/native"
-	typesTencent "github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/ghodss/yaml"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -43,13 +37,13 @@ func listCluster() {
 	table.SetHeaderLine(false)
 	table.SetColumnSeparator("")
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetHeader([]string{"Name", "Region", "Provider", "Status", "Masters", "Workers"})
+	table.SetHeader([]string{"Name", "Region", "Provider", "Status", "Masters", "Workers", "Version"})
 
 	v := common.CfgPath
 	if v == "" {
 		logrus.Fatalln("state path is empty")
 	}
-
+	// get all clusters from state
 	clusters, err := utils.ReadYaml(v, common.StateFile)
 	if err != nil {
 		logrus.Fatalf("read state file error, msg: %v\n", err)
@@ -61,127 +55,54 @@ func listCluster() {
 	}
 
 	var (
-		p         providers.Provider
-		filters   []*types.Cluster
-		removeCtx []string
+		p           providers.Provider
+		filters     []*types.ClusterInfo
+		clusterList []*types.Cluster
 	)
 
-	// filter useless clusters & contexts.
+	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
 	for _, r := range result {
-		switch r.Provider {
-		case "alibaba":
-			region := r.Name[strings.LastIndex(r.Name, ".")+1:]
-
-			b, err := yaml.Marshal(r.Options)
-			if err != nil {
-				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
-				removeCtx = append(removeCtx, r.Name)
-				continue
-			}
-
-			option := &typesAli.Options{}
-			if err := yaml.Unmarshal(b, option); err != nil {
-				removeCtx = append(removeCtx, r.Name)
-				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
-				continue
-			}
-			option.Region = region
-
-			p = &alibaba.Alibaba{
-				Metadata: r.Metadata,
-				Options:  *option,
-			}
-		case "tencent":
-			region := r.Name[strings.LastIndex(r.Name, ".")+1:]
-
-			b, err := yaml.Marshal(r.Options)
-			if err != nil {
-				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
-				removeCtx = append(removeCtx, r.Name)
-				continue
-			}
-
-			option := &typesTencent.Options{}
-			if err := yaml.Unmarshal(b, option); err != nil {
-				removeCtx = append(removeCtx, r.Name)
-				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
-				continue
-			}
-			option.Region = region
-
-			p = &tencent.Tencent{
-				Metadata: r.Metadata,
-				Options:  *option,
-			}
-		case "native":
-			b, err := yaml.Marshal(r.Options)
-			if err != nil {
-				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
-				removeCtx = append(removeCtx, r.Name)
-				continue
-			}
-			option := &typesNative.Options{}
-			if err := yaml.Unmarshal(b, option); err != nil {
-				removeCtx = append(removeCtx, r.Name)
-				logrus.Debugf("failed to convert cluster %s options\n", r.Name)
-				continue
-			}
-			p = &native.Native{
-				Metadata: r.Metadata,
-				Options:  *option,
-				Status:   r.Status,
-			}
-		}
-		if p == nil {
+		p, err = c.GetProviderByState(r)
+		if err != nil {
+			logrus.Errorf("failed to convert cluster options for cluster %s", r.Name)
 			continue
 		}
-		isExist, ids, err := p.IsClusterExist()
+		isExist, _, err := p.IsClusterExist()
 		if err != nil {
-			logrus.Fatalln(err)
+			logrus.Errorf("failed to check cluster %s exist, got error: %v ", r.Name, err)
+			continue
+		}
+		if !isExist {
+			logrus.Warnf("cluster %s is not exist, will remove from config", r.Name)
+			// remove kube config if cluster not exist
+			if err := cluster.OverwriteCfg(r.Name); err != nil {
+				logrus.Errorf("failed to remove unexist cluster %s from kube config", r.Name)
+			}
+			continue
 		}
 
-		if isExist && len(ids) > 0 {
-			filters = append(filters, &types.Cluster{
-				Metadata: r.Metadata,
-				Options:  r.Options,
-				Status:   r.Status,
-			})
-		} else {
-			removeCtx = append(removeCtx, r.Name)
-		}
+		filters = append(filters, p.GetCluster(kubeCfg))
+		clusterList = append(clusterList, &types.Cluster{
+			Metadata: r.Metadata,
+			Options:  r.Options,
+			Status:   r.Status,
+		})
 	}
 
 	// remove useless clusters from .state.
-	if err := cluster.FilterState(filters); err != nil {
-		logrus.Fatalf("failed to remove useless clusters\n")
+	if err := cluster.FilterState(clusterList); err != nil {
+		logrus.Errorf("failed to remove useless clusters\n")
 	}
 
-	// remove useless contexts from kubeCfg.
-	for _, r := range removeCtx {
-		if err := cluster.OverwriteCfg(r); err != nil {
-			logrus.Fatalf("failed to remove useless contexts\n")
-		}
-	}
-
-	var (
-		name   string
-		region string
-	)
 	for _, f := range filters {
-		if f.Provider != "native" && strings.Contains(f.Name, ".") {
-			name = f.Name[:strings.LastIndex(f.Name, ".")]
-			region = f.Name[strings.LastIndex(f.Name, ".")+1:]
-		} else {
-			name = f.Name
-			region = "-"
-		}
 		table.Append([]string{
-			name,
-			region,
+			f.Name,
+			f.Region,
 			f.Provider,
-			strings.ToLower(f.Status.Status),
+			f.Status,
 			f.Master,
 			f.Worker,
+			f.Version,
 		})
 	}
 

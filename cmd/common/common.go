@@ -7,8 +7,16 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
+	"github.com/cnrancher/autok3s/pkg/providers/alibaba"
+	"github.com/cnrancher/autok3s/pkg/providers/native"
+	"github.com/cnrancher/autok3s/pkg/providers/tencent"
+	"github.com/cnrancher/autok3s/pkg/types"
+	typesAli "github.com/cnrancher/autok3s/pkg/types/alibaba"
+	typesNative "github.com/cnrancher/autok3s/pkg/types/native"
+	typesTencent "github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
+	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -103,4 +111,45 @@ func MakeSureCredentialFlag(flags *pflag.FlagSet, p providers.Provider) error {
 	})
 
 	return nil
+}
+
+func GetProviderByState(c types.Cluster) (providers.Provider, error) {
+	b, err := yaml.Marshal(c.Options)
+	if err != nil {
+		return nil, err
+	}
+	switch c.Provider {
+	case "alibaba":
+		option := &typesAli.Options{}
+		if err := yaml.Unmarshal(b, option); err != nil {
+			return nil, err
+		}
+		return &alibaba.Alibaba{
+			Metadata: c.Metadata,
+			Options:  *option,
+			Status:   c.Status,
+		}, nil
+	case "tencent":
+		option := &typesTencent.Options{}
+		if err := yaml.Unmarshal(b, option); err != nil {
+			return nil, err
+		}
+		return &tencent.Tencent{
+			Metadata: c.Metadata,
+			Options:  *option,
+			Status:   c.Status,
+		}, nil
+	case "native":
+		option := &typesNative.Options{}
+		if err := yaml.Unmarshal(b, option); err != nil {
+			return nil, err
+		}
+		return &native.Native{
+			Metadata: c.Metadata,
+			Options:  *option,
+			Status:   c.Status,
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid provider name %s", c.Provider)
+	}
 }

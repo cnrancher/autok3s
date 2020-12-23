@@ -7,6 +7,11 @@ import (
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
+	// import custom provider
+	_ "github.com/cnrancher/autok3s/pkg/providers/alibaba"
+	_ "github.com/cnrancher/autok3s/pkg/providers/native"
+	_ "github.com/cnrancher/autok3s/pkg/providers/tencent"
+
 	"github.com/morikuni/aec"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
