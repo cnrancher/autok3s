@@ -104,6 +104,16 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 		ssh.SSHKeyPath = defaultSSHKeyPath
 	}
 
+	exist, _, err := p.IsClusterExist()
+	if err != nil {
+		return err
+	}
+
+	if exist {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` is already exist",
+			p.GetProviderName(), p.Name)
+	}
+
 	defer func() {
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(common.UsageInfo, p.Name)
@@ -144,6 +154,16 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 	}
 	if ssh.Password == "" && ssh.SSHKeyPath == "" {
 		ssh.SSHKeyPath = defaultSSHKeyPath
+	}
+
+	exist, _, err := p.IsClusterExist()
+	if err != nil {
+		return err
+	}
+
+	if !exist {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
+			p.GetProviderName(), p.Name)
 	}
 
 	// assemble node status.
@@ -238,20 +258,12 @@ func (p *Native) SSHK3sNode(ssh *types.SSH) error {
 }
 
 func (p *Native) IsClusterExist() (bool, []string, error) {
-	isExist := len(p.MasterNodes) > 0
-	if isExist {
-		var ids []string
-		for _, masterNode := range p.MasterNodes {
-			ids = append(ids, masterNode.InstanceID)
-		}
-
-		for _, workerNode := range p.WorkerNodes {
-			ids = append(ids, workerNode.InstanceID)
-		}
-
-		return isExist, ids, nil
+	cs, err := cluster.ReadFromState(&types.Cluster{Metadata: p.Metadata, Options: p.Options})
+	if err != nil {
+		return false, []string{}, err
 	}
-	return isExist, []string{}, nil
+
+	return len(cs) > 0, []string{}, nil
 }
 
 func (p *Native) Rollback() error {
