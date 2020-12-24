@@ -480,7 +480,7 @@ func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 	c.Status = cluster.GetClusterStatus(client)
 	c.Version = cluster.GetClusterVersion(client)
 	nodes, err := cluster.DescribeClusterNodes(client)
-	if err != nil {
+	if err != nil || nodes == nil {
 		p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
 		return c
 	}
@@ -499,8 +499,6 @@ func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 		c.Worker = "0"
 		return c
 	}
-	masterCount := 0
-	workerCount := 0
 	for _, instance := range result.Instances.Instance {
 		addresses := instance.VpcAttributes.PrivateIpAddress.IpAddress
 		for index, n := range nodes {
@@ -521,15 +519,13 @@ func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 				break
 			}
 		}
-		master := false
-		for _, tag := range instance.Tags.Tag {
-			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
-				master = true
-				masterCount++
-				break
-			}
-		}
-		if !master {
+	}
+	masterCount := 0
+	workerCount := 0
+	for _, n := range nodes {
+		if n.Master {
+			masterCount++
+		} else {
 			workerCount++
 		}
 	}
