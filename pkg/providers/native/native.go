@@ -12,7 +12,6 @@ import (
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
-	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
@@ -22,8 +21,6 @@ const (
 	k3sVersion       = ""
 	k3sChannel       = "stable"
 	k3sInstallScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
-	master           = "0"
-	worker           = "0"
 	ui               = false
 	repo             = "https://apphub.aliyuncs.com"
 )
@@ -57,8 +54,6 @@ func NewProvider() *Native {
 	return &Native{
 		Metadata: types.Metadata{
 			Provider:      ProviderName,
-			Master:        master,
-			Worker:        worker,
 			UI:            ui,
 			Repo:          repo,
 			K3sVersion:    k3sVersion,
@@ -82,13 +77,16 @@ func (p *Native) GetProviderName() string {
 }
 
 func (p *Native) GenerateClusterName() {
+	// no need to support.
 }
 
 func (p *Native) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
+	// no need to support.
 	return ""
 }
 
 func (p *Native) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
+	// no need to support.
 	return ""
 }
 
@@ -102,16 +100,6 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	}
 	if ssh.Password == "" && ssh.SSHKeyPath == "" {
 		ssh.SSHKeyPath = defaultSSHKeyPath
-	}
-
-	exist, _, err := p.IsClusterExist()
-	if err != nil {
-		return err
-	}
-
-	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` is already exist",
-			p.GetProviderName(), p.Name)
 	}
 
 	defer func() {
@@ -154,16 +142,6 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 	}
 	if ssh.Password == "" && ssh.SSHKeyPath == "" {
 		ssh.SSHKeyPath = defaultSSHKeyPath
-	}
-
-	exist, _, err := p.IsClusterExist()
-	if err != nil {
-		return err
-	}
-
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
 	}
 
 	// assemble node status.
@@ -219,53 +197,6 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 	return nil
 }
 
-func (p *Native) SSHK3sNode(ssh *types.SSH) error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
-
-	// check cluster exist
-	if ok, _, _ := p.IsClusterExist(); !ok {
-		return fmt.Errorf("[%s] cluster %s is not exist", p.GetProviderName(), p.Name)
-	}
-
-	c := &types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-		Status:   p.Status,
-	}
-
-	ids := make(map[string]string, len(p.MasterNodes)+len(p.WorkerNodes))
-	for _, masterNode := range p.MasterNodes {
-		ids[masterNode.InstanceID] = masterNode.PublicIPAddress[0] + " (master)"
-	}
-	for _, workerNode := range p.WorkerNodes {
-		ids[workerNode.InstanceID] = workerNode.PublicIPAddress[0] + " (worker)"
-	}
-
-	ip := strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
-
-	if ip == "" {
-		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
-	}
-	// ssh K3s node.
-	if err := cluster.SSHK3sNode(ip, c, ssh); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed ssh logic\n", p.GetProviderName())
-
-	return nil
-}
-
-func (p *Native) IsClusterExist() (bool, []string, error) {
-	cs, err := cluster.ReadFromState(&types.Cluster{Metadata: p.Metadata, Options: p.Options})
-	if err != nil {
-		return false, []string{}, err
-	}
-
-	return len(cs) > 0, []string{}, nil
-}
-
 func (p *Native) Rollback() error {
 	p.logger.Infof("[%s] executing rollback logic...\n", p.GetProviderName())
 
@@ -295,46 +226,7 @@ func (p *Native) Rollback() error {
 }
 
 func (p *Native) DeleteK3sCluster(f bool) error {
-	isConfirmed := true
-
-	exist, _, err := p.IsClusterExist()
-	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
-	}
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
-	}
-
-	if !f {
-		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.GetProviderName(), p.Name))
-	}
-
-	if isConfirmed {
-		p.logger = common.NewLogger(common.Debug)
-		p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
-
-		warnMsg, uninstallErr := cluster.UninstallK3sCluster(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-			Status:   p.Status,
-		})
-
-		// show warn messages before return error
-		for _, w := range warnMsg {
-			p.logger.Warnf("[%s] %s\n", p.GetProviderName(), w)
-		}
-		if uninstallErr != nil {
-			return uninstallErr
-		}
-
-		err := cluster.OverwriteCfg(p.Name)
-		if err != nil && !f {
-			return fmt.Errorf("[%s] synchronizing .cfg file error, msg: %v", p.GetProviderName(), err)
-		}
-
-		p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
-	}
-	return nil
+	return p.CommandNotSupport("delete")
 }
 
 func (p *Native) StartK3sCluster() error {
@@ -345,46 +237,20 @@ func (p *Native) StopK3sCluster(f bool) error {
 	return p.CommandNotSupport("stop")
 }
 
+func (p *Native) SSHK3sNode(ssh *types.SSH) error {
+	return p.CommandNotSupport("ssh")
+}
+
 func (p *Native) CommandNotSupport(commandName string) error {
 	return fmt.Errorf("[%s] dose not support command: [%s]", p.GetProviderName(), commandName)
 }
 
 func (p *Native) GetCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug)
-	c := &types.ClusterInfo{
-		Name:     p.Name,
-		Region:   "-",
-		Zone:     "-",
-		Provider: p.GetProviderName(),
-	}
-	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
-	if err != nil {
-		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Status = types.ClusterStatusUnknown
-		c.Version = types.ClusterStatusUnknown
-	}
-	c.Status = cluster.GetClusterStatus(client)
-	c.Version = cluster.GetClusterVersion(client)
-	nodes, err := cluster.DescribeClusterNodes(client)
-	if err != nil {
-		p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
-		return c
-	}
-	if nodes != nil {
-		c.Nodes = nodes
-		masterCount := 0
-		workerCount := 0
-		for _, n := range nodes {
-			if n.Master {
-				masterCount++
-			} else {
-				workerCount++
-			}
-		}
-		c.Master = strconv.Itoa(masterCount)
-		c.Worker = strconv.Itoa(workerCount)
-	}
-	return c
+	return &types.ClusterInfo{}
+}
+
+func (p *Native) IsClusterExist() (bool, []string, error) {
+	return false, []string{}, nil
 }
 
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {

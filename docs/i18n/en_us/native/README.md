@@ -29,9 +29,10 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip> \
-    --worker-ips <worker0-ip,worker1-ip>
+    --master-ips <master-ip-1,master-ip-2> \
+    --worker-ips <worker-ip-1,worker-ip-2>
 ```
+
 ### Setup K3s HA Cluster
 HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master-ips` at least 3, e.g.
 
@@ -40,7 +41,7 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip,master1-ip,master2-ip>
+    --master-ips <master-ip-1,master-ip-2,master-ip-3>
 ```
 
 HA(external database) mode need `--master-ips` greater than 1, also need to specify `--datastore`, e.g.
@@ -50,7 +51,7 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip,master1-ip> \
+    --master-ips <master-ip-1,master-ip-2> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
@@ -62,9 +63,9 @@ autok3s -d join \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --worker-ips <worker1-ip,worker2-ip>
+    --ip <existing-k3s-server-public-ip> \
+    --worker-ips <worker-ip-2,worker-ip-3>
 ```
-
 
 Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
 
@@ -73,7 +74,8 @@ autok3s -d join \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master1-ip,master2-ip>
+    --ip <existing-k3s-server-public-ip> \
+    --master-ips <master-ip-2,master-ip-3>
 ```
 
 Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
@@ -82,67 +84,10 @@ Join master nodes to (external database) HA cluster, also need to specify `--dat
 autok3s -d join \
     --provider native \
     --name myk3s \
-    --master-ips <master1-ip,master2-ip> \
+    --master-ips <master-ip-2,master-ip-3> \
+    --ssh-key-path <ssh-key-path> \
+    --ip <existing-k3s-server-public-ip> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
-```
-
-### Delete K3s Cluster
-This command will delete a k3s cluster, e.g myk3s.
-
-```bash
-autok3s delete --provider native --name myk3s
-```
-
-### List K3s Clusters
-This command will list the clusters that you have created on this machine.
-
-```bash
-autok3s list
-```
-
-```bash
-       NAME         REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
-myk3s.cn-hangzhou  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
-myk3s              -            native    Running  1        1        v1.19.5+k3s2
-myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
-```
-
-### Describe k3s cluster
-This command will show detail information of specified cluster, such as instance status, node IP, kubelet version, etc.
-
-```bash
-autok3s describe cluster <clusterName>
-```
-> Note：Cluster name should be `<clusterName>` as list command result, for example: `autok3s describe cluster myk3s`
-
-```bash
-Name: myk3s
-Provider: native
-Region: -
-Zone: -
-Master: 1
-Worker: 1
-Status: Running
-Version: v1.19.5+k3s2
-Nodes:
-  - internal-ip: x.x.x.x
-    external-ip: x.x.x.x
-    instance-status:
-    instance-id:
-    roles: master,etcd
-    status: Ready
-    hostname: xxxxxx
-    container-runtime: containerd://1.4.3-k3s1
-    version: v1.19.5+k3s2
-  - internal-ip: x.x.x.x
-    external-ip: x.x.x.x
-    instance-status:
-    instance-id:
-    roles: <none>
-    status: Ready
-    hostname: xxxxxx
-    container-runtime: containerd://1.4.3-k3s1
-    version: v1.19.5+k3s2
 ```
 
 ### Access K3s Cluster
@@ -160,12 +105,6 @@ autok3s kubectl config get-contexts
 autok3s kubectl config use-context <context>
 ```
 
-### SSH K3s Cluster's Node
-Login to specified k3s cluster node via ssh, e.g myk3s.
-
-```bash
-autok3s ssh --provider native --name myk3s
-```
 ## Advanced Usage
 We integrate some advanced components related to the current provider, e.g. ui.
 
@@ -195,8 +134,8 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip> \
-    --worker-ips <worker0-ip,worker1-ip> \
+    --master-ips <master-ip-1> \
+    --worker-ips <worker-ip-1,worker-ip-2> \
     --registry /etc/autok3s/registries.yaml
 ```
 

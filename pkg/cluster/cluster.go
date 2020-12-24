@@ -40,6 +40,7 @@ var (
 	logger                 *logrus.Logger
 	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s --node-external-ip %s %s' %s sh -"
 	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
+	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s"
 	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
@@ -181,8 +182,11 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	cluster.Status.Status = common.StatusRunning
 
 	// write current cluster to state file.
-	if err := SaveState(cluster); err != nil {
-		return err
+	// native provider no need to operate .state file.
+	if p.GetProviderName() != "native" {
+		if err := SaveState(cluster); err != nil {
+			return err
+		}
 	}
 
 	logger.Infof("[%s] successfully executed init k3s cluster logic\n", cluster.Provider)
@@ -201,15 +205,31 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	k3sMirror := merged.Mirror
 	dockerMirror := merged.DockerMirror
 
-	if merged.Token == "" {
-		return errors.New("[cluster] k3s token can not be empty")
-	}
-
 	if merged.IP == "" {
 		if len(merged.MasterNodes) <= 0 || len(merged.MasterNodes[0].InternalIPAddress) <= 0 {
 			return errors.New("[cluster] master node internal ip address can not be empty")
 		}
 		merged.IP = merged.MasterNodes[0].InternalIPAddress[0]
+	}
+
+	// get cluster token from `--ip` address.
+	if merged.Token == "" {
+		serverNode := types.Node{}
+		if len(added.MasterNodes) > 0 {
+			serverNode = added.MasterNodes[0]
+		} else {
+			serverNode = added.WorkerNodes[0]
+		}
+		serverNode.PublicIPAddress = []string{merged.IP}
+		token, err := execute(&hosts.Host{Node: serverNode}, []string{getTokenCommand})
+		if err != nil {
+			return err
+		}
+		merged.Token = strings.TrimSpace(token)
+	}
+
+	if merged.Token == "" {
+		return errors.New("[cluster] k3s token can not be empty")
 	}
 
 	errChan := make(chan error)
@@ -270,8 +290,11 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	merged.Worker = strconv.Itoa(len(merged.WorkerNodes))
 
 	// write current cluster to state file.
-	if err := SaveState(merged); err != nil {
-		return nil
+	// native provider no need to operate .state file.
+	if p.GetProviderName() != "native" {
+		if err := SaveState(merged); err != nil {
+			return nil
+		}
 	}
 
 	logger.Infof("[%s] successfully executed join k3s node logic\n", merged.Provider)
@@ -426,24 +449,6 @@ func DeleteState(name string, provider string) error {
 	}
 
 	return utils.WriteYaml(r, v, common.StateFile)
-}
-
-func UninstallK3sCluster(cluster *types.Cluster) (warnMsg []string, err error) {
-	for _, workerNode := range cluster.WorkerNodes {
-		_, e := execute(&hosts.Host{Node: workerNode}, []string{workerUninstallCommand})
-		if e != nil {
-			warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on worker node %s: %s", workerNode.InstanceID, e.Error()))
-		}
-	}
-	for _, masterNode := range cluster.MasterNodes {
-		_, e := execute(&hosts.Host{Node: masterNode}, []string{masterUninstallCommand})
-		if e != nil {
-			warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on master node %s: %s", masterNode.InstanceID, e.Error()))
-		}
-	}
-
-	err = DeleteState(cluster.Name, cluster.Provider)
-	return
 }
 
 func UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {

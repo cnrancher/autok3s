@@ -59,7 +59,7 @@ func describeCluster(args []string) {
 	}
 
 	resourceNames := args[1:]
-	allErr := []string{}
+	allErr := make([]string, 0)
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
 	out := new(tabwriter.Writer)
 	out.Init(os.Stdout, 0, 8, 0, '\t', 0)
