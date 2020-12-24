@@ -475,7 +475,7 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 	c.Status = cluster.GetClusterStatus(client)
 	c.Version = cluster.GetClusterVersion(client)
 	nodes, err := cluster.DescribeClusterNodes(client)
-	if err != nil {
+	if err != nil || nodes == nil {
 		p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
 		return c
 	}
@@ -497,8 +497,6 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 	}
 
 	// get instance nodes
-	masterCount := 0
-	workerCount := 0
 	for _, instance := range result.Response.InstanceSet {
 		addresses := tencentCommon.StringValues(instance.PrivateIpAddresses)
 		for index, n := range nodes {
@@ -520,15 +518,13 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 				break
 			}
 		}
-		master := false
-		for _, tagPtr := range instance.Tags {
-			if strings.EqualFold(*tagPtr.Key, "master") && strings.EqualFold(*tagPtr.Value, "true") {
-				master = true
-				masterCount++
-				break
-			}
-		}
-		if !master {
+	}
+	masterCount := 0
+	workerCount := 0
+	for _, n := range nodes {
+		if n.Master {
+			masterCount++
+		} else {
 			workerCount++
 		}
 	}
