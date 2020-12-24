@@ -101,6 +101,51 @@ autok3s -d delete --provider native --name myk3s
 autok3s list
 ```
 
+```bash
+       NAME         REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
+myk3s.cn-hangzhou  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
+myk3s              -            native    Running  1        1        v1.19.5+k3s2
+myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
+```
+
+### 查看集群详细信息
+显示具体的k3s信息，包括实例状态、主机ip、集群版本等信息。
+
+```bash
+autok3s describe cluster <clusterName>
+```
+> 注意：这里`<clusterName>`需要按照list显示的格式输入，例如`autok3s describe cluster myk3s`
+
+```bash
+Name: myk3s
+Provider: native
+Region: -
+Zone: -
+Master: 1
+Worker: 1
+Status: Running
+Version: v1.19.5+k3s2
+Nodes:
+  - internal-ip: x.x.x.x
+    external-ip: x.x.x.x
+    instance-status:
+    instance-id:
+    roles: master,etcd
+    status: Ready
+    hostname: xxxxxx
+    container-runtime: containerd://1.4.3-k3s1
+    version: v1.19.5+k3s2
+  - internal-ip: x.x.x.x
+    external-ip: x.x.x.x
+    instance-status:
+    instance-id:
+    roles: <none>
+    status: Ready
+    hostname: xxxxxx
+    container-runtime: containerd://1.4.3-k3s1
+    version: v1.19.5+k3s2
+```
+
 ### Kubectl
 集群创建完成后, `autok3s` 会自动合并 `kubeconfig` 文件。
 

@@ -155,6 +155,62 @@ This command will list the clusters that you have created on this machine.
 autok3s list
 ```
 
+> Note：Cluster name will show as `<clusterName>.<region>` for tencent provider.
+
+```bash
+       NAME         REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
+myk3s.cn-hangzhou  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
+myk3s              -            native    Running  1        1        v1.19.5+k3s2
+myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
+```
+
+### Describe k3s cluster
+This command will show detail information of specified cluster, such as instance status, node IP, kubelet version, etc.
+
+```bash
+autok3s describe cluster <clusterName>
+```
+> Note：Cluster name should be `<clusterName>.<region>` as list command result, for example: `autok3s describe cluster myk3s.ap-nanjing`
+
+```bash
+Name: myk3s.ap-nanjing
+Provider: tencent
+Region: ap-nanjing
+Zone: ap-nanjing-1
+Master: 2
+Worker: 1
+Status: Running
+Version: v1.19.5+k3s2
+Nodes:
+  - internal-ip: x.x.x.x
+    external-ip: x.x.x.x
+    instance-status: RUNNING
+    instance-id: xxxxx
+    roles: etcd,master
+    status: Ready
+    hostname: xxxx
+    container-runtime: containerd://1.4.3-k3s1
+    version: v1.19.5+k3s2
+  - internal-ip: x.x.x.x
+    external-ip: x.x.x.x
+    instance-status: RUNNING
+    instance-id: xxxxx
+    roles: <none>
+    status: Ready
+    hostname: xxxxxx
+    container-runtime: containerd://1.4.3-k3s1
+    version: v1.19.5+k3s2
+  - internal-ip: x.x.x.x
+    external-ip: x.x.x.x
+    instance-status: RUNNING
+    instance-id: xxxxxx
+    roles: etcd,master
+    status: Ready
+    hostname: xxxxx
+    container-runtime: containerd://1.4.3-k3s1
+    version: v1.19.5+k3s2
+```
+
 ### Access K3s Cluster
 After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 
