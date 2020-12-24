@@ -29,8 +29,8 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip> \
-    --worker-ips <worker0-ip,worker1-ip>
+    --master-ips <master-ip-1,master-ip-2> \
+    --worker-ips <worker-ip-1,worker-ip-2>
 ```
 
 ### 创建高可用K3s集群
@@ -41,7 +41,7 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip,master1-ip,master2-ip>
+    --master-ips <master-ip-1,master-ip-2,master-ip-3>
 ```
 
 高可用模式(外部数据库) 要求 `--master` 至少为1, 并且需要指定参数 `--datastore`。
@@ -51,7 +51,7 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip,master1-ip> \
+    --master-ips <master-ip-1,master-ip-2> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
@@ -63,7 +63,8 @@ autok3s -d join \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --worker-ips <worker0-ip,worker1-ip>
+    --ip <existing-k3s-server-public-ip> \
+    --worker-ips <worker-ip-2,worker-ip-3>
 ```
 
 为高可用集群(嵌入式etcd: k3s版本 >= 1.19.1-k3s1)模式新增节点。
@@ -73,7 +74,8 @@ autok3s -d join \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip,master1-ip>
+    --ip <existing-k3s-server-public-ip> \
+    --master-ips <master-ip-2,master-ip-3>
 ```
 
 为高可用集群(外部数据库)新增节点，需要指定参数`--datastore`。
@@ -83,67 +85,9 @@ autok3s -d join \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip,master1-ip> \
+    --ip <existing-k3s-server-public-ip> \
+    --master-ips <master-ip-2,master-ip-3> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
-```
-
-### 删除K3s集群
-删除一个k3s集群，这里删除的集群为myk3s。
-
-```bash
-autok3s -d delete --provider native --name myk3s
-```
-
-### 查看集群列表
-显示当前主机上管理的所有K3s集群列表。
-
-```bash
-autok3s list
-```
-
-```bash
-       NAME         REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
-myk3s.cn-hangzhou  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
-myk3s              -            native    Running  1        1        v1.19.5+k3s2
-myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
-```
-
-### 查看集群详细信息
-显示具体的k3s信息，包括实例状态、主机ip、集群版本等信息。
-
-```bash
-autok3s describe cluster <clusterName>
-```
-> 注意：这里`<clusterName>`需要按照list显示的格式输入，例如`autok3s describe cluster myk3s`
-
-```bash
-Name: myk3s
-Provider: native
-Region: -
-Zone: -
-Master: 1
-Worker: 1
-Status: Running
-Version: v1.19.5+k3s2
-Nodes:
-  - internal-ip: x.x.x.x
-    external-ip: x.x.x.x
-    instance-status:
-    instance-id:
-    roles: master,etcd
-    status: Ready
-    hostname: xxxxxx
-    container-runtime: containerd://1.4.3-k3s1
-    version: v1.19.5+k3s2
-  - internal-ip: x.x.x.x
-    external-ip: x.x.x.x
-    instance-status:
-    instance-id:
-    roles: <none>
-    status: Ready
-    hostname: xxxxxx
-    container-runtime: containerd://1.4.3-k3s1
-    version: v1.19.5+k3s2
 ```
 
 ### Kubectl
@@ -161,12 +105,6 @@ autok3s kubectl config get-contexts
 autok3s kubectl config use-context <context>
 ```
 
-### SSH
-SSH连接到集群中的某个主机，这里选择的集群为myk3s。
-
-```bash
-autok3s ssh --provider native --name myk3s
-```
 ## 进阶使用
 我们集成了一些与当前provider有关的高级组件，例如 ccm、ui。
 
@@ -196,8 +134,8 @@ autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip> \
-    --worker-ips <worker0-ip,worker1-ip> \
+    --master-ips <master-ip-1> \
+    --worker-ips <worker-ip-1,worker-ip-2> \
     --registry /etc/autok3s/registries.yaml
 ```
 

@@ -204,7 +204,6 @@ autok3s list
 ```bash
        NAME         REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
 myk3s.cn-hangzhou  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
-myk3s              -            native    Running  1        1        v1.19.5+k3s2
 myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 ```
 

@@ -312,7 +312,7 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Name:     "name",
 			P:        &p.Name,
 			V:        p.Name,
-			Usage:    "Cluster name",
+			Usage:    "Set the name of the kubeconfig context",
 			Required: true,
 		},
 		{
@@ -394,7 +394,7 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Name:  "ip",
 			P:     &p.IP,
 			V:     p.IP,
-			Usage: "Specify K3s master/lb ip",
+			Usage: "Public IP of an existing k3s server",
 		},
 		{
 			Name:  "k3s-version",

@@ -1,7 +1,6 @@
 package native
 
 import (
-	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -11,29 +10,17 @@ import (
 
 const createUsageExample = `  autok3s -d create \
     --provider native \
-    --name <cluster name> \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master0-ip> \
-    --worker-ips <worker0-ip,worker1-ip>
+    --master-ips <master-ips> \
+    --worker-ips <worker-ips>
 `
 
 const joinUsageExample = `  autok3s -d join \
     --provider native \
-    --name <cluster name> \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master1-ip> \
-    --worker-ips <worker2-ip,worker3-ip>
-`
-
-const deleteUsageExample = `  autok3s -d delete \
-    --provider native \
-    --name <cluster name>
-`
-
-const sshUsageExample = `  autok3s ssh \
-    --provider native \
-    --name <cluster name> \
-    --ssh-key-path <ssh-key-path>
+    --ip <existing server ip> \
+    --master-ips <master-ips> \
+    --worker-ips <worker-ips>
 `
 
 func (p *Native) GetUsageExample(action string) string {
@@ -42,10 +29,6 @@ func (p *Native) GetUsageExample(action string) string {
 		return createUsageExample
 	case "join":
 		return joinUsageExample
-	case "delete":
-		return deleteUsageExample
-	case "ssh":
-		return sshUsageExample
 	default:
 		return "not support"
 	}
@@ -77,17 +60,7 @@ func (p *Native) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 }
 
 func (p *Native) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
-		},
-	}
-
-	return utils.ConvertFlags(cmd, fs)
+	return cmd.Flags()
 }
 
 func (p *Native) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -99,40 +72,7 @@ func (p *Native) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 }
 
 func (p *Native) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
-		},
-	}
-
-	return utils.ConvertFlags(cmd, fs)
-}
-
-func (p *Native) MergeClusterOptions() error {
-	clusters, err := cluster.ReadFromState(&types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-	})
-	if err != nil {
-		return err
-	}
-
-	var matched *types.Cluster
-	for _, c := range clusters {
-		if c.Provider == p.Provider && c.Name == p.Name {
-			matched = &c
-		}
-	}
-
-	if matched != nil {
-		// join command need merge status & token value.
-		p.overwriteMetadata(matched)
-	}
-	return nil
+	return cmd.Flags()
 }
 
 func (p *Native) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -144,20 +84,24 @@ func (p *Native) BindCredentialFlags() *pflag.FlagSet {
 	return nfs
 }
 
+func (p *Native) MergeClusterOptions() error {
+	return nil
+}
+
 func (p *Native) sharedFlags() []types.Flag {
 	fs := []types.Flag{
 		{
 			Name:     "name",
 			P:        &p.Name,
 			V:        p.Name,
-			Usage:    "Cluster name",
+			Usage:    "Set the name of the kubeconfig context",
 			Required: true,
 		},
 		{
 			Name:  "ip",
 			P:     &p.IP,
 			V:     p.IP,
-			Usage: "Specify K3s master/lb ip",
+			Usage: "Public IP of an existing k3s server",
 		},
 		{
 			Name:  "k3s-version",
@@ -211,45 +155,15 @@ func (p *Native) sharedFlags() []types.Flag {
 			Name:  "master-ips",
 			P:     &p.MasterIps,
 			V:     p.MasterIps,
-			Usage: "Ips of master nodes",
+			Usage: "Public IPs of master nodes on which to install agent, multiple IPs are separated by commas",
 		},
 		{
 			Name:  "worker-ips",
 			P:     &p.WorkerIps,
 			V:     p.WorkerIps,
-			Usage: "Ips of worker nodes",
+			Usage: "Public IPs of worker nodes on which to install agent, multiple IPs are separated by commas",
 		},
 	}
 
 	return fs
-}
-
-func (p *Native) overwriteMetadata(matched *types.Cluster) {
-	// doesn't need to be overwrite.
-	p.Status = matched.Status
-	p.Token = matched.Token
-	p.IP = matched.IP
-	p.DataStore = matched.DataStore
-	p.Mirror = matched.Mirror
-	p.DockerMirror = matched.DockerMirror
-	p.InstallScript = matched.InstallScript
-	// needed to be overwrite.
-	if p.K3sChannel == "" {
-		p.K3sChannel = matched.K3sChannel
-	}
-	if p.K3sVersion == "" {
-		p.K3sVersion = matched.K3sVersion
-	}
-	if p.InstallScript == "" {
-		p.InstallScript = matched.InstallScript
-	}
-	if p.Registry == "" {
-		p.Registry = matched.Registry
-	}
-	if p.MasterExtraArgs == "" {
-		p.MasterExtraArgs = matched.MasterExtraArgs
-	}
-	if p.WorkerExtraArgs == "" {
-		p.WorkerExtraArgs = matched.WorkerExtraArgs
-	}
 }
