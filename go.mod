@@ -40,6 +40,7 @@ require (
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/gogo/googleapis v1.4.0 // indirect
+	github.com/gorilla/mux v1.7.4
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f // indirect
 	github.com/morikuni/aec v1.0.0
@@ -47,6 +48,7 @@ require (
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0 // indirect
+	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
 	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0

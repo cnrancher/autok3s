@@ -109,6 +109,10 @@ github.com/google/gofuzz
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/openapiv2
+# github.com/gorilla/mux v1.7.4
+github.com/gorilla/mux
+# github.com/gorilla/websocket v1.4.1
+github.com/gorilla/websocket
 # github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7
 github.com/gregjones/httpcache
 github.com/gregjones/httpcache/diskcache
@@ -224,6 +228,20 @@ github.com/pelletier/go-toml
 github.com/peterbourgon/diskv
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
+# github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
+github.com/rancher/apiserver
+github.com/rancher/apiserver/pkg/apierror
+github.com/rancher/apiserver/pkg/builtin
+github.com/rancher/apiserver/pkg/handlers
+github.com/rancher/apiserver/pkg/parse
+github.com/rancher/apiserver/pkg/server
+github.com/rancher/apiserver/pkg/store/apiroot
+github.com/rancher/apiserver/pkg/store/empty
+github.com/rancher/apiserver/pkg/store/schema
+github.com/rancher/apiserver/pkg/subscribe
+github.com/rancher/apiserver/pkg/types
+github.com/rancher/apiserver/pkg/urlbuilder
+github.com/rancher/apiserver/pkg/writer
 # github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
 github.com/rancher/k3s/pkg/agent/templates
 github.com/rancher/k3s/pkg/daemons/config
@@ -252,7 +270,11 @@ github.com/rancher/wrangler/pkg/merr
 github.com/rancher/wrangler/pkg/name
 github.com/rancher/wrangler/pkg/objectset
 github.com/rancher/wrangler/pkg/patch
+github.com/rancher/wrangler/pkg/schemas
+github.com/rancher/wrangler/pkg/schemas/definition
+github.com/rancher/wrangler/pkg/schemas/validation
 github.com/rancher/wrangler/pkg/schemes
+github.com/rancher/wrangler/pkg/slice
 # github.com/rancher/wrangler-api v0.6.0
 github.com/rancher/wrangler-api/pkg/generated/controllers/core
 github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1
