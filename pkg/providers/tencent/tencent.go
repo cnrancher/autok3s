@@ -40,11 +40,10 @@ const (
 	imageID                  = "img-pi0ii46r" /* Ubuntu Server 18.04.1 LTS x64 */
 	instanceType             = "SA1.MEDIUM4"  /* CPU:2 Memory:4 */
 	instanceChargeType       = "POSTPAID_BY_HOUR"
-	internetMaxBandwidthOut  = "50"
+	internetMaxBandwidthOut  = "5"
 	internetChargeType       = "TRAFFIC_POSTPAID_BY_HOUR"
 	diskCategory             = "CLOUD_SSD"
 	diskSize                 = "60"
-	maxPageSize              = 100
 	master                   = "0"
 	worker                   = "0"
 	ui                       = false
@@ -430,16 +429,17 @@ func (p *Tencent) IsClusterExist() (bool, []string, error) {
 			return false, ids, err
 		}
 	}
-	response, err := p.describeInstances()
+	instanceList, err := p.describeInstances()
 	if err != nil {
-		return false, ids, nil
+		return false, ids, err
 	}
-	if len(response.Response.InstanceSet) > 0 {
-		for _, resource := range response.Response.InstanceSet {
+	if len(instanceList) > 0 {
+		for _, resource := range instanceList {
 			ids = append(ids, *resource.InstanceId)
 		}
+		return true, ids, nil
 	}
-	return true, ids, err
+	return false, ids, nil
 }
 
 func (p *Tencent) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
@@ -488,8 +488,8 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 			return c
 		}
 	}
-	result, err := p.describeInstances()
-	if err != nil || result == nil || result.Response == nil || result.Response.InstanceSet == nil {
+	instanceList, err := p.describeInstances()
+	if err != nil {
 		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
 		c.Master = "0"
 		c.Worker = "0"
@@ -497,7 +497,7 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 	}
 
 	// get instance nodes
-	for _, instance := range result.Response.InstanceSet {
+	for _, instance := range instanceList {
 		addresses := tencentCommon.StringValues(instance.PrivateIpAddresses)
 		for index, n := range nodes {
 			isCurrentInstance := false
@@ -807,7 +807,7 @@ func (p *Tencent) createCheck() error {
 			p.GetProviderName(), p.Name)
 	}
 
-	if p.Region != defaultRegion && p.Zone == "" && p.VpcID == "" {
+	if p.Region != defaultRegion && p.Zone == defaultZone && p.VpcID == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set `--zone` in specified region %s to create default vpc or set exist `--vpc xxx --subnet xxx` in specified region", p.GetProviderName(), p.Region)
 	}
 
@@ -855,14 +855,15 @@ func (p *Tencent) joinCheck() error {
 }
 
 func (p *Tencent) startAndStopCheck(aimStatus string) error {
-	response, err := p.describeInstances()
+	instanceList, err := p.describeInstances()
 	if err != nil {
-		return err
+		return fmt.Errorf("[%s] failed to list instance for cluster %s, region: %s, zone: %s: %v",
+			p.GetProviderName(), p.Name, p.Region, p.Zone, err)
 	}
-	if len(response.Response.InstanceSet) > 0 {
+	if len(instanceList) > 0 {
 		masterCnt := 0
 		unexpectedStatusCnt := 0
-		for _, instance := range response.Response.InstanceSet {
+		for _, instance := range instanceList {
 			instanceID := *instance.InstanceId
 			instanceState := *instance.InstanceState
 			if instanceState != aimStatus {
@@ -902,19 +903,20 @@ func (p *Tencent) startAndStopCheck(aimStatus string) error {
 			return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
 		}
 		p.Master = strconv.Itoa(masterCnt)
-		p.Worker = strconv.Itoa(len(response.Response.InstanceSet) - masterCnt)
+		p.Worker = strconv.Itoa(len(instanceList) - masterCnt)
 		return nil
 	}
 	return fmt.Errorf("[%s] unable to confirm the current status of instance(s)", p.GetProviderName())
 }
 
 func (p *Tencent) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, publicKey string) (*types.Cluster, error) {
-	response, err := p.describeInstances()
+	instanceList, err := p.describeInstances()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[%s] failed to list instance for cluster %s, region: %s, zone: %s: %v",
+			p.GetProviderName(), p.Name, p.Region, p.Zone, err)
 	}
 
-	for _, status := range response.Response.InstanceSet {
+	for _, status := range instanceList {
 		InstanceID := *status.InstanceId
 		var eip []string
 		if p.PublicIPAssignedEIP {
@@ -1036,26 +1038,41 @@ func (p *Tencent) runInstances(num int, master bool, password string) error {
 	return nil
 }
 
-func (p *Tencent) describeInstances() (*cvm.DescribeInstancesResponse, error) {
+func (p *Tencent) describeInstances() ([]*cvm.Instance, error) {
 	request := cvm.NewDescribeInstancesRequest()
 
-	request.Limit = tencentCommon.Int64Ptr(maxPageSize)
+	limit := int64(20)
+	request.Limit = tencentCommon.Int64Ptr(limit)
 	// If there are multiple Filters, between the Filters is a logical AND (AND)
 	// If there are multiple Values in the same Filter, between Values under the same Filter is a logical OR (OR)
 	request.Filters = []*cvm.Filter{
 		{Name: tencentCommon.StringPtr("tag:autok3s"), Values: tencentCommon.StringPtrs([]string{"true"})},
 		{Name: tencentCommon.StringPtr("tag:cluster"), Values: tencentCommon.StringPtrs([]string{common.TagClusterPrefix + p.Name})},
 	}
-	response, err := p.c.DescribeInstances(request)
-	if err == nil && len(response.Response.InstanceSet) == 0 {
-		return nil, fmt.Errorf("[%s] calling describeInstances error. region: %s, zone: %s, "+"cluster: %s",
-			p.GetProviderName(), p.Region, p.Zone, p.Name)
-	}
-	if err != nil {
-		return nil, err
+	offset := int64(0)
+	index := int64(0)
+	instanceList := make([]*cvm.Instance, 0)
+	for {
+		response, err := p.c.DescribeInstances(request)
+		if err != nil {
+			return nil, err
+		}
+		if response.Response == nil || response.Response.InstanceSet == nil || len(response.Response.InstanceSet) == 0 {
+			break
+		}
+		total := *response.Response.TotalCount
+		for _, ins := range response.Response.InstanceSet {
+			instanceList = append(instanceList, ins)
+		}
+		offset = limit*index + limit
+		index = index + 1
+		if offset >= total {
+			break
+		}
+		request.Offset = tencentCommon.Int64Ptr(offset)
 	}
 
-	return response, nil
+	return instanceList, nil
 }
 
 func (p *Tencent) terminateInstances(instanceIds []string) error {
@@ -1774,16 +1791,13 @@ func (p *Tencent) operateCluster(expectStatus, targetStatus string, f bool, fn f
 }
 
 func (p *Tencent) syncClusterInstance(ssh *types.SSH) ([]*cvm.Instance, error) {
-	response, err := p.describeInstances()
+	instanceList, err := p.describeInstances()
 	if err != nil {
-		return nil, err
-	}
-	if len(response.Response.InstanceSet) < 1 {
-		return nil, fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
+		return nil, fmt.Errorf("[%s] failed to list instance for cluster %s, region: %s, zone: %s: %v",
+			p.GetProviderName(), p.Name, p.Region, p.Zone, err)
 	}
 
-	for _, instance := range response.Response.InstanceSet {
+	for _, instance := range instanceList {
 		instanceID := *instance.InstanceId
 		instanceState := *instance.InstanceState
 		master := false
@@ -1816,7 +1830,7 @@ func (p *Tencent) syncClusterInstance(ssh *types.SSH) ([]*cvm.Instance, error) {
 	}
 	p.syncNodeStatusWithInstance(ssh)
 
-	return response.Response.InstanceSet, nil
+	return instanceList, nil
 }
 
 func (p *Tencent) getSubnetCidr() (string, error) {

@@ -36,7 +36,7 @@ const (
 	accessKeySecret          = "access-secret"
 	imageID                  = "ubuntu_18_04_x64_20G_alibase_20200618.vhd"
 	instanceType             = "ecs.c6.large"
-	internetMaxBandwidthOut  = "50"
+	internetMaxBandwidthOut  = "5"
 	diskCategory             = "cloud_ssd"
 	diskSize                 = "40"
 	master                   = "0"
@@ -437,12 +437,15 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 
 	response, err := p.c.ListTagResources(request)
-	if err != nil || len(response.TagResources.TagResource) > 0 {
+	if err != nil || !response.IsSuccess() {
+		return false, nil, err
+	}
+	if len(response.TagResources.TagResource) > 0 {
 		for _, resource := range response.TagResources.TagResource {
 			ids = append(ids, resource.ResourceId)
 		}
 		// ecs will return multiple instance ids based on the value of tag key.n by n, so duplicate items need to be removed.
-		return true, utils.UniqueArray(ids), err
+		return true, utils.UniqueArray(ids), nil
 	}
 	return false, nil, nil
 }
@@ -492,14 +495,14 @@ func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 			return c
 		}
 	}
-	result, err := p.describeInstances()
-	if err != nil || result == nil {
+	instanceList, err := p.describeInstances()
+	if err != nil {
 		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
 		c.Master = "0"
 		c.Worker = "0"
 		return c
 	}
-	for _, instance := range result.Instances.Instance {
+	for _, instance := range instanceList {
 		addresses := instance.VpcAttributes.PrivateIpAddress.IpAddress
 		for index, n := range nodes {
 			isCurrentInstance := false
@@ -572,6 +575,15 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 	request.SecurityGroupId = p.SecurityGroup
 	request.Amount = requests.NewInteger(num)
 	request.UniqueSuffix = requests.NewBoolean(false)
+	// TODO need to check `--eip` value
+	//bandwidth, err := strconv.Atoi(p.InternetMaxBandwidthOut)
+	//if err != nil {
+	//	p.logger.Warnf("[%s] `--internet-max-bandwidth-out` value %s is invalid, "+
+	//		"need to be integer, will use default value to create instance", p.GetProviderName(), p.InternetMaxBandwidthOut)
+	//	bandwidth = 5
+	//}
+	//request.InternetMaxBandwidthOut = requests.NewInteger(bandwidth)
+
 	if p.Zone != "" {
 		request.ZoneId = p.Zone
 	}
@@ -730,12 +742,12 @@ func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 }
 
 func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, publicKey string) (*types.Cluster, error) {
-	response, err := p.describeInstances()
+	instanceList, err := p.describeInstances()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, status := range response.Instances.Instance {
+	for _, status := range instanceList {
 		if value, ok := p.m.Load(status.InstanceId); ok {
 			v := value.(types.Node)
 			// add only nodes that run the current command.
@@ -766,7 +778,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			Master:            master,
 			RollBack:          false,
 			InstanceID:        status.InstanceId,
-			InstanceStatus:    alibaba.StatusRunning,
+			InstanceStatus:    status.Status,
 			InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
 			EipAllocationIds:  []string{status.EipAddress.AllocationId},
 			PublicIPAddress:   []string{status.EipAddress.IpAddress}})
@@ -781,24 +793,45 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 	}, nil
 }
 
-func (p *Alibaba) describeInstances() (*ecs.DescribeInstancesResponse, error) {
+func (p *Alibaba) describeInstances() ([]ecs.Instance, error) {
 	request := ecs.CreateDescribeInstancesRequest()
 	request.Scheme = "https"
+	pageSize := 20
+	request.PageSize = requests.NewInteger(pageSize)
 	request.Tag = &[]ecs.DescribeInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
 	if p.Zone != "" {
 		request.ZoneId = p.Zone
 	}
+	instanceList := make([]ecs.Instance, 0)
+	totalPage := 0
+	for {
+		response, err := p.c.DescribeInstances(request)
+		if err != nil || !response.IsSuccess() {
+			return nil, fmt.Errorf("[%s] failed to get all instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		}
+		total := response.TotalCount
+		pageNum := response.PageNumber
+		if totalPage == 0 {
+			totalPage = total / pageSize
+			if total%pageSize != 0 {
+				totalPage = totalPage + 1
+			}
+		}
+		for _, ins := range response.Instances.Instance {
+			instanceList = append(instanceList, ins)
+		}
+		if (pageNum + 1) > totalPage {
+			break
+		}
+		request.PageNumber = requests.NewInteger(pageNum + 1)
+	}
 
-	response, err := p.c.DescribeInstances(request)
-	if err == nil && len(response.Instances.Instance) == 0 {
+	if len(instanceList) == 0 {
 		return nil, fmt.Errorf("[%s] there's no instance for cluster %s at region: %s, zone: %s",
 			p.GetProviderName(), p.Name, p.Region, p.Zone)
 	}
-	if err != nil {
-		return nil, err
-	}
 
-	return response, nil
+	return instanceList, nil
 }
 
 func (p *Alibaba) getVSwitchCIDR() (string, string, error) {
@@ -862,7 +895,7 @@ func (p *Alibaba) createCheck() error {
 			p.GetProviderName(), p.Name)
 	}
 
-	if p.Region != defaultRegion && p.Zone == "" && p.VSwitch == "" {
+	if p.Region != defaultRegion && p.Zone == defaultZoneID && p.VSwitch == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set `--zone` in specified region %s to create default vswitch or set exist `--vswitch` in specified region", p.GetProviderName(), p.Region)
 	}
 
@@ -905,62 +938,76 @@ func (p *Alibaba) joinCheck() error {
 }
 
 func (p *Alibaba) startAndStopCheck(aimStatus string) error {
-	response, err := p.describeInstances()
+	instanceList, err := p.describeInstances()
 	if err != nil {
 		return err
 	}
-	if response.IsSuccess() && len(response.Instances.Instance) > 0 {
-		masterCnt := 0
-		unexpectedStatusCnt := 0
-		for _, instance := range response.Instances.Instance {
-			if instance.Status != aimStatus {
-				unexpectedStatusCnt++
-				p.logger.Warnf("[%s] instance [%s] status is %s, but it is expected to be %s\n",
-					p.GetProviderName(), instance.InstanceId, instance.Status, aimStatus)
+	masterCnt := 0
+	unexpectedStatusCnt := 0
+	for _, instance := range instanceList {
+		if instance.Status != aimStatus {
+			unexpectedStatusCnt++
+			p.logger.Warnf("[%s] instance [%s] status is %s, but it is expected to be %s\n",
+				p.GetProviderName(), instance.InstanceId, instance.Status, aimStatus)
+		}
+		master := false
+		for _, tag := range instance.Tags.Tag {
+			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
+				master = true
+				masterCnt++
+				break
 			}
-			master := false
-			for _, tag := range instance.Tags.Tag {
-				if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
-					master = true
-					masterCnt++
-					break
-				}
-			}
+		}
 
-			p.m.Store(instance.InstanceId, types.Node{
-				Master:            master,
-				InstanceID:        instance.InstanceId,
-				InstanceStatus:    instance.Status,
-				InternalIPAddress: instance.VpcAttributes.PrivateIpAddress.IpAddress,
-				PublicIPAddress:   []string{instance.EipAddress.IpAddress},
-				EipAllocationIds:  []string{instance.EipAddress.AllocationId},
-			})
-		}
-		if unexpectedStatusCnt > 0 {
-			return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
-		}
-		p.Master = strconv.Itoa(masterCnt)
-		p.Worker = strconv.Itoa(len(response.Instances.Instance) - masterCnt)
-		return nil
+		p.m.Store(instance.InstanceId, types.Node{
+			Master:            master,
+			InstanceID:        instance.InstanceId,
+			InstanceStatus:    instance.Status,
+			InternalIPAddress: instance.VpcAttributes.PrivateIpAddress.IpAddress,
+			PublicIPAddress:   []string{instance.EipAddress.IpAddress},
+			EipAllocationIds:  []string{instance.EipAddress.AllocationId},
+		})
 	}
-	return fmt.Errorf("[%s] unable to confirm the current status of instance(s)", p.GetProviderName())
+	if unexpectedStatusCnt > 0 {
+		return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
+	}
+	p.Master = strconv.Itoa(masterCnt)
+	p.Worker = strconv.Itoa(len(instanceList) - masterCnt)
+	return nil
 }
 
-func (p *Alibaba) describeEipAddresses(allocationIds []string) (*vpc.DescribeEipAddressesResponse, error) {
-	if allocationIds == nil {
-		return nil, fmt.Errorf("[%s] allocationID can not be empty", p.GetProviderName())
-	}
+func (p *Alibaba) describeEipAddresses(allocationIds []string) ([]vpc.EipAddress, error) {
 	request := vpc.CreateDescribeEipAddressesRequest()
 	request.Scheme = "https"
 
-	request.PageSize = requests.NewInteger(50)
-	request.AllocationId = strings.Join(allocationIds, ",")
-
-	response, err := p.v.DescribeEipAddresses(request)
-	if err != nil {
-		return nil, err
+	pageSize := 20
+	request.PageSize = requests.NewInteger(pageSize)
+	index := 0
+	count := len(allocationIds) / pageSize
+	if len(allocationIds)%pageSize != 0 {
+		count = count + 1
 	}
-	return response, nil
+	var pagedAllocationIds []string
+	eipList := make([]vpc.EipAddress, 0)
+	for i := 0; i < count; i++ {
+		if (index + pageSize) > len(allocationIds) {
+			pagedAllocationIds = allocationIds[index:]
+		} else {
+			pagedAllocationIds = allocationIds[index : index+pageSize]
+		}
+		index = index + pageSize
+		request.AllocationId = strings.Join(pagedAllocationIds, ",")
+
+		response, err := p.v.DescribeEipAddresses(request)
+		if err != nil || !response.IsSuccess() || len(response.EipAddresses.EipAddress) <= 0 {
+			return nil, err
+		}
+		for _, eip := range response.EipAddresses.EipAddress {
+			eipList = append(eipList, eip)
+		}
+	}
+
+	return eipList, nil
 }
 
 func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
@@ -1021,6 +1068,7 @@ func (p *Alibaba) unassociateEipAddress(allocationID string) error {
 func (p *Alibaba) allocateEipAddress() (*vpc.AllocateEipAddressResponse, error) {
 	request := vpc.CreateAllocateEipAddressRequest()
 	request.Scheme = "https"
+	request.Bandwidth = p.InternetMaxBandwidthOut
 
 	response, err := p.v.AllocateEipAddress(request)
 	if err != nil {
@@ -1124,19 +1172,19 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 }
 
 func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
-	if allocationIds == nil {
+	if allocationIds == nil || len(allocationIds) == 0 {
 		return fmt.Errorf("[%s] allocationIds can not be empty", p.GetProviderName())
 	}
 
 	p.logger.Debugf("[%s] waiting eip(s) to be in `%s` status...\n", p.GetProviderName(), aimStatus)
 
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
-		response, err := p.describeEipAddresses(allocationIds)
-		if err != nil || !response.IsSuccess() || len(response.EipAddresses.EipAddress) <= 0 {
-			return false, nil
+		eipList, err := p.describeEipAddresses(allocationIds)
+		if err != nil || eipList == nil {
+			return false, err
 		}
 
-		for _, eip := range response.EipAddresses.EipAddress {
+		for _, eip := range eipList {
 			p.logger.Debugf("[%s] eip(s) [%s: %s] is in `%s` status\n", p.GetProviderName(), eip.AllocationId, eip.IpAddress, eip.Status)
 
 			if eip.Status != aimStatus {
@@ -1198,18 +1246,18 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 		err error
 	)
 
-	// create key pair
-	pk, err := p.createKeyPair(ssh)
-	if err != nil {
-		return nil, fmt.Errorf("[%s] failed to create key pair: %v", p.GetProviderName(), err)
-	}
-
 	if err = p.generateClientSDK(); err != nil {
 		return nil, err
 	}
 
 	if err = fn(); err != nil {
 		return nil, err
+	}
+
+	// create key pair
+	pk, err := p.createKeyPair(ssh)
+	if err != nil {
+		return nil, fmt.Errorf("[%s] failed to create key pair: %v", p.GetProviderName(), err)
 	}
 
 	masterNum, _ := strconv.Atoi(p.Master)
@@ -1357,16 +1405,12 @@ func (p *Alibaba) assignEIPToInstance(num int, master bool) ([]string, error) {
 }
 
 func (p *Alibaba) syncClusterInstance(ssh *types.SSH) ([]ecs.Instance, error) {
-	response, err := p.describeInstances()
+	instanceList, err := p.describeInstances()
 	if err != nil {
 		return nil, err
 	}
-	if len(response.Instances.Instance) < 1 {
-		return nil, fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
-	}
 
-	for _, instance := range response.Instances.Instance {
+	for _, instance := range instanceList {
 		// sync all instance that belongs to current clusters
 		master := false
 		for _, tag := range instance.Tags.Tag {
@@ -1389,7 +1433,7 @@ func (p *Alibaba) syncClusterInstance(ssh *types.SSH) ([]ecs.Instance, error) {
 
 	p.syncNodeStatusWithInstance(ssh)
 
-	return response.Instances.Instance, nil
+	return instanceList, nil
 }
 
 func (p *Alibaba) createKeyPair(ssh *types.SSH) (string, error) {
