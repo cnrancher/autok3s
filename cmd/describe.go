@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	c "github.com/cnrancher/autok3s/cmd/common"
@@ -20,12 +21,23 @@ var (
 		Short:   "Show details of a specific resource",
 		Example: `  autok3s describe cluster <cluster name>`,
 	}
+	desProvider = ""
+	region      = ""
 )
+
+func init() {
+	describeCmd.Flags().StringVarP(&desProvider, "provider", "p", desProvider, "Provider is a module which provides an interface for managing cloud resources")
+	describeCmd.Flags().StringVarP(&region, "region", "r", region, "the physical locations of your cluster instance")
+}
 
 func DescribeCommand() *cobra.Command {
 	describeCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 || len(args) < 2 {
 			logrus.Fatalln("you must specify the type of resource to describe, e.g. autok3s describe cluster <cluster name>")
+		}
+		resource := args[0]
+		if resource != "cluster" {
+			logrus.Fatalf("autok3s doesn't support resource type %s", resource)
 		}
 		return nil
 	}
@@ -38,10 +50,6 @@ func DescribeCommand() *cobra.Command {
 func describeCluster(args []string) {
 	if len(args) < 2 {
 		logrus.Fatalln("you must specify the type of resource to describe, e.g. autok3s describe cluster <cluster name>")
-	}
-	resource := args[0]
-	if resource != "cluster" {
-		logrus.Fatalf("autok3s doesn't support resource type %s", resource)
 	}
 	v := common.CfgPath
 	if v == "" {
@@ -65,10 +73,10 @@ func describeCluster(args []string) {
 	out.Init(os.Stdout, 0, 8, 0, '\t', 0)
 
 	for _, name := range resourceNames {
-		notExist := true
+		exist := false
 		for _, r := range result {
-			if r.Name == name {
-				notExist = false
+			exist = isSpecifiedCluster(r.Name, name, region, desProvider)
+			if exist {
 				p, err := c.GetProviderByState(r)
 				if err != nil {
 					logrus.Errorf("failed to convert cluster options for cluster %s", r.Name)
@@ -83,8 +91,8 @@ func describeCluster(args []string) {
 					allErr = append(allErr, fmt.Sprintf("cluster %s is not exist", name))
 					continue
 				}
-				info := p.GetCluster(kubeCfg)
-				fmt.Fprintf(out, "Name: %s\n", info.Name)
+				info := p.DescribeCluster(kubeCfg)
+				fmt.Fprintf(out, "Name: %s\n", name)
 				fmt.Fprintf(out, "Provider: %s\n", info.Provider)
 				fmt.Fprintf(out, "Region: %s\n", info.Region)
 				fmt.Fprintf(out, "Zone: %s\n", info.Zone)
@@ -104,9 +112,10 @@ func describeCluster(args []string) {
 					fmt.Fprintf(out, "    container-runtime: %s\n", node.ContainerRuntimeVersion)
 					fmt.Fprintf(out, "    version: %s\n", node.Version)
 				}
+				break
 			}
 		}
-		if notExist {
+		if !exist {
 			allErr = append(allErr, fmt.Sprintf("cluster %s is not exist", name))
 		}
 	}
@@ -114,4 +123,22 @@ func describeCluster(args []string) {
 		fmt.Fprintf(out, "%s\n", e)
 	}
 	out.Flush()
+}
+
+func isSpecifiedCluster(context, name, region, provider string) bool {
+	// context format is <name>.<region>.<provider>
+	contextArray := strings.Split(context, ".")
+	if region == "" && provider == "" {
+		return contextArray[0] == name
+	}
+	if region != "" && provider != "" {
+		return context == fmt.Sprintf("%s.%s.%s", name, region, provider)
+	}
+	if region != "" && len(contextArray) == 3 {
+		return contextArray[0] == name && contextArray[1] == region
+	}
+	if provider != "" && len(contextArray) == 3 {
+		return contextArray[0] == name && contextArray[2] == provider
+	}
+	return false
 }

@@ -63,6 +63,7 @@ type Provider interface {
 	// Rollback when error occurs.
 	Rollback() error
 	MergeClusterOptions() error
+	DescribeCluster(kubecfg string) *types.ClusterInfo
 	GetCluster(kubecfg string) *types.ClusterInfo
 }
 

@@ -125,7 +125,7 @@ func (p *Tencent) GetProviderName() string {
 }
 
 func (p *Tencent) GenerateClusterName() {
-	p.Name = fmt.Sprintf("%s.%s", p.Name, p.Region)
+	p.Name = fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.GetProviderName())
 }
 
 func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
@@ -473,11 +473,10 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 		return c
 	}
 	c.Status = cluster.GetClusterStatus(client)
-	c.Version = cluster.GetClusterVersion(client)
-	nodes, err := cluster.DescribeClusterNodes(client)
-	if err != nil || nodes == nil {
-		p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
-		return c
+	if c.Status == types.ClusterStatusRunning {
+		c.Version = cluster.GetClusterVersion(client)
+	} else {
+		c.Version = types.ClusterStatusUnknown
 	}
 
 	if p.c == nil {
@@ -496,41 +495,100 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 		return c
 	}
 
-	// get instance nodes
-	for _, instance := range instanceList {
-		addresses := tencentCommon.StringValues(instance.PrivateIpAddresses)
-		for index, n := range nodes {
-			isCurrentInstance := false
-			for _, address := range addresses {
-				if address == n.InternalIP {
-					isCurrentInstance = true
-					break
-				}
-			}
-			if isCurrentInstance {
-				n.InstanceID = *instance.InstanceId
-				n.InstanceStatus = *instance.InstanceState
-				if n.ExternalIP == "" {
-					publicAddresses := tencentCommon.StringValues(instance.PublicIpAddresses)
-					n.ExternalIP = publicAddresses[0]
-				}
-				nodes[index] = n
+	masterCount := 0
+	workerCount := 0
+	for _, ins := range instanceList {
+		isMaster := false
+		for _, t := range ins.Tags {
+			if *t.Key == "master" && *t.Value == "true" {
+				isMaster = true
+				masterCount++
 				break
 			}
 		}
-	}
-	masterCount := 0
-	workerCount := 0
-	for _, n := range nodes {
-		if n.Master {
-			masterCount++
-		} else {
+		if !isMaster {
 			workerCount++
 		}
 	}
 	c.Master = strconv.Itoa(masterCount)
 	c.Worker = strconv.Itoa(workerCount)
-	c.Nodes = nodes
+
+	return c
+}
+
+func (p *Tencent) DescribeCluster(kubecfg string) *types.ClusterInfo {
+	p.logger = common.NewLogger(common.Debug)
+	c := &types.ClusterInfo{
+		Name:     p.Name,
+		Region:   p.Region,
+		Zone:     p.Zone,
+		Provider: p.GetProviderName(),
+	}
+	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
+	if err != nil {
+		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		c.Status = types.ClusterStatusUnknown
+		c.Version = types.ClusterStatusUnknown
+		return c
+	}
+	c.Status = cluster.GetClusterStatus(client)
+	if p.c == nil {
+		if err := p.generateClientSDK(); err != nil {
+			p.logger.Errorf("[%s] failed to generate tencent client sdk for cluster %s: %v", p.GetProviderName(), p.Name, err)
+			c.Master = "0"
+			c.Worker = "0"
+			return c
+		}
+	}
+	instanceList, err := p.describeInstances()
+	if err != nil {
+		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		c.Master = "0"
+		c.Worker = "0"
+		return c
+	}
+	instanceNodes := make([]types.ClusterNode, 0)
+	masterCount := 0
+	workerCount := 0
+	for _, instance := range instanceList {
+		n := types.ClusterNode{
+			InstanceID:              *instance.InstanceId,
+			InstanceStatus:          *instance.InstanceState,
+			InternalIP:              tencentCommon.StringValues(instance.PrivateIpAddresses),
+			ExternalIP:              tencentCommon.StringValues(instance.PublicIpAddresses),
+			Status:                  types.ClusterStatusUnknown,
+			ContainerRuntimeVersion: types.ClusterStatusUnknown,
+			Version:                 types.ClusterStatusUnknown,
+		}
+		isMaster := false
+		for _, t := range instance.Tags {
+			if *t.Key == "master" && *t.Value == "true" {
+				isMaster = true
+				masterCount++
+				break
+			}
+		}
+		if !isMaster {
+			workerCount++
+		}
+		instanceNodes = append(instanceNodes, n)
+	}
+	c.Master = strconv.Itoa(masterCount)
+	c.Worker = strconv.Itoa(workerCount)
+	c.Nodes = instanceNodes
+
+	if c.Status == types.ClusterStatusRunning {
+		c.Version = cluster.GetClusterVersion(client)
+		nodes, err := cluster.DescribeClusterNodes(client, instanceNodes)
+		if err != nil {
+			p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
+			return c
+		}
+		c.Nodes = nodes
+	} else {
+		c.Version = types.ClusterStatusUnknown
+	}
+
 	return c
 }
 

@@ -199,12 +199,10 @@ autok3s -d delete --provider alibaba --name myk3s
 autok3s list
 ```
 
-> 注意：使用公有云Provider创建的集群名称会使用`<clusterName>.<region>`显示。
-
 ```bash
-       NAME         REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
-myk3s.cn-hangzhou  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
-myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
+NAME     REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
+myk3s  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
+myk3s  ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 ```
 
 ### 查看集群详细信息
@@ -213,10 +211,10 @@ myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s
 ```bash
 autok3s describe cluster <clusterName>
 ```
-> 注意：这里`<clusterName>`需要按照list显示的格式输入，例如`autok3s describe cluster myk3s.cn-hangzhou`
+> 注意：如果使用不同的provider创建的集群名称相同，describe时会显示多个集群信息，可以使用`-p <provider> -r <region>`对provider及region进一步过滤。e.g. `autok3s describe cluster <clusterName> -p alibaba -r <region>`
 
 ```bash
-Name: myk3s.cn-hangzhou
+Name: myk3s
 Provider: alibaba
 Region: cn-hangzhou
 Zone: cn-hangzhou-i
@@ -267,7 +265,7 @@ Nodes:
 集群创建完成后, `autok3s` 会自动合并 `kubeconfig` 文件。
 
 ```bash
-autok3s kubectl config use-context myk3s.cn-hangzhou
+autok3s kubectl config use-context myk3s.cn-hangzhou.alibaba
 autok3s kubectl <sub-commands> <flags>
 ```
 
