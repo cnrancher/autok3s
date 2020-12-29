@@ -245,6 +245,10 @@ func (p *Native) CommandNotSupport(commandName string) error {
 	return fmt.Errorf("[%s] dose not support command: [%s]", p.GetProviderName(), commandName)
 }
 
+func (p *Native) DescribeCluster(kubecfg string) *types.ClusterInfo {
+	return &types.ClusterInfo{}
+}
+
 func (p *Native) GetCluster(kubecfg string) *types.ClusterInfo {
 	return &types.ClusterInfo{}
 }

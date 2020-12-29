@@ -58,7 +58,7 @@ func CreateCommand() *cobra.Command {
 	}
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
-		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
+		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>"
 		cp.GenerateClusterName()
 
 		// create k3s cluster with generated cluster name.

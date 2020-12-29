@@ -110,11 +110,12 @@ func (p *Tencent) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Tencent) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Cluster name",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:     "region",
@@ -132,11 +133,12 @@ func (p *Tencent) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Tencent) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Cluster name",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",
@@ -153,11 +155,12 @@ func (p *Tencent) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Tencent) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Cluster name",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",
@@ -174,11 +177,12 @@ func (p *Tencent) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Tencent) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Cluster name",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",
@@ -203,7 +207,7 @@ func (p *Tencent) MergeClusterOptions() error {
 
 	var matched *types.Cluster
 	for _, c := range clusters {
-		if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
+		if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.Provider) {
 			matched = &c
 		}
 	}
@@ -309,11 +313,12 @@ func (p *Tencent) overwriteMetadata(matched *types.Cluster) {
 func (p *Tencent) sharedFlags() []types.Flag {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Set the name of the kubeconfig context",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",

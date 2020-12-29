@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	c "github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/cluster"
@@ -95,8 +96,9 @@ func listCluster() {
 	}
 
 	for _, f := range filters {
+		context := strings.Split(f.Name, ".")
 		table.Append([]string{
-			f.Name,
+			context[0],
 			f.Region,
 			f.Provider,
 			f.Status,

@@ -18,7 +18,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
-	"github.com/cnrancher/autok3s/pkg/types/native"
 	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -384,15 +383,11 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 		switch cluster.Provider {
 		case "alibaba":
 			if option, ok := cluster.Options.(alibaba.Options); ok {
-				name = fmt.Sprintf("%s.%s", cluster.Name, option.Region)
-			}
-		case "native":
-			if _, ok := cluster.Options.(native.Options); ok {
-				name = cluster.Name
+				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
 			}
 		case "tencent":
 			if option, ok := cluster.Options.(tencent.Options); ok {
-				name = fmt.Sprintf("%s.%s", cluster.Name, option.Region)
+				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
 			}
 		}
 
@@ -999,13 +994,13 @@ func GetClusterConfig(name, kubeconfig string) (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.Timeout = 20 * time.Second
+	config.Timeout = 5 * time.Second
 	c, err := kubernetes.NewForConfig(config)
 	return c, err
 }
 
 func GetClusterStatus(c *kubernetes.Clientset) string {
-	_, err := c.RESTClient().Get().RequestURI("/readyz").DoRaw(context.TODO())
+	_, err := c.RESTClient().Get().Timeout(5 * time.Second).RequestURI("/readyz").DoRaw(context.TODO())
 	if err != nil {
 		return types.ClusterStatusStopped
 	}
@@ -1020,63 +1015,69 @@ func GetClusterVersion(c *kubernetes.Clientset) string {
 	return v.GitVersion
 }
 
-func DescribeClusterNodes(client *kubernetes.Clientset) ([]types.ClusterNode, error) {
+func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.ClusterNode) ([]types.ClusterNode, error) {
 	// list cluster nodes
-	nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	timeout := int64(5 * time.Second)
+	nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{TimeoutSeconds: &timeout})
 	if err != nil || nodeList == nil {
 		return nil, err
 	}
-	nodes := []types.ClusterNode{}
-	for _, n := range nodeList.Items {
-		node := types.ClusterNode{
-			ContainerRuntimeVersion: n.Status.NodeInfo.ContainerRuntimeVersion,
-			Version:                 n.Status.NodeInfo.KubeletVersion,
-		}
-		// get address
-		addressList := n.Status.Addresses
+	for _, node := range nodeList.Items {
+		var internalIP, hostName string
+		addressList := node.Status.Addresses
 		for _, address := range addressList {
 			switch address.Type {
-			case v1.NodeHostName:
-				node.HostName = address.Address
 			case v1.NodeInternalIP:
-				node.InternalIP = address.Address
-			case v1.NodeExternalIP:
-				node.ExternalIP = address.Address
+				internalIP = address.Address
+			case v1.NodeHostName:
+				hostName = address.Address
 			default:
 				continue
 			}
 		}
-		// get roles
-		labels := n.Labels
-		_, ok := labels[LabelNodeRoleMaster]
-		node.Master = ok
-		roles := []string{}
-		for role := range labels {
-			if strings.HasPrefix(role, "node-role.kubernetes.io") {
-				roleArray := strings.Split(role, "/")
-				if len(roleArray) > 1 {
-					roles = append(roles, roleArray[1])
+		for index, n := range instanceNodes {
+			isCurrentInstance := false
+			for _, address := range n.InternalIP {
+				if address == internalIP {
+					isCurrentInstance = true
+					break
 				}
 			}
-		}
-		if len(roles) == 0 {
-			roles = append(roles, "<none>")
-		}
-		node.Roles = strings.Join(roles, ",")
-		// get status
-		conditions := n.Status.Conditions
-		for _, c := range conditions {
-			if c.Type == v1.NodeReady {
-				if c.Status == v1.ConditionTrue {
-					node.Status = "Ready"
-				} else {
-					node.Status = "NotReady"
+			if isCurrentInstance {
+				n.HostName = hostName
+				n.Version = node.Status.NodeInfo.KubeletVersion
+				n.ContainerRuntimeVersion = node.Status.NodeInfo.ContainerRuntimeVersion
+				// get roles
+				labels := node.Labels
+				roles := []string{}
+				for role := range labels {
+					if strings.HasPrefix(role, "node-role.kubernetes.io") {
+						roleArray := strings.Split(role, "/")
+						if len(roleArray) > 1 {
+							roles = append(roles, roleArray[1])
+						}
+					}
 				}
+				if len(roles) == 0 {
+					roles = append(roles, "<none>")
+				}
+				n.Roles = strings.Join(roles, ",")
+				// get status
+				conditions := node.Status.Conditions
+				for _, c := range conditions {
+					if c.Type == v1.NodeReady {
+						if c.Status == v1.ConditionTrue {
+							n.Status = "Ready"
+						} else {
+							n.Status = "NotReady"
+						}
+						break
+					}
+				}
+				instanceNodes[index] = n
 				break
 			}
 		}
-		nodes = append(nodes, node)
 	}
-
-	return nodes, nil
+	return instanceNodes, nil
 }

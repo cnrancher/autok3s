@@ -112,11 +112,12 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",
@@ -133,11 +134,12 @@ func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",
@@ -154,11 +156,12 @@ func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",
@@ -183,7 +186,7 @@ func (p *Alibaba) MergeClusterOptions() error {
 
 	var matched *types.Cluster
 	for _, c := range clusters {
-		if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s", p.Name, p.Region) {
+		if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.Provider) {
 			matched = &c
 		}
 	}
@@ -205,11 +208,12 @@ func (p *Alibaba) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
 func (p *Alibaba) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Cluster name",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",
@@ -312,11 +316,12 @@ func (p *Alibaba) overwriteMetadata(matched *types.Cluster) {
 func (p *Alibaba) sharedFlags() []types.Flag {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Set the name of the kubeconfig context",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
 		},
 		{
 			Name:   "region",

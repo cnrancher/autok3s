@@ -94,14 +94,14 @@ type ClusterInfo struct {
 }
 
 type ClusterNode struct {
-	InstanceID              string `json:"instance-id,omitempty"`
-	InstanceStatus          string `json:"instance-status,omitempty"`
-	ExternalIP              string `json:"external-ip,omitempty"`
-	InternalIP              string `json:"internal-ip,omitempty"`
-	Roles                   string `json:"roles,omitempty"`
-	Status                  string `json:"status,omitempty"`
-	HostName                string `json:"hostname,omitempty"`
-	ContainerRuntimeVersion string `json:"containerRuntimeVersion,omitempty"`
-	Version                 string `json:"version,omitempty"`
-	Master                  bool   `json:"-"`
+	InstanceID              string   `json:"instance-id,omitempty"`
+	InstanceStatus          string   `json:"instance-status,omitempty"`
+	ExternalIP              []string `json:"external-ip,omitempty"`
+	InternalIP              []string `json:"internal-ip,omitempty"`
+	Roles                   string   `json:"roles,omitempty"`
+	Status                  string   `json:"status,omitempty"`
+	HostName                string   `json:"hostname,omitempty"`
+	ContainerRuntimeVersion string   `json:"containerRuntimeVersion,omitempty"`
+	Version                 string   `json:"version,omitempty"`
+	Master                  bool     `json:"-"`
 }

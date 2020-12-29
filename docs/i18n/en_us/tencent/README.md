@@ -155,12 +155,10 @@ This command will list the clusters that you have created on this machine.
 autok3s list
 ```
 
-> Note：Cluster name will show as `<clusterName>.<region>` for tencent provider.
-
 ```bash
-       NAME         REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
-myk3s.cn-hangzhou  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
-myk3s.ap-nanjing   ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
+NAME     REGION     PROVIDER  STATUS   MASTERS  WORKERS    VERSION
+myk3s  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
+myk3s  ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 ```
 
 ### Describe k3s cluster
@@ -169,10 +167,10 @@ This command will show detail information of specified cluster, such as instance
 ```bash
 autok3s describe cluster <clusterName>
 ```
-> Note：Cluster name should be `<clusterName>.<region>` as list command result, for example: `autok3s describe cluster myk3s.ap-nanjing`
+> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster. e.g. `autok3s describe cluster <clusterName> -p tencent -r <region>`
 
 ```bash
-Name: myk3s.ap-nanjing
+Name: myk3s
 Provider: tencent
 Region: ap-nanjing
 Zone: ap-nanjing-1
@@ -214,7 +212,7 @@ Nodes:
 After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 
 ```bash
-autok3s kubectl config use-context myk3s.ap-guangzhou
+autok3s kubectl config use-context myk3s.ap-guangzhou.tencent
 autok3s kubectl <sub-commands> <flags>
 ```
 
