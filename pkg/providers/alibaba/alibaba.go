@@ -42,7 +42,6 @@ const (
 	master                   = "0"
 	worker                   = "0"
 	ui                       = false
-	repo                     = "https://apphub.aliyuncs.com"
 	terway                   = "none"
 	terwayMaxPoolSize        = "5"
 	cloudControllerManager   = false
@@ -98,11 +97,11 @@ func NewProvider() *Alibaba {
 			Master:                 master,
 			Worker:                 worker,
 			UI:                     ui,
-			Repo:                   repo,
 			CloudControllerManager: cloudControllerManager,
 			K3sVersion:             k3sVersion,
 			K3sChannel:             k3sChannel,
 			InstallScript:          k3sInstallScript,
+			Cluster:                false,
 		},
 		Options: alibaba.Options{
 			DiskCategory:            diskCategory,

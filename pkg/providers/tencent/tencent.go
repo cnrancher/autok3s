@@ -47,7 +47,6 @@ const (
 	master                   = "0"
 	worker                   = "0"
 	ui                       = false
-	repo                     = "https://apphub.aliyuncs.com"
 	defaultCidr              = "10.42.0.0/16"
 	defaultRegion            = "ap-guangzhou"
 	defaultZone              = "ap-guangzhou-3"
@@ -97,10 +96,10 @@ func NewProvider() *Tencent {
 			Master:        master,
 			Worker:        worker,
 			UI:            ui,
-			Repo:          repo,
 			K3sVersion:    k3sVersion,
 			K3sChannel:    k3sChannel,
 			InstallScript: k3sInstallScript,
+			Cluster:       false,
 		},
 		Options: tencent.Options{
 			ImageID:                 imageID,

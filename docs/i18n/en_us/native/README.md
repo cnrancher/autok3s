@@ -34,14 +34,15 @@ autok3s -d create \
 ```
 
 ### Setup K3s HA Cluster
-HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master-ips` at least 3, e.g.
+HA(embedded etcd: >= 1.19.1-k3s1) mode, e.g.
 
 ```bash
 autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master-ip-1,master-ip-2,master-ip-3>
+    --master-ips <master-ip-1,master-ip-2,master-ip-3> \
+    --cluster
 ```
 
 HA(external database) mode need `--master-ips` greater than 1, also need to specify `--datastore`, e.g.

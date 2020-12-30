@@ -86,16 +86,16 @@ func (p *Tencent) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Usage: "Enable K3s UI.",
 		},
 		{
-			Name:  "repo",
-			P:     &p.Repo,
-			V:     p.Repo,
-			Usage: "Specify helm repo",
-		},
-		{
 			Name:  "eip",
 			P:     &p.PublicIPAssignedEIP,
 			V:     p.PublicIPAssignedEIP,
 			Usage: "Enable eip",
+		},
+		{
+			Name:  "cluster",
+			P:     &p.Cluster,
+			V:     p.Cluster,
+			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19)",
 		},
 	}...)
 
@@ -287,7 +287,6 @@ func (p *Tencent) overwriteMetadata(matched *types.Cluster) {
 	p.Mirror = matched.Mirror
 	p.DockerMirror = matched.DockerMirror
 	p.InstallScript = matched.InstallScript
-	p.Repo = matched.Repo
 	p.Network = matched.Network
 	// needed to be overwrite.
 	if p.K3sChannel == "" {

@@ -44,10 +44,10 @@ func (p *Native) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Usage: "Enable K3s UI.",
 		},
 		{
-			Name:  "repo",
-			P:     &p.Repo,
-			V:     p.Repo,
-			Usage: "Specify helm repo",
+			Name:  "cluster",
+			P:     &p.Cluster,
+			V:     p.Cluster,
+			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19)",
 		},
 	}...)
 

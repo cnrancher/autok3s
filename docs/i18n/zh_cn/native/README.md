@@ -34,14 +34,15 @@ autok3s -d create \
 ```
 
 ### 创建高可用K3s集群
-高可用模式(嵌入式etcd: k3s版本 >= 1.19.1-k3s1) 要求 `--master` 至少为3。
+高可用模式(嵌入式etcd: k3s版本 >= 1.19.1-k3s1)。
 
 ```bash
 autok3s -d create \
     --provider native \
     --name myk3s \
     --ssh-key-path <ssh-key-path> \
-    --master-ips <master-ip-1,master-ip-2,master-ip-3>
+    --master-ips <master-ip-1,master-ip-2,master-ip-3> \
+    --cluster
 ```
 
 高可用模式(外部数据库) 要求 `--master` 至少为1, 并且需要指定参数 `--datastore`。

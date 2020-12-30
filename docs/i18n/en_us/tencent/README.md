@@ -96,10 +96,10 @@ autok3s -d create -p tencent --name myk3s --master 1 --worker 1
 ```
 
 ### Setup K3s HA Cluster
-HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3, e.g.
+HA(embedded etcd: >= 1.19.1-k3s1) mode, e.g.
 
 ```bash
-autok3s -d create -p tencent --name myk3s --master 3
+autok3s -d create -p tencent --name myk3s --master 3 --cluster
 ```
 
 HA(external database) mode need `--master` greater than 1, also need to specify `--datastore`, e.g.

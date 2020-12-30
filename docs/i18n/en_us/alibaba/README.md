@@ -141,10 +141,10 @@ autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
 
 ### Setup K3s HA Cluster
-HA(embedded etcd: >= 1.19.1-k3s1) mode need `--master` at least 3, e.g.
+HA(embedded etcd: >= 1.19.1-k3s1) mode. e.g.
 
 ```bash
-autok3s -d create -p alibaba --name myk3s --master 3
+autok3s -d create -p alibaba --name myk3s --master 3 --cluster
 ```
 
 HA(external database) mode need `--master` greater than 1, also need to specify `--datastore`, e.g.
@@ -160,7 +160,7 @@ To join master/agent nodes, specify the cluster you want to add, e.g myk3s.
 autok3s -d join --provider alibaba --name myk3s --worker 1
 ```
 
-Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
+Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster.  e.g.
 
 ```bash
 autok3s -d join --provider alibaba --name myk3s --master 2

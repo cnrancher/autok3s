@@ -22,7 +22,6 @@ const (
 	k3sChannel       = "stable"
 	k3sInstallScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 	ui               = false
-	repo             = "https://apphub.aliyuncs.com"
 )
 
 // ProviderName is the name of this provider.
@@ -55,10 +54,10 @@ func NewProvider() *Native {
 		Metadata: types.Metadata{
 			Provider:      ProviderName,
 			UI:            ui,
-			Repo:          repo,
 			K3sVersion:    k3sVersion,
 			K3sChannel:    k3sChannel,
 			InstallScript: k3sInstallScript,
+			Cluster:       false,
 		},
 		Options: native.Options{
 			MasterIps: "",

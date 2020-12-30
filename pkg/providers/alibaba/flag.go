@@ -87,12 +87,6 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Usage: "Enable K3s UI.",
 		},
 		{
-			Name:  "repo",
-			P:     &p.Repo,
-			V:     p.Repo,
-			Usage: "Specify helm repo",
-		},
-		{
 			Name:  "terway",
 			P:     &p.Terway.Mode,
 			V:     p.Terway.Mode,
@@ -103,6 +97,12 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			P:     &p.Terway.MaxPoolSize,
 			V:     p.Terway.MaxPoolSize,
 			Usage: "Max pool size for terway ENI mode",
+		},
+		{
+			Name:  "cluster",
+			P:     &p.Cluster,
+			V:     p.Cluster,
+			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19)",
 		},
 	}...)
 
@@ -290,7 +290,6 @@ func (p *Alibaba) overwriteMetadata(matched *types.Cluster) {
 	p.Mirror = matched.Mirror
 	p.DockerMirror = matched.DockerMirror
 	p.InstallScript = matched.InstallScript
-	p.Repo = matched.Repo
 	p.Network = matched.Network
 	// needed to be overwrite.
 	if p.K3sChannel == "" {
