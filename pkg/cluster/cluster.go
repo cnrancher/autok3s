@@ -37,7 +37,7 @@ import (
 
 var (
 	logger                 *logrus.Logger
-	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --tls-san %s --node-external-ip %s %s' %s sh -"
+	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server --tls-san %s --node-external-ip %s %s' %s sh -"
 	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
@@ -83,6 +83,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	workerExtraArgs := cluster.WorkerExtraArgs
 
 	if cluster.DataStore != "" {
+		cluster.Cluster = false
 		masterExtraArgs += " --datastore-endpoint " + cluster.DataStore
 	}
 
@@ -99,6 +100,9 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	providerExtraArgs := p.GenerateMasterExtraArgs(cluster, cluster.MasterNodes[0])
 	if providerExtraArgs != "" {
 		master0ExtraArgs += providerExtraArgs
+	}
+	if cluster.Cluster {
+		master0ExtraArgs += " --cluster-init"
 	}
 	if err := initMaster(k3sScript, k3sMirror, dockerMirror, publicIP, master0ExtraArgs, cluster, cluster.MasterNodes[0]); err != nil {
 		return err
@@ -163,7 +167,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	// deploy additional UI manifests.
 	if cluster.UI {
 		if _, err := execute(&hosts.Host{Node: cluster.MasterNodes[0]}, []string{fmt.Sprintf(deployUICommand,
-			base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(dashboardTmpl, cluster.Repo))), common.K3sManifestsDir)}); err != nil {
+			base64.StdEncoding.EncodeToString([]byte(dashboardTmpl)), common.K3sManifestsDir)}); err != nil {
 			return err
 		}
 	}
@@ -568,10 +572,10 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 	}
 
 	logger.Debugf("[cluster] k3s master command: %s\n", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
-		"--cluster-init", ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+		ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(initCommand, k3sScript, k3sMirror,
-		cluster.Token, "--cluster-init", ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
+		cluster.Token, ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		return err
 	}
 

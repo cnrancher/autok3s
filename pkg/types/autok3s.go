@@ -18,7 +18,6 @@ type Metadata struct {
 	Worker                 string `json:"worker" yaml:"worker"`
 	Token                  string `json:"token,omitempty" yaml:"token,omitempty"`
 	IP                     string `json:"ip,omitempty" yaml:"ip,omitempty"`
-	Repo                   string `json:"repo,omitempty" yaml:"repo,omitempty"`
 	ClusterCIDR            string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
 	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
@@ -32,6 +31,7 @@ type Metadata struct {
 	Network                string `json:"network,omitempty" yaml:"network,omitempty"`
 	UI                     bool   `json:"ui,omitempty" yaml:"ui,omitempty"`
 	CloudControllerManager bool   `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
+	Cluster                bool   `json:"cluster,omitempty" yaml:"cluster,omitempty"`
 }
 
 type Status struct {
