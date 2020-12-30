@@ -45,10 +45,7 @@ var (
 	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
-)
-
-const (
-	LabelNodeRoleMaster = "node-role.kubernetes.io/master"
+	registryPath           = "/etc/rancher/k3s"
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
@@ -848,6 +845,8 @@ func genK3sVersion(version, channel string) string {
 }
 
 func handleRegistry(host *hosts.Host, file string) error {
+	cmd := make([]string, 0)
+	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", registryPath))
 	registry, err := unmarshalRegistryFile(file)
 	if err != nil {
 		return err
@@ -858,9 +857,11 @@ func handleRegistry(host *hosts.Host, file string) error {
 		return err
 	}
 
-	registry, cmd, err := saveRegistryTLS(registry, tls)
-	if err != nil {
-		return err
+	if tls != nil && len(tls) > 0 {
+		registry, cmd, err = saveRegistryTLS(registry, tls)
+		if err != nil {
+			return err
+		}
 	}
 
 	registryContent, err := registryToString(registry)
@@ -935,10 +936,6 @@ func registryTLSMap(registry *templates.Registry) (m map[string]map[string][]byt
 
 func saveRegistryTLS(registry *templates.Registry, m map[string]map[string][]byte) (*templates.Registry, []string, error) {
 	cmd := make([]string, 0)
-	if m == nil || len(m) == 0 {
-		return nil, cmd, fmt.Errorf("registry map is nil")
-	}
-
 	for r, c := range m {
 		if r != "" {
 			if _, ok := registry.Configs[r]; !ok {
