@@ -287,8 +287,18 @@ autok3s ssh --provider alibaba --name myk3s
 我们集成了一些与当前provider有关的高级组件，例如 terway、ccm、ui。
 
 ### Setup Private Registry
-下面是将本地的`/etc/autok3s/registries.yaml`启用TLS的`registry`配置文件，应用到通过`autok3s`命令应创建的k3s集群中。
+在运行`autok3s create`或`autok3s join`时，通过传递`--registry /etc/autok3s/registries.yaml`以使用私有镜像仓库，例如：
 
+```bash
+autok3s -d create \
+    --provider alibaba \
+    --name myk3s \
+    --master 1 \
+    --worker 1 \
+    --registry /etc/autok3s/registries.yaml
+```
+
+使用私有镜像仓库的配置请参考以下内容，如果您的私有镜像仓库需要TLS认证，`autok3s`会从本地读取相关的TLS文件并自动上传到远程服务器中完成配置，您只需要完善`registry.yaml`即可。
 ```bash
 mirrors:
   docker.io:
@@ -303,17 +313,6 @@ configs:
       cert_file: # path to the cert file used in the registry
       key_file:  # path to the key file used in the registry
       ca_file:   # path to the ca file used in the registry
-```
-
-在运行`autok3s create`或`autok3s join`时，通过传递`--registry /etc/autok3s/registries.yaml`参数使其生效，例如：
-
-```bash
-autok3s -d create \
-    --provider alibaba \
-    --name myk3s \
-    --master 1 \
-    --worker 1 \
-    --registry /etc/autok3s/registries.yaml
 ```
 
 ### 启用阿里云Terway CNI插件
