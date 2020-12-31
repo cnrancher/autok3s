@@ -43,7 +43,7 @@ const (
 	internetMaxBandwidthOut  = "5"
 	internetChargeType       = "TRAFFIC_POSTPAID_BY_HOUR"
 	diskCategory             = "CLOUD_SSD"
-	diskSize                 = "60"
+	diskSize                 = "50"
 	master                   = "0"
 	worker                   = "0"
 	ui                       = false
