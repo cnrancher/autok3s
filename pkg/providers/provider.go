@@ -57,14 +57,19 @@ type Provider interface {
 	// K3s stop cluster interface.
 	StopK3sCluster(f bool) error
 	// K3s ssh node interface.
-	SSHK3sNode(ssh *types.SSH) error
+	SSHK3sNode(ssh *types.SSH, node string) error
 	// K3s check cluster exist.
 	IsClusterExist() (bool, []string, error)
 	// Rollback when error occurs.
 	Rollback() error
+	// merge exist cluster options
 	MergeClusterOptions() error
+	// describe detailed cluster information
 	DescribeCluster(kubecfg string) *types.ClusterInfo
+	// get cluster simple information
 	GetCluster(kubecfg string) *types.ClusterInfo
+	// get default ssh config for provider
+	GetSSHConfig() *types.SSH
 }
 
 // RegisterProvider registers a provider.Factory by name.

@@ -49,27 +49,27 @@ func IsExistedNodes(nodes []types.Node, instance string) (int, bool) {
 	return -1, false
 }
 
-func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) (string, error) {
+func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) ([]byte, error) {
 	var keyPath string
 	if ssh.SSHKeyPath == "" && keypair == "" {
 		logrus.Infof("[%s] generate default key-pair \n", providerName)
 		if err := utils.GenerateSSHKey(common.GetDefaultSSHKeyPath(name, providerName)); err != nil {
-			return "", err
+			return nil, err
 		}
 		keyPath = common.GetDefaultSSHKeyPath(name, providerName)
 	} else {
 		keyPath = ssh.SSHKeyPath
 		if keypair != "" {
 			logrus.Infof("[%s] Using existing key pair %s \n", providerName, keypair)
-			return "", nil
+			return nil, nil
 		}
 	}
 
 	ssh.SSHKeyPath = keyPath
 	publicKey, err := ioutil.ReadFile(keyPath + ".pub")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(publicKey), nil
+	return publicKey, nil
 }

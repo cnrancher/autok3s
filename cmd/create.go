@@ -25,13 +25,6 @@ var (
 
 func init() {
 	createCmd.Flags().StringVarP(&cProvider, "provider", "p", cProvider, "Provider is a module which provides an interface for managing cloud resources")
-	createCmd.Flags().StringVar(&cSSH.User, "ssh-user", cSSH.User, "SSH user for host")
-	createCmd.Flags().StringVar(&cSSH.Port, "ssh-port", cSSH.Port, "SSH port for host")
-	createCmd.Flags().StringVar(&cSSH.SSHKeyPath, "ssh-key-path", cSSH.SSHKeyPath, "SSH private key path")
-	createCmd.Flags().StringVar(&cSSH.SSHKeyPassphrase, "ssh-key-pass", cSSH.SSHKeyPassphrase, "SSH passphrase of private key")
-	createCmd.Flags().StringVar(&cSSH.SSHCertPath, "ssh-key-cert-path", cSSH.SSHCertPath, "SSH private key certificate path")
-	createCmd.Flags().StringVar(&cSSH.Password, "ssh-password", cSSH.Password, "SSH login password")
-	createCmd.Flags().BoolVar(&cSSH.SSHAgentAuth, "ssh-agent", cSSH.SSHAgentAuth, "Enable ssh agent")
 }
 
 func CreateCommand() *cobra.Command {
@@ -43,6 +36,15 @@ func CreateCommand() *cobra.Command {
 		} else {
 			cp = reg
 		}
+
+		cSSH = cp.GetSSHConfig()
+		createCmd.Flags().StringVar(&cSSH.User, "ssh-user", cSSH.User, "SSH user for host")
+		createCmd.Flags().StringVar(&cSSH.Port, "ssh-port", cSSH.Port, "SSH port for host")
+		createCmd.Flags().StringVar(&cSSH.SSHKeyPath, "ssh-key-path", cSSH.SSHKeyPath, "SSH private key path")
+		createCmd.Flags().StringVar(&cSSH.SSHKeyPassphrase, "ssh-key-pass", cSSH.SSHKeyPassphrase, "SSH passphrase of private key")
+		createCmd.Flags().StringVar(&cSSH.SSHCertPath, "ssh-key-cert-path", cSSH.SSHCertPath, "SSH private key certificate path")
+		createCmd.Flags().StringVar(&cSSH.Password, "ssh-password", cSSH.Password, "SSH login password")
+		createCmd.Flags().BoolVar(&cSSH.SSHAgentAuth, "ssh-agent", cSSH.SSHAgentAuth, "Enable ssh agent")
 
 		createCmd.Flags().AddFlagSet(cp.GetCredentialFlags(createCmd))
 		createCmd.Flags().AddFlagSet(cp.GetCreateFlags(createCmd))

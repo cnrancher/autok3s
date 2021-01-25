@@ -358,7 +358,7 @@ func (p *Tencent) StopK3sCluster(f bool) error {
 	return nil
 }
 
-func (p *Tencent) SSHK3sNode(ssh *types.SSH) error {
+func (p *Tencent) SSHK3sNode(ssh *types.SSH, ip string) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
 
@@ -404,7 +404,9 @@ func (p *Tencent) SSHK3sNode(ssh *types.SSH) error {
 		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
 	}
 
-	ip := strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
+	if ip == "" {
+		ip = strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
+	}
 
 	if ip == "" {
 		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
@@ -738,7 +740,7 @@ func (p *Tencent) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 
 	// assemble instance status.
 	var c *types.Cluster
-	if c, err = p.assembleInstanceStatus(ssh, needUploadKeyPair, pk); err != nil {
+	if c, err = p.assembleInstanceStatus(ssh, needUploadKeyPair, string(pk)); err != nil {
 		return nil, err
 	}
 
