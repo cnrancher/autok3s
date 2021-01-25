@@ -353,7 +353,7 @@ func (p *Alibaba) StopK3sCluster(f bool) error {
 	return nil
 }
 
-func (p *Alibaba) SSHK3sNode(ssh *types.SSH) error {
+func (p *Alibaba) SSHK3sNode(ssh *types.SSH, node string) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
 
@@ -404,15 +404,16 @@ func (p *Alibaba) SSHK3sNode(ssh *types.SSH) error {
 	if err != nil {
 		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
 	}
+	if node == "" {
+		node = strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
+	}
 
-	ip := strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
-
-	if ip == "" {
+	if node == "" {
 		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
 	}
 
 	// ssh K3s node.
-	if err := cluster.SSHK3sNode(ip, c, ssh); err != nil {
+	if err := cluster.SSHK3sNode(node, c, ssh); err != nil {
 		return err
 	}
 
@@ -1497,7 +1498,8 @@ func (p *Alibaba) createKeyPair(ssh *types.SSH) (string, error) {
 	if p.KeyPair != "" && ssh.SSHKeyPath == "" {
 		return "", fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeyPair)
 	}
-	return putil.CreateKeyPair(ssh, p.GetProviderName(), p.Name, p.KeyPair)
+	pk, err := putil.CreateKeyPair(ssh, p.GetProviderName(), p.Name, p.KeyPair)
+	return string(pk), err
 }
 
 func (p *Alibaba) generateDefaultVPC() error {

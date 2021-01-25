@@ -24,13 +24,6 @@ var (
 
 func init() {
 	joinCmd.Flags().StringVarP(&jProvider, "provider", "p", jProvider, "Provider is a module which provides an interface for managing cloud resources")
-	joinCmd.Flags().StringVar(&jSSH.User, "ssh-user", jSSH.User, "SSH user for host")
-	joinCmd.Flags().StringVar(&jSSH.Port, "ssh-port", jSSH.Port, "SSH port for host")
-	joinCmd.Flags().StringVar(&jSSH.SSHKeyPath, "ssh-key-path", jSSH.SSHKeyPath, "SSH private key path")
-	joinCmd.Flags().StringVar(&jSSH.SSHKeyPassphrase, "ssh-key-pass", jSSH.SSHKeyPassphrase, "SSH passphrase of private key")
-	joinCmd.Flags().StringVar(&jSSH.SSHCertPath, "ssh-key-cert-path", jSSH.SSHCertPath, "SSH private key certificate path")
-	joinCmd.Flags().StringVar(&jSSH.Password, "ssh-password", jSSH.Password, "SSH login password")
-	joinCmd.Flags().BoolVar(&jSSH.SSHAgentAuth, "ssh-agent", jSSH.SSHAgentAuth, "Enable ssh agent")
 }
 
 func JoinCommand() *cobra.Command {
@@ -42,6 +35,14 @@ func JoinCommand() *cobra.Command {
 		} else {
 			jp = reg
 		}
+		jSSH = jp.GetSSHConfig()
+		joinCmd.Flags().StringVar(&jSSH.User, "ssh-user", jSSH.User, "SSH user for host")
+		joinCmd.Flags().StringVar(&jSSH.Port, "ssh-port", jSSH.Port, "SSH port for host")
+		joinCmd.Flags().StringVar(&jSSH.SSHKeyPath, "ssh-key-path", jSSH.SSHKeyPath, "SSH private key path")
+		joinCmd.Flags().StringVar(&jSSH.SSHKeyPassphrase, "ssh-key-pass", jSSH.SSHKeyPassphrase, "SSH passphrase of private key")
+		joinCmd.Flags().StringVar(&jSSH.SSHCertPath, "ssh-key-cert-path", jSSH.SSHCertPath, "SSH private key certificate path")
+		joinCmd.Flags().StringVar(&jSSH.Password, "ssh-password", jSSH.Password, "SSH login password")
+		joinCmd.Flags().BoolVar(&jSSH.SSHAgentAuth, "ssh-agent", jSSH.SSHAgentAuth, "Enable ssh agent")
 
 		joinCmd.Flags().AddFlagSet(jp.GetCredentialFlags(joinCmd))
 		joinCmd.Flags().AddFlagSet(jp.GetJoinFlags(joinCmd))

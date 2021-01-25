@@ -79,6 +79,15 @@ func (p *Native) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return cmd.Flags()
 }
 
+func (p *Native) GetSSHConfig() *types.SSH {
+	ssh := &types.SSH{
+		User:       defaultUser,
+		Port:       "22",
+		SSHKeyPath: defaultSSHKeyPath,
+	}
+	return ssh
+}
+
 func (p *Native) BindCredentialFlags() *pflag.FlagSet {
 	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
 	return nfs
@@ -91,11 +100,12 @@ func (p *Native) MergeClusterOptions() error {
 func (p *Native) sharedFlags() []types.Flag {
 	fs := []types.Flag{
 		{
-			Name:     "name",
-			P:        &p.Name,
-			V:        p.Name,
-			Usage:    "Set the name of the kubeconfig context",
-			Required: true,
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			ShortHand: "n",
+			Usage:     "Set the name of the kubeconfig context",
+			Required:  true,
 		},
 		{
 			Name:  "ip",

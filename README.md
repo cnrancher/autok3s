@@ -67,7 +67,7 @@ Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) p
 
 # License
 
-Copyright (c) 2020 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2021 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

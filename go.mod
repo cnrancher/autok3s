@@ -34,20 +34,15 @@ replace (
 require (
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
-	github.com/benmoss/go-powershell v0.0.0-20190925205200-09527df358ca // indirect
+	github.com/aws/aws-sdk-go v1.28.2
 	github.com/briandowns/spinner v1.11.1
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200821074627-7ae5222c72cc+incompatible
-	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/ghodss/yaml v1.0.0
-	github.com/gogo/googleapis v1.4.0 // indirect
 	github.com/gorilla/mux v1.7.4
-	github.com/hashicorp/go-multierror v1.1.0 // indirect
-	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f // indirect
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
-	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0 // indirect
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
 	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
 	github.com/sirupsen/logrus v1.6.0

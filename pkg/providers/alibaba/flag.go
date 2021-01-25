@@ -250,6 +250,14 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return utils.ConvertFlags(cmd, fs)
 }
 
+func (p *Alibaba) GetSSHConfig() *types.SSH {
+	ssh := &types.SSH{
+		User: defaultUser,
+		Port: "22",
+	}
+	return ssh
+}
+
 func (p *Alibaba) BindCredentialFlags() *pflag.FlagSet {
 	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
 	nfs.StringVar(&p.AccessKey, accessKeyID, p.AccessKey, "User access key ID")

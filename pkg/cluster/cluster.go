@@ -18,6 +18,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
+	"github.com/cnrancher/autok3s/pkg/types/amazone"
 	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -388,6 +389,10 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 			}
 		case "tencent":
 			if option, ok := cluster.Options.(tencent.Options); ok {
+				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
+			}
+		case "amazone":
+			if option, ok := cluster.Options.(amazone.Options); ok {
 				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
 			}
 		}

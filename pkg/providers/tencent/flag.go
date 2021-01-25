@@ -242,6 +242,14 @@ func (p *Tencent) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return utils.ConvertFlags(cmd, fs)
 }
 
+func (p *Tencent) GetSSHConfig() *types.SSH {
+	ssh := &types.SSH{
+		User: defaultUser,
+		Port: "22",
+	}
+	return ssh
+}
+
 func (p *Tencent) BindCredentialFlags() *pflag.FlagSet {
 	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
 	nfs.StringVar(&p.SecretID, secretID, p.SecretID, "User access key ID")

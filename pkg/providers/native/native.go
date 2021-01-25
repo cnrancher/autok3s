@@ -236,7 +236,7 @@ func (p *Native) StopK3sCluster(f bool) error {
 	return p.CommandNotSupport("stop")
 }
 
-func (p *Native) SSHK3sNode(ssh *types.SSH) error {
+func (p *Native) SSHK3sNode(ssh *types.SSH, ip string) error {
 	return p.CommandNotSupport("ssh")
 }
 
