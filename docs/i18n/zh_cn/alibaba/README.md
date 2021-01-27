@@ -171,20 +171,6 @@ autok3s -d join --provider alibaba --name myk3s --master 2
 autok3s -d join --provider alibaba --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-### 启动K3s集群
-启动一个处于停止状态的k3s集群，这里启动的集群为myk3s。
-
-```bash
-autok3s -d start --provider alibaba --name myk3s
-```
-
-### 停止K3s集群
-停止一个处于运行状态的k3s集群，这里停止的集群为myk3s。
-
-```bash
-autok3s -d stop --provider alibaba --name myk3s
-```
-
 ### 删除K3s集群
 删除一个k3s集群，这里删除的集群为myk3s。
 

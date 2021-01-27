@@ -127,20 +127,6 @@ Join master nodes to (external database) HA cluster, also need to specify `--dat
 autok3s -d join --provider tencent --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-### Start K3s Cluster
-This command will start a stopped k3s cluster, e.g myk3s.
-
-```bash
-autok3s -d start --provider tencent --name myk3s
-```
-
-### Stop K3s Cluster
-This command will stop a running k3s cluster, e.g myk3s.
-
-```bash
-autok3s -d stop --provider tencent --name myk3s
-```
-
 ### Delete K3s Cluster
 This command will delete a k3s cluster, e.g myk3s.
 
