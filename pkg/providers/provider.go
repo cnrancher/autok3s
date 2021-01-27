@@ -28,10 +28,6 @@ type Provider interface {
 	GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Join command flags.
 	GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet
-	// Stop command flags.
-	GetStopFlags(cmd *cobra.Command) *pflag.FlagSet
-	// Start command flags.
-	GetStartFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Delete command flags.
 	GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet
 	// SSH command flags.
@@ -52,10 +48,6 @@ type Provider interface {
 	JoinK3sNode(ssh *types.SSH) error
 	// K3s delete cluster interface.
 	DeleteK3sCluster(f bool) error
-	// K3s start cluster interface.
-	StartK3sCluster() error
-	// K3s stop cluster interface.
-	StopK3sCluster(f bool) error
 	// K3s ssh node interface.
 	SSHK3sNode(ssh *types.SSH, node string) error
 	// K3s check cluster exist.

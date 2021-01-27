@@ -332,32 +332,6 @@ func (p *Tencent) DeleteK3sCluster(f bool) error {
 	return nil
 }
 
-func (p *Tencent) StartK3sCluster() error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing start logic...\n", p.GetProviderName())
-
-	if err := p.operateCluster(tencent.StatusStopped, tencent.Running, false, p.startCluster); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed start logic\n", p.GetProviderName())
-
-	return nil
-}
-
-func (p *Tencent) StopK3sCluster(f bool) error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing stop logic...\n", p.GetProviderName())
-
-	if err := p.operateCluster(tencent.Running, tencent.StatusStopped, f, p.stopCluster); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed stop logic\n", p.GetProviderName())
-
-	return nil
-}
-
 func (p *Tencent) SSHK3sNode(ssh *types.SSH, ip string) error {
 	p.logger = common.NewLogger(common.Debug)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
@@ -913,61 +887,6 @@ func (p *Tencent) joinCheck() error {
 	return nil
 }
 
-func (p *Tencent) startAndStopCheck(aimStatus string) error {
-	instanceList, err := p.describeInstances()
-	if err != nil {
-		return fmt.Errorf("[%s] failed to list instance for cluster %s, region: %s, zone: %s: %v",
-			p.GetProviderName(), p.Name, p.Region, p.Zone, err)
-	}
-	if len(instanceList) > 0 {
-		masterCnt := 0
-		unexpectedStatusCnt := 0
-		for _, instance := range instanceList {
-			instanceID := *instance.InstanceId
-			instanceState := *instance.InstanceState
-			if instanceState != aimStatus {
-				unexpectedStatusCnt++
-				p.logger.Warnf("[%s] instance [%s] status is %s, but it is expected to be %s\n",
-					p.GetProviderName(), instanceID, instanceState, aimStatus)
-			}
-			master := false
-			for _, tagPtr := range instance.Tags {
-				if strings.EqualFold(*tagPtr.Key, "master") && strings.EqualFold(*tagPtr.Value, "true") {
-					master = true
-					masterCnt++
-					break
-				}
-			}
-			var eip []string
-			if p.PublicIPAssignedEIP {
-				eipInfos, err := p.describeAddresses(nil, []*string{instance.InstanceId})
-				if err != nil {
-					p.logger.Errorf("[%s] error when query eip info of instance:[%s]\n", p.GetProviderName(), *instance.InstanceId)
-					return err
-				}
-				for _, eipInfo := range eipInfos {
-					eip = append(eip, *eipInfo.AddressId)
-				}
-			}
-			p.m.Store(instanceID, types.Node{
-				Master:            master,
-				InstanceID:        instanceID,
-				InstanceStatus:    instanceState,
-				InternalIPAddress: tencentCommon.StringValues(instance.PrivateIpAddresses),
-				PublicIPAddress:   tencentCommon.StringValues(instance.PublicIpAddresses),
-				EipAllocationIds:  eip,
-			})
-		}
-		if unexpectedStatusCnt > 0 {
-			return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
-		}
-		p.Master = strconv.Itoa(masterCnt)
-		p.Worker = strconv.Itoa(len(instanceList) - masterCnt)
-		return nil
-	}
-	return fmt.Errorf("[%s] unable to confirm the current status of instance(s)", p.GetProviderName())
-}
-
 func (p *Tencent) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, publicKey string) (*types.Cluster, error) {
 	instanceList, err := p.describeInstances()
 	if err != nil {
@@ -1143,35 +1062,6 @@ func (p *Tencent) terminateInstances(instanceIds []string) error {
 
 	if err != nil {
 		return fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
-	}
-
-	return nil
-}
-
-func (p *Tencent) startCluster(f bool, instanceIds []string) error {
-	request := cvm.NewStartInstancesRequest()
-
-	request.InstanceIds = tencentCommon.StringPtrs(instanceIds)
-
-	_, err := p.c.StartInstances(request)
-
-	if err != nil {
-		return fmt.Errorf("[%s] calling startInstances error, msg: %v", p.GetProviderName(), err)
-	}
-
-	return nil
-}
-
-func (p *Tencent) stopCluster(force bool, instanceIds []string) error {
-	request := cvm.NewStopInstancesRequest()
-
-	request.InstanceIds = tencentCommon.StringPtrs(instanceIds)
-	request.ForceStop = tencentCommon.BoolPtr(force)
-
-	_, err := p.c.StopInstances(request)
-
-	if err != nil {
-		return fmt.Errorf("[%s] calling stopInstances error, msg: %v", p.GetProviderName(), err)
 	}
 
 	return nil
@@ -1804,49 +1694,6 @@ func (p *Tencent) syncNodeStatusWithInstance(ssh *types.SSH) {
 		}
 		return true
 	})
-}
-
-func (p *Tencent) operateCluster(expectStatus, targetStatus string, f bool, fn func(f bool, ids []string) error) error {
-	if err := p.generateClientSDK(); err != nil {
-		return err
-	}
-
-	exist, ids, err := p.IsClusterExist()
-
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
-	}
-
-	if err == nil && len(ids) > 0 {
-		// ensure that the status of all instances is stopped.
-		if err := p.startAndStopCheck(expectStatus); err != nil {
-			return err
-		}
-
-		if err := fn(f, ids); err != nil {
-			return err
-		}
-
-		// wait ecs instances to be running status.
-		if err = p.getInstanceStatus(targetStatus); err != nil {
-			return err
-		}
-		p.syncNodeStatusWithInstance(nil)
-		p.Status.Status = targetStatus
-
-		err = cluster.SaveState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-			Status:   p.Status,
-		})
-
-		if err != nil {
-			return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
-		}
-	}
-
-	return nil
 }
 
 func (p *Tencent) syncClusterInstance(ssh *types.SSH) ([]*cvm.Instance, error) {

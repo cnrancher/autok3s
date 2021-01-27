@@ -36,20 +36,6 @@ const deleteUsageExample = `  autok3s -d delete \
     --secret-key <secret-key>
 `
 
-const startUsageExample = `  autok3s -d start \
-    --provider tencent \
-    --name <cluster name> \
-    --secret-id <secret-id> \
-    --secret-key <secret-key>
-`
-
-const stopUsageExample = `  autok3s -d stop \
-    --provider tencent \
-    --name <cluster name> \
-    --secret-id <secret-id> \
-    --secret-key <secret-key>
-`
-
 const sshUsageExample = `  autok3s ssh \
     --provider tencent \
     --name <cluster name> \
@@ -65,10 +51,6 @@ func (p *Tencent) GetUsageExample(action string) string {
 		return joinUsageExample
 	case "delete":
 		return deleteUsageExample
-	case "start":
-		return startUsageExample
-	case "stop":
-		return stopUsageExample
 	case "ssh":
 		return sshUsageExample
 	default:
@@ -124,50 +106,6 @@ func (p *Tencent) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Usage:    "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
 			Required: true,
 			EnvVar:   "CVM_REGION",
-		},
-	}
-
-	return utils.ConvertFlags(cmd, fs)
-}
-
-func (p *Tencent) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			Usage:     "Cluster name",
-			ShortHand: "n",
-			Required:  true,
-		},
-		{
-			Name:   "region",
-			P:      &p.Region,
-			V:      p.Region,
-			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
-			EnvVar: "CVM_REGION",
-		},
-	}
-
-	return utils.ConvertFlags(cmd, fs)
-}
-
-func (p *Tencent) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			Usage:     "Cluster name",
-			ShortHand: "n",
-			Required:  true,
-		},
-		{
-			Name:   "region",
-			P:      &p.Region,
-			V:      p.Region,
-			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
-			EnvVar: "CVM_REGION",
 		},
 	}
 

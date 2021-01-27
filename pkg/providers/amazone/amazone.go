@@ -10,10 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cnrancher/autok3s/pkg/hosts"
-
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -22,7 +21,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -54,8 +52,7 @@ const (
 )
 
 const (
-	keypairNotFoundCode = "InvalidKeyPair.NotFound"
-	deployCCMCommand    = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
+	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
 )
 
 type Amazone struct {
@@ -215,26 +212,6 @@ func (p *Amazone) DeleteK3sCluster(f bool) error {
 		}
 		p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
 	}
-	return nil
-}
-
-func (p *Amazone) StartK3sCluster() error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing start logic...\n", p.GetProviderName())
-	if err := p.operateCluster(ec2.InstanceStateNameStopped, ec2.InstanceStateNameRunning, false, p.startCluster); err != nil {
-		return err
-	}
-	p.logger.Infof("[%s] successfully executed start logic\n", p.GetProviderName())
-	return nil
-}
-
-func (p *Amazone) StopK3sCluster(f bool) error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing stop logic...\n", p.GetProviderName())
-	if err := p.operateCluster(ec2.InstanceStateNameRunning, ec2.InstanceStateNameStopped, f, p.stopCluster); err != nil {
-		return err
-	}
-	p.logger.Infof("[%s] successfully executed start logic\n", p.GetProviderName())
 	return nil
 }
 
@@ -801,33 +778,40 @@ func (p *Amazone) syncNodeStatusWithInstance(ssh *types.SSH) {
 }
 
 func (p *Amazone) describeInstances() ([]*ec2.Instance, error) {
-	// TODO need to check by pages
 	describeInput := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("tag:autok3s"),
 				Values: aws.StringSlice([]string{"true"}),
 			},
-			{},
 			{
 				Name:   aws.String("tag:cluster"),
 				Values: aws.StringSlice([]string{common.TagClusterPrefix + p.Name}),
 			},
 		},
-	}
-	output, err := p.client.DescribeInstances(describeInput)
-	if err != nil {
-		return nil, fmt.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		MaxResults: aws.Int64(int64(50)),
 	}
 
 	instanceList := []*ec2.Instance{}
-	if output != nil && len(output.Reservations) > 0 {
-		for _, reservation := range output.Reservations {
-			for _, instance := range reservation.Instances {
-				instanceList = append(instanceList, instance)
+	for {
+		output, err := p.client.DescribeInstances(describeInput)
+		if output == nil || err != nil {
+			return nil, fmt.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		}
+
+		if len(output.Reservations) > 0 {
+			for _, reservation := range output.Reservations {
+				for _, instance := range reservation.Instances {
+					instanceList = append(instanceList, instance)
+				}
 			}
 		}
+		if aws.StringValue(output.NextToken) == "" {
+			break
+		}
+		describeInput.NextToken = output.NextToken
 	}
+
 	return instanceList, nil
 }
 
@@ -871,35 +855,12 @@ func (p *Amazone) createCheck() error {
 	}
 
 	// check key pair
-	keyName := p.KeypairName
-	keyShouldExist := true
-	if keyName == "" {
-		keyName = p.Name
-		keyShouldExist = false
-	}
-
-	key, err := p.client.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{
-		KeyNames: []*string{&keyName},
-	})
-	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == keypairNotFoundCode && keyShouldExist {
-				return fmt.Errorf("[%s] there is no keypair with the name %s. Please verify the keypair name provided", p.GetProviderName(), keyName)
-			}
-			if awsErr.Code() == keypairNotFoundCode && !keyShouldExist {
-				// Not a real error for 'NotFound' since we're checking existence
-			}
-		} else {
-			return err
-		}
-	}
-
-	if err == nil && len(key.KeyPairs) != 0 {
-		if !keyShouldExist {
-			// check default key-pair path
-			if _, err := os.Stat(common.GetDefaultSSHKeyPath(p.Name, p.GetProviderName())); err != nil {
-				return fmt.Errorf("[%s] there is already a keypair with name %s but can't find default key, please set `--ssh-key-path` for that keypair, or remove the keypair, or use a different cluster name", p.GetProviderName(), p.KeypairName)
-			}
+	if p.KeypairName != "" {
+		_, err = p.client.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{
+			KeyNames: []*string{&p.KeypairName},
+		})
+		if err != nil {
+			return fmt.Errorf("[%s] failed to get keypair by name %s, got error: %v", p.GetProviderName(), p.KeypairName, err)
 		}
 	}
 
@@ -907,15 +868,16 @@ func (p *Amazone) createCheck() error {
 	if p.VpcID == "" {
 		p.VpcID, err = p.getDefaultVPCId()
 		if err != nil {
-			p.logger.Warnf("[%s] couldn't determine your account Default VPC ID : %q", p.GetProviderName(), err)
+			return err
 		}
 	}
 
 	if p.SubnetID == "" && p.VpcID == "" {
-		return fmt.Errorf("[%s] there's no valid vpc and subnet", p.GetProviderName())
+		return fmt.Errorf("[%s] calling preflight error: can't generate instance without vpc and subnet", p.GetProviderName())
 	}
 
 	if p.SubnetID != "" && p.VpcID != "" {
+		// check subnet is belongs to vpc
 		subnetFilter := []*ec2.Filter{
 			{
 				Name:   aws.String("subnet-id"),
@@ -959,12 +921,10 @@ func (p *Amazone) createCheck() error {
 		}
 
 		if len(subnets.Subnets) == 0 {
-			return fmt.Errorf("unable to find a subnet that is both in the zone %s and belonging to VPC ID %s", p.Zone, p.VpcID)
+			return fmt.Errorf("can't get subnets for vpc %s at zone %s", p.VpcID, p.Zone)
 		}
 
-		p.SubnetID = *subnets.Subnets[0].SubnetId
-
-		// try to find default
+		// find default subnet
 		if len(subnets.Subnets) > 1 {
 			for _, subnet := range subnets.Subnets {
 				if subnet.DefaultForAz != nil && *subnet.DefaultForAz {
@@ -972,6 +932,10 @@ func (p *Amazone) createCheck() error {
 					break
 				}
 			}
+		}
+
+		if p.SubnetID == "" {
+			p.SubnetID = *subnets.Subnets[0].SubnetId
 		}
 	}
 
@@ -1061,7 +1025,7 @@ func (p *Amazone) createKeyPair(ssh *types.SSH) error {
 			if pk != nil {
 				keyName := p.Name
 				p.logger.Debugf("creating key pair: %s", keyName)
-				_, err = p.client.ImportKeyPair(&ec2.ImportKeyPairInput{
+				_, err := p.client.ImportKeyPair(&ec2.ImportKeyPairInput{
 					KeyName:           &keyName,
 					PublicKeyMaterial: pk,
 				})
@@ -1088,13 +1052,13 @@ func (p *Amazone) getDefaultVPCId() (string, error) {
 		if aws.StringValue(attribute.AttributeName) == "default-vpc" {
 			value := aws.StringValue(attribute.AttributeValues[0].AttributeValue)
 			if value == "none" {
-				return "", errors.New("default-vpc is 'none'")
+				return "", errors.New("there's 'none' for default vpc")
 			}
 			return value, nil
 		}
 	}
 
-	return "", errors.New("No default-vpc attribute")
+	return "", errors.New("couldn't get default vpc")
 }
 
 func (p *Amazone) configSecurityGroup() error {
@@ -1371,103 +1335,6 @@ func (p *Amazone) deleteCluster(f bool) error {
 	}
 
 	p.logger.Debugf("[%s] successfully deleted cluster %s\n", p.GetProviderName(), p.Name)
-	return nil
-}
-
-func (p *Amazone) operateCluster(expectStatus, targetStatus string, f bool, fn func(f bool, ids []string) error) error {
-	p.newClient()
-	exist, ids, err := p.IsClusterExist()
-	if err != nil {
-		return err
-	}
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
-	}
-
-	if len(ids) > 0 {
-		if err := p.startAndStopCheck(expectStatus); err != nil {
-			return err
-		}
-
-		if err := fn(f, ids); err != nil {
-			return err
-		}
-		// wait ecs instances to be target status.
-		if err = p.getInstanceStatus(targetStatus); err != nil {
-			return err
-		}
-
-		p.syncNodeStatusWithInstance(nil)
-		p.Status.Status = targetStatus
-
-		err = cluster.SaveState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-			Status:   p.Status,
-		})
-
-		if err != nil {
-			return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
-		}
-	}
-	return nil
-}
-
-func (p *Amazone) startAndStopCheck(aimStatus string) error {
-	instanceList, err := p.describeInstances()
-	if err != nil {
-		return err
-	}
-	masterCnt := 0
-	unexpectedStatusCnt := 0
-	for _, instance := range instanceList {
-		if aws.StringValue(instance.State.Name) != aimStatus {
-			unexpectedStatusCnt++
-			p.logger.Warnf("[%s] instance [%s] status is %s, but it is expected to be %s\n",
-				p.GetProviderName(), aws.StringValue(instance.InstanceId), aws.StringValue(instance.State.Name), aimStatus)
-		}
-		master := false
-		for _, tag := range instance.Tags {
-			if strings.EqualFold(aws.StringValue(tag.Key), "master") && strings.EqualFold(aws.StringValue(tag.Value), "true") {
-				master = true
-				masterCnt++
-				break
-			}
-		}
-
-		p.m.Store(aws.StringValue(instance.InstanceId), types.Node{
-			Master:            master,
-			InstanceID:        aws.StringValue(instance.InstanceId),
-			InstanceStatus:    aws.StringValue(instance.State.Name),
-			InternalIPAddress: []string{aws.StringValue(instance.PrivateIpAddress)},
-			PublicIPAddress:   []string{aws.StringValue(instance.PublicIpAddress)},
-		})
-	}
-	if unexpectedStatusCnt > 0 {
-		return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
-	}
-	p.Master = strconv.Itoa(masterCnt)
-	p.Worker = strconv.Itoa(len(instanceList) - masterCnt)
-	return nil
-}
-
-func (p *Amazone) startCluster(f bool, ids []string) error {
-	input := &ec2.StartInstancesInput{}
-	input.SetInstanceIds(aws.StringSlice(ids))
-	if _, err := p.client.StartInstances(input); err != nil {
-		return fmt.Errorf("[%s] calling startInstance error, msg: [%v]", p.GetProviderName(), err)
-	}
-	return nil
-}
-
-func (p *Amazone) stopCluster(f bool, ids []string) error {
-	input := &ec2.StopInstancesInput{}
-	input.SetInstanceIds(aws.StringSlice(ids))
-	input.SetForce(f)
-	if _, err := p.client.StopInstances(input); err != nil {
-		return fmt.Errorf("[%s] calling stopInstance error, msg: [%v]", p.GetProviderName(), err)
-	}
 	return nil
 }
 

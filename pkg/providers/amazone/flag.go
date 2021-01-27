@@ -36,20 +36,6 @@ const deleteUsageExample = `  autok3s -d delete \
     --secret-key <secret-key> 
 `
 
-const startUsageExample = `  autok3s -d start \
-    --provider amazone \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --secret-key <secret-key> 
-`
-
-const stopUsageExample = `  autok3s -d stop \
-    --provider amazone \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --secret-key <secret-key> 
-`
-
 const sshUsageExample = `  autok3s ssh \
     --provider amazone \
     --name <cluster name> \
@@ -66,10 +52,6 @@ func (p *Amazone) GetUsageExample(action string) string {
 		return joinUsageExample
 	case "delete":
 		return deleteUsageExample
-	case "start":
-		return startUsageExample
-	case "stop":
-		return stopUsageExample
 	case "ssh":
 		return sshUsageExample
 	default:
@@ -93,50 +75,6 @@ func (p *Amazone) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19)",
 		},
 	}...)
-
-	return utils.ConvertFlags(cmd, fs)
-}
-
-func (p *Amazone) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			Usage:     "Set the name of the kubeconfig context",
-			ShortHand: "n",
-			Required:  true,
-		},
-		{
-			Name:   "region",
-			P:      &p.Region,
-			V:      p.Region,
-			Usage:  "AWS region",
-			EnvVar: "AWS_DEFAULT_REGION",
-		},
-	}
-
-	return utils.ConvertFlags(cmd, fs)
-}
-
-func (p *Amazone) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			Usage:     "Set the name of the kubeconfig context",
-			ShortHand: "n",
-			Required:  true,
-		},
-		{
-			Name:   "region",
-			P:      &p.Region,
-			V:      p.Region,
-			Usage:  "AWS region",
-			EnvVar: "AWS_DEFAULT_REGION",
-		},
-	}
 
 	return utils.ConvertFlags(cmd, fs)
 }

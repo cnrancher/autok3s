@@ -36,20 +36,6 @@ const deleteUsageExample = `  autok3s -d delete \
     --access-secret <access-secret>
 `
 
-const startUsageExample = `  autok3s -d start \
-    --provider alibaba \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
-`
-
-const stopUsageExample = `  autok3s -d stop \
-    --provider alibaba \
-    --name <cluster name> \
-    --access-key <access-key> \
-    --access-secret <access-secret>
-`
-
 const sshUsageExample = `  autok3s ssh \
     --provider alibaba \
     --name <cluster name> \
@@ -66,10 +52,6 @@ func (p *Alibaba) GetUsageExample(action string) string {
 		return joinUsageExample
 	case "delete":
 		return deleteUsageExample
-	case "start":
-		return startUsageExample
-	case "stop":
-		return stopUsageExample
 	case "ssh":
 		return sshUsageExample
 	default:
@@ -105,50 +87,6 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19)",
 		},
 	}...)
-
-	return utils.ConvertFlags(cmd, fs)
-}
-
-func (p *Alibaba) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			Usage:     "Set the name of the kubeconfig context",
-			ShortHand: "n",
-			Required:  true,
-		},
-		{
-			Name:   "region",
-			P:      &p.Region,
-			V:      p.Region,
-			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
-			EnvVar: "ECS_REGION",
-		},
-	}
-
-	return utils.ConvertFlags(cmd, fs)
-}
-
-func (p *Alibaba) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			Usage:     "Set the name of the kubeconfig context",
-			ShortHand: "n",
-			Required:  true,
-		},
-		{
-			Name:   "region",
-			P:      &p.Region,
-			V:      p.Region,
-			Usage:  "Region is physical locations (data centers) that spread all over the world to reduce the network latency",
-			EnvVar: "ECS_REGION",
-		},
-	}
 
 	return utils.ConvertFlags(cmd, fs)
 }
@@ -398,6 +336,12 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			P:     &p.InternetMaxBandwidthOut,
 			V:     p.InternetMaxBandwidthOut,
 			Usage: "Used to specify the maximum out flow of the instance internet",
+		},
+		{
+			Name:  "eip",
+			P:     &p.EIP,
+			V:     &p.EIP,
+			Usage: "Allocate EIP for instance",
 		},
 		{
 			Name:  "ip",
