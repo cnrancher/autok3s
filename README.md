@@ -37,6 +37,7 @@ See the providers' links below for more usage details:
 - [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap Kubernetes with k3s onto Alibaba ECS
 - [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap Kubernetes with k3s onto Tencent CVM
 - [native](docs/i18n/en_us/native/README.md) - Bootstrap Kubernetes with k3s onto any VM
+- [amazone](docs/i18n/en_us/amazone/README.md) - Bootstrap Kubernetes with k3s onto Amazone ECS
 
 ## Quick Start
 The following command use the `alibaba` provider, with prerequisites that refer to the [alibaba](docs/i18n/en_us/alibaba/README.md) document.
