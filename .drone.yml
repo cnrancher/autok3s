@@ -38,13 +38,24 @@ platform:
   os: linux
   arch: amd64
 steps:
+  - name: build
+    image: maiwj/drone-dapper:v0.4.2
+    privileged: true
+    environment:
+      BY: dapper
+      CROSS: false
+    commands:
+      - make autok3s build only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
   - name: verify
     image: maiwj/drone-dapper:v0.4.2
     privileged: true
     environment:
       BY: dapper
     commands:
-      - make autok3s unit
+      - make autok3s unit only
     volumes:
       - name: docker
         path: /var/run/docker.sock
@@ -121,8 +132,6 @@ volumes:
 trigger:
   event:
     include:
-      - push
-      - pull_request
       - tag
 node:
   instance: agent-amd64
@@ -171,7 +180,6 @@ trigger:
       - "refs/tags/v*"
   event:
     include:
-      - push
       - tag
 node:
   instance: agent-amd64

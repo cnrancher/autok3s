@@ -4,6 +4,7 @@ import (
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -43,7 +44,7 @@ func SSHCommand() *cobra.Command {
 		sshCmd.Flags().StringVar(&sSSH.Password, "ssh-password", sSSH.Password, "SSH login password")
 		sshCmd.Flags().BoolVar(&sSSH.SSHAgentAuth, "ssh-agent", sSSH.SSHAgentAuth, "Enable ssh agent")
 
-		sshCmd.Flags().AddFlagSet(sp.GetCredentialFlags(sshCmd))
+		sshCmd.Flags().AddFlagSet(utils.ConvertFlags(sshCmd, sp.GetCredentialFlags()))
 		sshCmd.Flags().AddFlagSet(sp.GetSSHFlags(sshCmd))
 		sshCmd.Example = sp.GetUsageExample("ssh")
 	}

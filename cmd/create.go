@@ -4,6 +4,7 @@ import (
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -46,14 +47,14 @@ func CreateCommand() *cobra.Command {
 		createCmd.Flags().StringVar(&cSSH.Password, "ssh-password", cSSH.Password, "SSH login password")
 		createCmd.Flags().BoolVar(&cSSH.SSHAgentAuth, "ssh-agent", cSSH.SSHAgentAuth, "Enable ssh agent")
 
-		createCmd.Flags().AddFlagSet(cp.GetCredentialFlags(createCmd))
-		createCmd.Flags().AddFlagSet(cp.GetCreateFlags(createCmd))
+		createCmd.Flags().AddFlagSet(utils.ConvertFlags(createCmd, cp.GetCredentialFlags()))
+		createCmd.Flags().AddFlagSet(utils.ConvertFlags(createCmd, cp.GetOptionFlags()))
 		createCmd.Example = cp.GetUsageExample("create")
 	}
 
 	createCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if cProvider == "" {
-			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+			logrus.Fatalln("required flags(s) \"--provider\" not set")
 		}
 		common.InitPFlags(cmd, cp)
 		return common.MakeSureCredentialFlag(cmd.Flags(), cp)
@@ -62,6 +63,9 @@ func CreateCommand() *cobra.Command {
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
 		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>"
 		cp.GenerateClusterName()
+		if err := cp.CreateCheck(cSSH); err != nil {
+			logrus.Fatalln(err)
+		}
 
 		// create k3s cluster with generated cluster name.
 		if err := cp.CreateK3sCluster(cSSH); err != nil {

@@ -14,6 +14,7 @@ type Tunnel struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+	Writer io.Writer
 	Modes  ssh.TerminalModes
 	Term   string
 	Height int
@@ -146,8 +147,14 @@ func (t *Tunnel) executeCommand(cmd string) error {
 		return err
 	}
 
-	outWriter := io.MultiWriter(os.Stdout, t.Stdout)
-	errWriter := io.MultiWriter(os.Stderr, t.Stderr)
+	var outWriter, errWriter io.Writer
+	if t.Writer != nil {
+		outWriter = io.MultiWriter(t.Stdout, t.Writer)
+		errWriter = io.MultiWriter(t.Stderr, t.Writer)
+	} else {
+		outWriter = io.MultiWriter(os.Stdout, t.Stdout)
+		errWriter = io.MultiWriter(os.Stderr, t.Stderr)
+	}
 
 	wg := sync.WaitGroup{}
 
@@ -168,4 +175,8 @@ func (t *Tunnel) executeCommand(cmd string) error {
 	wg.Wait()
 
 	return err
+}
+
+func (t *Tunnel) Session() (*ssh.Session, error) {
+	return t.conn.NewSession()
 }

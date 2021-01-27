@@ -4,6 +4,7 @@ import (
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,7 @@ func JoinCommand() *cobra.Command {
 		joinCmd.Flags().StringVar(&jSSH.Password, "ssh-password", jSSH.Password, "SSH login password")
 		joinCmd.Flags().BoolVar(&jSSH.SSHAgentAuth, "ssh-agent", jSSH.SSHAgentAuth, "Enable ssh agent")
 
-		joinCmd.Flags().AddFlagSet(jp.GetCredentialFlags(joinCmd))
+		joinCmd.Flags().AddFlagSet(utils.ConvertFlags(joinCmd, jp.GetCredentialFlags()))
 		joinCmd.Flags().AddFlagSet(jp.GetJoinFlags(joinCmd))
 		joinCmd.Example = jp.GetUsageExample("join")
 	}

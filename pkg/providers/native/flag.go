@@ -34,7 +34,7 @@ func (p *Native) GetUsageExample(action string) string {
 	}
 }
 
-func (p *Native) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
+func (p *Native) GetOptionFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{
 		{
@@ -51,7 +51,7 @@ func (p *Native) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 		},
 	}...)
 
-	return utils.ConvertFlags(cmd, fs)
+	return fs
 }
 
 func (p *Native) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -67,8 +67,8 @@ func (p *Native) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return cmd.Flags()
 }
 
-func (p *Native) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
-	return cmd.Flags()
+func (p *Native) GetCredentialFlags() []types.Flag {
+	return []types.Flag{}
 }
 
 func (p *Native) GetSSHConfig() *types.SSH {

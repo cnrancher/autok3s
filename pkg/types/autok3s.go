@@ -1,5 +1,7 @@
 package types
 
+import "github.com/sirupsen/logrus"
+
 type AutoK3s struct {
 	Clusters []Cluster `json:"clusters" yaml:"clusters"`
 }
@@ -9,6 +11,7 @@ type Cluster struct {
 	Options  interface{} `json:"options,omitempty"`
 
 	Status `json:"status" yaml:"status"`
+	Logger *logrus.Logger `json:"-" yaml:"-"`
 }
 
 type Metadata struct {

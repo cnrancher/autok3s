@@ -18,7 +18,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
-	"github.com/cnrancher/autok3s/pkg/types/amazone"
+	"github.com/cnrancher/autok3s/pkg/types/aws"
 	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -50,7 +50,11 @@ var (
 )
 
 func InitK3sCluster(cluster *types.Cluster) error {
-	logger = common.NewLogger(common.Debug)
+	if cluster.Logger != nil {
+		logger = cluster.Logger
+	} else {
+		logger = common.NewLogger(common.Debug, nil)
+	}
 	logger.Infof("[%s] executing init k3s cluster logic...\n", cluster.Provider)
 
 	p, err := providers.GetProvider(cluster.Provider)
@@ -195,7 +199,12 @@ func InitK3sCluster(cluster *types.Cluster) error {
 }
 
 func JoinK3sNode(merged, added *types.Cluster) error {
-	logger = common.NewLogger(common.Debug)
+	if merged.Logger != nil {
+		logger = merged.Logger
+	} else {
+		logger = common.NewLogger(common.Debug, nil)
+	}
+
 	logger.Infof("[%s] executing join k3s node logic\n", merged.Provider)
 
 	p, err := providers.GetProvider(merged.Provider)
@@ -391,8 +400,8 @@ func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
 			if option, ok := cluster.Options.(tencent.Options); ok {
 				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
 			}
-		case "amazone":
-			if option, ok := cluster.Options.(amazone.Options); ok {
+		case "aws":
+			if option, ok := cluster.Options.(aws.Options); ok {
 				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
 			}
 		}
@@ -439,16 +448,15 @@ func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
 }
 
 func DeleteState(name string, provider string) error {
-	r, err := deleteClusterFromState(name, provider)
-	if err != nil {
-		return err
-	}
-
 	v := common.CfgPath
 	if v == "" {
 		return errors.New("[cluster] cfg path is empty")
 	}
 
+	r, err := deleteClusterFromState(name, provider)
+	if err != nil {
+		return err
+	}
 	return utils.WriteYaml(r, v, common.StateFile)
 }
 
@@ -487,23 +495,13 @@ func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
 }
 
 func SaveState(cluster *types.Cluster) error {
+	v := common.CfgPath
+	if v == "" {
+		return errors.New("[cluster] cfg path is empty")
+	}
 	r, err := AppendToState(cluster)
 	if err != nil {
 		return err
-	}
-
-	v := common.CfgPath
-	if v == "" {
-		return errors.New("[cluster] cfg path is empty")
-	}
-
-	return utils.WriteYaml(r, v, common.StateFile)
-}
-
-func FilterState(r []*types.Cluster) error {
-	v := common.CfgPath
-	if v == "" {
-		return errors.New("[cluster] cfg path is empty")
 	}
 
 	return utils.WriteYaml(r, v, common.StateFile)
@@ -737,17 +735,19 @@ func execute(host *hosts.Host, cmds []string) (string, error) {
 	defer func() {
 		_ = tunnel.Close()
 	}()
-
-	var (
-		stdout bytes.Buffer
-		stderr bytes.Buffer
-	)
+	tunnel.Writer = logger.Out
 
 	for _, cmd := range cmds {
 		tunnel.Cmd(cmd)
 	}
 
-	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil {
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
+	tunnel.SetStdio(&stdout, &stderr)
+
+	if err := tunnel.Run(); err != nil {
 		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
@@ -1086,4 +1086,32 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 		}
 	}
 	return instanceNodes, nil
+}
+
+func GetClusterByID(id string) (*types.Cluster, error) {
+	v := common.CfgPath
+	if v == "" {
+		return nil, errors.New("[cluster] cfg path is empty")
+	}
+
+	clusters, err := utils.ReadYaml(v, common.StateFile)
+	if err != nil {
+		return nil, err
+	}
+
+	converts, err := ConvertToClusters(clusters)
+	if err != nil {
+		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
+	}
+	for _, c := range converts {
+		if c.Name == id {
+			return &c, nil
+		}
+	}
+	return nil, fmt.Errorf("cluster %s is not found", id)
+}
+
+func SaveClusterState(cluster *types.Cluster, status string) error {
+	path := common.GetClusterStatePath()
+	return utils.WriteYaml(cluster, path, fmt.Sprintf("%s_%s", cluster.Name, status))
 }
