@@ -3,8 +3,11 @@ package alibaba
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +26,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
+	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -86,11 +90,11 @@ type Alibaba struct {
 
 func init() {
 	providers.RegisterProvider(ProviderName, func() (providers.Provider, error) {
-		return NewProvider(), nil
+		return newProvider(), nil
 	})
 }
 
-func NewProvider() *Alibaba {
+func newProvider() *Alibaba {
 	return &Alibaba{
 		Metadata: types.Metadata{
 			Provider:               ProviderName,
@@ -131,17 +135,20 @@ func (p *Alibaba) GenerateClusterName() {
 }
 
 func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
-	if ssh.User == "" {
-		ssh.User = defaultUser
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
 	}
-
-	if p.KeyPair != "" && ssh.SSHKeyPath == "" {
-		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --key-pair %s", p.GetProviderName(), p.KeyPair)
-	}
-
 	defer func() {
+		if err != nil {
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+			if c != nil {
+				c.Status.Status = common.StatusFailed
+				cluster.SaveClusterState(c, common.StatusFailed)
+			}
+			return
+		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(common.UsageInfo, p.Name)
 			if p.UI {
@@ -154,12 +161,31 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 			fmt.Println("")
 		}
 	}()
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
+	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] begin to create cluster %s \n", p.GetProviderName(), p.Name)
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
 
-	c, err := p.generateInstance(p.createCheck, ssh)
+	c.Status.Status = common.StatusCreating
+	err = cluster.SaveClusterState(c, common.StatusCreating)
+	if err != nil {
+		return err
+	}
+
+	c, err = p.generateInstance(func() error {
+		return nil
+	}, ssh)
 	if err != nil {
 		return
 	}
 
+	c.Logger = p.logger
 	// initialize K3s cluster.
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return
@@ -204,25 +230,54 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 		}
 		p.logger.Infof("[%s] successfully deploy Alibaba additional manifests\n", p.GetProviderName())
 	}
-
-	return
+	logFile.Close()
+	// remove creating state file and save running state
+	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+	return cluster.SaveClusterState(c, common.StatusRunning)
 }
 
-func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
-	p.logger = common.NewLogger(common.Debug)
+func (p *Alibaba) JoinK3sNode(ssh *types.SSH) (err error) {
+	if p.m == nil {
+		p.m = new(syncmap.Map)
+	}
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}
+	defer func() {
+		if err != nil {
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
+			if c != nil {
+				c.Status.Status = common.StatusFailed
+				cluster.SaveClusterState(c, common.StatusFailed)
+			}
+			return
+		}
+	}()
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
 	if ssh.User == "" {
 		ssh.User = defaultUser
 	}
+	c.Status.Status = "upgrading"
+	err = cluster.SaveClusterState(c, common.StatusJoin)
+	if err != nil {
+		return err
+	}
 
-	merged, err := p.generateInstance(p.joinCheck, ssh)
+	c, err = p.generateInstance(p.joinCheck, ssh)
 	if err != nil {
 		return err
 	}
 
 	added := &types.Cluster{
-		Metadata: merged.Metadata,
-		Options:  merged.Options,
+		Metadata: c.Metadata,
+		Options:  c.Options,
 		Status:   types.Status{},
 	}
 
@@ -239,17 +294,26 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) error {
 		return true
 	})
 
+	c.Logger = p.logger
+	added.Logger = p.logger
 	// join K3s node.
-	if err := cluster.JoinK3sNode(merged, added); err != nil {
+	if err := cluster.JoinK3sNode(c, added); err != nil {
 		return err
 	}
 
 	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
-
-	return nil
+	logFile.Close()
+	// remove join state file and save running state
+	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
+	return cluster.SaveClusterState(c, common.StatusRunning)
 }
 
 func (p *Alibaba) Rollback() error {
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing rollback logic...\n", p.GetProviderName())
 
 	ids := make([]string, 0)
@@ -293,14 +357,14 @@ func (p *Alibaba) Rollback() error {
 	}
 
 	// remove default key-pair folder
-	err := os.RemoveAll(common.GetClusterPath(p.Name, p.GetProviderName()))
+	err = os.RemoveAll(common.GetClusterPath(p.Name, p.GetProviderName()))
 	if err != nil {
 		return fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.Name, p.GetProviderName()), err)
 	}
 
 	p.logger.Infof("[%s] successfully executed rollback logic\n", p.GetProviderName())
 
-	return nil
+	return logFile.Close()
 }
 
 func (p *Alibaba) DeleteK3sCluster(f bool) error {
@@ -311,7 +375,19 @@ func (p *Alibaba) DeleteK3sCluster(f bool) error {
 	}
 
 	if isConfirmed {
-		p.logger = common.NewLogger(common.Debug)
+		logFile, err := common.GetLogFile(p.Name)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			logFile.Close()
+			// remove log file
+			os.Remove(filepath.Join(common.GetLogPath(), p.Name))
+			// remove state file
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusRunning)))
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
+		}()
+		p.logger = common.NewLogger(common.Debug, logFile)
 		p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
 
 		if err := p.generateClientSDK(); err != nil {
@@ -329,7 +405,7 @@ func (p *Alibaba) DeleteK3sCluster(f bool) error {
 }
 
 func (p *Alibaba) SSHK3sNode(ssh *types.SSH, node string) error {
-	p.logger = common.NewLogger(common.Debug)
+	p.logger = common.NewLogger(common.Debug, nil)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
 
 	if err := p.generateClientSDK(); err != nil {
@@ -441,7 +517,7 @@ func (p *Alibaba) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.N
 }
 
 func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug)
+	p.logger = common.NewLogger(common.Debug, nil)
 	c := &types.ClusterInfo{
 		Name:     p.Name,
 		Region:   p.Region,
@@ -498,7 +574,7 @@ func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 }
 
 func (p *Alibaba) DescribeCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug)
+	p.logger = common.NewLogger(common.Debug, nil)
 	c := &types.ClusterInfo{
 		Name:     p.Name,
 		Region:   p.Region,
@@ -569,6 +645,51 @@ func (p *Alibaba) DescribeCluster(kubecfg string) *types.ClusterInfo {
 		c.Version = types.ClusterStatusUnknown
 	}
 	return c
+}
+
+func (p *Alibaba) GetClusterConfig() (map[string]schemas.Field, error) {
+	config := p.GetSSHConfig()
+	sshConfig, err := utils.ConvertToFields(*config)
+	if err != nil {
+		return nil, err
+	}
+	metaConfig, err := utils.ConvertToFields(p.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range sshConfig {
+		metaConfig[k] = v
+	}
+	return metaConfig, nil
+}
+
+func (p *Alibaba) GetProviderOption() (map[string]schemas.Field, error) {
+	return utils.ConvertToFields(p.Options)
+}
+
+func (p *Alibaba) SetConfig(config []byte) error {
+	c := types.Cluster{}
+	err := json.Unmarshal(config, &c)
+	if err != nil {
+		return err
+	}
+	sourceMeta := reflect.ValueOf(&p.Metadata).Elem()
+	targetMeta := reflect.ValueOf(&c.Metadata).Elem()
+	utils.MergeConfig(sourceMeta, targetMeta)
+	sourceOption := reflect.ValueOf(&p.Options).Elem()
+	b, err := json.Marshal(c.Options)
+	if err != nil {
+		return err
+	}
+	opt := &alibaba.Options{}
+	err = json.Unmarshal(b, opt)
+	if err != nil {
+		return err
+	}
+	targetOption := reflect.ValueOf(opt).Elem()
+	utils.MergeConfig(sourceOption, targetOption)
+
+	return nil
 }
 
 func (p *Alibaba) generateClientSDK() error {
@@ -654,7 +775,10 @@ func (p *Alibaba) deleteCluster(f bool) error {
 		return fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
 	}
 	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+		if !f {
+			return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+		}
+		return nil
 	}
 
 	p.releaseEipAddresses(false)
@@ -696,7 +820,8 @@ func (p *Alibaba) deleteCluster(f bool) error {
 	if err != nil && !f {
 		return fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.Name, p.GetProviderName()), err)
 	}
-
+	// remove log file
+	os.Remove(filepath.Join(common.GetLogPath(), p.Name))
 	p.logger.Debugf("[%s] successfully deleted cluster %s\n", p.GetProviderName(), p.Name)
 
 	return nil
@@ -884,7 +1009,11 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 	return response.Vpcs.Vpc[0].CidrBlock, nil
 }
 
-func (p *Alibaba) createCheck() error {
+func (p *Alibaba) CreateCheck(ssh *types.SSH) error {
+	if p.KeyPair != "" && ssh.SSHKeyPath == "" {
+		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --key-pair %s", p.GetProviderName(), p.KeyPair)
+	}
+
 	masterNum, err := strconv.Atoi(p.Master)
 	if masterNum < 1 || err != nil {
 		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",

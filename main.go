@@ -1,3 +1,6 @@
+//go:generate rm -rf pkg/server/ui
+//go:generate go run pkg/codegen/main.go
+
 package main
 
 import (

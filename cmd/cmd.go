@@ -9,7 +9,7 @@ import (
 
 	// import custom provider
 	_ "github.com/cnrancher/autok3s/pkg/providers/alibaba"
-	_ "github.com/cnrancher/autok3s/pkg/providers/amazone"
+	_ "github.com/cnrancher/autok3s/pkg/providers/aws"
 	_ "github.com/cnrancher/autok3s/pkg/providers/native"
 	_ "github.com/cnrancher/autok3s/pkg/providers/tencent"
 
@@ -64,6 +64,14 @@ func initCfg() {
 	viper.AutomaticEnv()
 
 	if err := utils.EnsureFileExist(common.CfgPath, common.ConfigFile); err != nil {
+		logrus.Fatalln(err)
+	}
+
+	if err := utils.EnsureFolderExist(common.GetLogPath()); err != nil {
+		logrus.Fatalln(err)
+	}
+
+	if err := utils.EnsureFolderExist(common.GetClusterStatePath()); err != nil {
 		logrus.Fatalln(err)
 	}
 

@@ -5,7 +5,9 @@ import (
 	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types/apis"
 
+	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -24,8 +26,8 @@ type Provider interface {
 	GetProviderName() string
 	// Get command usage example.
 	GetUsageExample(action string) string
-	// Create command flags.
-	GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet
+	// Create flags of provider options.
+	GetOptionFlags() []types.Flag
 	// Join command flags.
 	GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Delete command flags.
@@ -33,7 +35,7 @@ type Provider interface {
 	// SSH command flags.
 	GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet
 	// Credential flags.
-	GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet
+	GetCredentialFlags() []types.Flag
 	// Use this method to bind Viper, although it is somewhat repetitive.
 	BindCredentialFlags() *pflag.FlagSet
 	// Generate cluster name.
@@ -62,6 +64,13 @@ type Provider interface {
 	GetCluster(kubecfg string) *types.ClusterInfo
 	// get default ssh config for provider
 	GetSSHConfig() *types.SSH
+	// get cluster configuration of provider
+	GetClusterConfig() (map[string]schemas.Field, error)
+	GetProviderOption() (map[string]schemas.Field, error)
+	// set cluster configuration of provider
+	SetConfig(config []byte) error
+	// validate create flags
+	CreateCheck(ssh *types.SSH) error
 }
 
 // RegisterProvider registers a provider.Factory by name.
@@ -85,4 +94,16 @@ func GetProvider(name string) (Provider, error) {
 		return nil, fmt.Errorf("provider %s is not registered", name)
 	}
 	return f()
+}
+
+func ListProviders() []apis.Provider {
+	providersMutex.Lock()
+	defer providersMutex.Unlock()
+	list := make([]apis.Provider, 0)
+	for p := range providers {
+		list = append(list, apis.Provider{
+			Name: p,
+		})
+	}
+	return list
 }

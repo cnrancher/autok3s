@@ -58,7 +58,7 @@ func (p *Tencent) GetUsageExample(action string) string {
 	}
 }
 
-func (p *Tencent) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
+func (p *Tencent) GetOptionFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{
 		{
@@ -81,7 +81,7 @@ func (p *Tencent) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 		},
 	}...)
 
-	return utils.ConvertFlags(cmd, fs)
+	return fs
 }
 
 func (p *Tencent) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -157,7 +157,7 @@ func (p *Tencent) MergeClusterOptions() error {
 	return nil
 }
 
-func (p *Tencent) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
+func (p *Tencent) GetCredentialFlags() []types.Flag {
 	fs := []types.Flag{
 		{
 			Name:     secretID,
@@ -177,7 +177,7 @@ func (p *Tencent) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 		},
 	}
 
-	return utils.ConvertFlags(cmd, fs)
+	return fs
 }
 
 func (p *Tencent) GetSSHConfig() *types.SSH {

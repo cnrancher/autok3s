@@ -36,15 +36,21 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.28.2
 	github.com/briandowns/spinner v1.11.1
+	github.com/creack/pty v1.1.7
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200821074627-7ae5222c72cc+incompatible
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/websocket v1.4.1
+	github.com/hpcloud/tail v1.0.0
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
 	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
+	github.com/rancher/wrangler v0.6.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5

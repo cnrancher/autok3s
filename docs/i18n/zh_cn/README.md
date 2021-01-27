@@ -36,6 +36,7 @@
 - [alibaba](alibaba/README.md) - 在阿里云的 ECS 中初始化 Kubernetes (k3s) 集群
 - [tencent](tencent/README.md) - 在腾讯云 CVM 中初始化 Kubernetes (k3s) 集群
 - [native](native/README.md) - 在任意类型 VM 实例中初始化 Kubernetes (k3s) 集群
+- [aws](aws/README.md) - 在亚马逊 EC2 中初始化 Kubernetes (k3s) 集群
 
 ## 快速体验
 以下命令使用`alibaba`作为云提供商，相关的前置条件请参考[alibaba](alibaba/README.md)云提供商文档。
@@ -46,6 +47,10 @@ export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
 
 autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
+
+## 快速体验 UI
+
+如果您不想使用命令行工具体验，可以使用`autok3s`内置 UI 来体验相关功能，请运行命令 `autok3s serve`
 
 ## 演示视频
 示程序在1分钟左右就能将Kubernetes (k3s)安装到阿里云的ECS实例上。

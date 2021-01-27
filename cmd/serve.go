@@ -17,12 +17,13 @@ var (
 	}
 
 	bindPort    = "8080"
-	bindAddress = "0.0.0.0"
+	bindAddress = "127.0.0.1"
 )
 
 func init() {
+	// only support localhost for now
 	serveCmd.Flags().StringVar(&bindPort, "bind-port", bindPort, "HTTP/HTTPS bind port")
-	serveCmd.Flags().StringVar(&bindAddress, "bind-address", bindAddress, "HTTP/HTTPS bind address")
+	//serveCmd.Flags().StringVar(&bindAddress, "bind-address", bindAddress, "HTTP/HTTPS bind address")
 }
 
 func ServeCommand() *cobra.Command {

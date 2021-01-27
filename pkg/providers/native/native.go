@@ -1,7 +1,9 @@
 package native
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,7 +14,9 @@ import (
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
+	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 )
@@ -90,7 +94,11 @@ func (p *Native) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.No
 }
 
 func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
-	p.logger = common.NewLogger(common.Debug)
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
 
 	// set ssh default value
@@ -110,10 +118,6 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 		}
 	}()
 
-	if p.MasterIps == "" {
-		return fmt.Errorf("[%s] cluster must have one master when create", p.GetProviderName())
-	}
-
 	// assemble node status.
 	var c *types.Cluster
 	if c, err = p.assembleNodeStatus(ssh); err != nil {
@@ -122,7 +126,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 
 	c.Mirror = k3sMirror
 	c.DockerMirror = dockerMirror
-
+	c.Logger = p.logger
 	// initialize K3s cluster.
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return
@@ -133,7 +137,11 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 }
 
 func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
-	p.logger = common.NewLogger(common.Debug)
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
 	// set ssh default value
 	if ssh.User == "" {
@@ -185,7 +193,8 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 
 	p.Options.MasterIps = strings.Join(masterIps, ",")
 	p.Options.WorkerIps = strings.Join(workerIps, ",")
-
+	merged.Logger = p.logger
+	added.Logger = p.logger
 	// join K3s node.
 	if err := cluster.JoinK3sNode(merged, added); err != nil {
 		return err
@@ -224,6 +233,13 @@ func (p *Native) Rollback() error {
 	return nil
 }
 
+func (p *Native) CreateCheck(ssh *types.SSH) error {
+	if p.MasterIps == "" {
+		return fmt.Errorf("[%s] cluster must have one master when create", p.GetProviderName())
+	}
+	return nil
+}
+
 func (p *Native) DeleteK3sCluster(f bool) error {
 	return p.CommandNotSupport("delete")
 }
@@ -246,6 +262,51 @@ func (p *Native) GetCluster(kubecfg string) *types.ClusterInfo {
 
 func (p *Native) IsClusterExist() (bool, []string, error) {
 	return false, []string{}, nil
+}
+
+func (p *Native) GetClusterConfig() (map[string]schemas.Field, error) {
+	config := p.GetSSHConfig()
+	sshConfig, err := utils.ConvertToFields(*config)
+	if err != nil {
+		return nil, err
+	}
+	metaConfig, err := utils.ConvertToFields(p.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range sshConfig {
+		metaConfig[k] = v
+	}
+	return metaConfig, nil
+}
+
+func (p *Native) GetProviderOption() (map[string]schemas.Field, error) {
+	return utils.ConvertToFields(p.Options)
+}
+
+func (p *Native) SetConfig(config []byte) error {
+	c := types.Cluster{}
+	err := json.Unmarshal(config, &c)
+	if err != nil {
+		return err
+	}
+	sourceMeta := reflect.ValueOf(&p.Metadata).Elem()
+	targetMeta := reflect.ValueOf(&c.Metadata).Elem()
+	utils.MergeConfig(sourceMeta, targetMeta)
+	sourceOption := reflect.ValueOf(&p.Options).Elem()
+	b, err := json.Marshal(c.Options)
+	if err != nil {
+		return err
+	}
+	opt := &native.Options{}
+	err = json.Unmarshal(b, opt)
+	if err != nil {
+		return err
+	}
+	targetOption := reflect.ValueOf(opt).Elem()
+	utils.MergeConfig(sourceOption, targetOption)
+
+	return nil
 }
 
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {

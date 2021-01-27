@@ -3,8 +3,11 @@ package tencent
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +23,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/utils"
 	"github.com/cnrancher/autok3s/pkg/viper"
 
+	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
 	tencentCommon "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -128,13 +132,20 @@ func (p *Tencent) GenerateClusterName() {
 }
 
 func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
-	if ssh.User == "" {
-		ssh.User = defaultUser
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
 	}
-
 	defer func() {
+		if err != nil {
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+			if c != nil {
+				c.Status.Status = common.StatusFailed
+				cluster.SaveClusterState(c, common.StatusFailed)
+			}
+			return
+		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			fmt.Printf(common.UsageInfo, p.Name)
 			if p.UI {
@@ -148,11 +159,29 @@ func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 		}
 	}()
 
-	c, err := p.generateInstance(p.createCheck, ssh)
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
+	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
+	if ssh.User == "" {
+		ssh.User = defaultUser
+	}
+	c.Status.Status = common.StatusCreating
+	err = cluster.SaveClusterState(c, common.StatusCreating)
+	if err != nil {
+		return err
+	}
+
+	c, err = p.generateInstance(func() error {
+		return nil
+	}, ssh)
 	if err != nil {
 		return
 	}
 
+	c.Logger = p.logger
 	// initialize K3s cluster.
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return
@@ -165,11 +194,11 @@ func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 			// deploy additional Tencent cloud-controller-manager manifests.
 			tencentCCM := &tencent.CloudControllerManager{
 				Region:                base64.StdEncoding.EncodeToString([]byte(option.Region)),
-				SecretKey:             base64.StdEncoding.EncodeToString([]byte(option.SecretKey)),
-				SecretID:              base64.StdEncoding.EncodeToString([]byte(option.SecretID)),
 				VpcID:                 base64.StdEncoding.EncodeToString([]byte(option.VpcID)),
 				NetworkRouteTableName: base64.StdEncoding.EncodeToString([]byte(option.NetworkRouteTableName)),
 			}
+			tencentCCM.SecretID = base64.StdEncoding.EncodeToString([]byte(option.SecretID))
+			tencentCCM.SecretKey = base64.StdEncoding.EncodeToString([]byte(option.SecretKey))
 			if p.ClusterCIDR == "" {
 				p.ClusterCIDR = defaultCidr
 			}
@@ -186,24 +215,54 @@ func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 		p.logger.Infof("[%s] successfully deploy tencent additional manifests\n", p.GetProviderName())
 	}
 
-	return
+	logFile.Close()
+	// remove creating state file and save running state
+	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+	return cluster.SaveClusterState(c, common.StatusRunning)
 }
 
-func (p *Tencent) JoinK3sNode(ssh *types.SSH) error {
-	p.logger = common.NewLogger(common.Debug)
+func (p *Tencent) JoinK3sNode(ssh *types.SSH) (err error) {
+	if p.m == nil {
+		p.m = new(syncmap.Map)
+	}
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}
+	defer func() {
+		if err != nil {
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
+			if c != nil {
+				c.Status.Status = common.StatusFailed
+				cluster.SaveClusterState(c, common.StatusFailed)
+			}
+			return
+		}
+	}()
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
 	if ssh.User == "" {
 		ssh.User = defaultUser
 	}
 
-	merged, err := p.generateInstance(p.joinCheck, ssh)
+	c.Status.Status = "upgrading"
+	err = cluster.SaveClusterState(c, common.StatusJoin)
+	if err != nil {
+		return err
+	}
+	c, err = p.generateInstance(p.joinCheck, ssh)
 	if err != nil {
 		return err
 	}
 
 	added := &types.Cluster{
-		Metadata: merged.Metadata,
-		Options:  merged.Options,
+		Metadata: c.Metadata,
+		Options:  c.Options,
 		Status:   types.Status{},
 	}
 
@@ -220,17 +279,27 @@ func (p *Tencent) JoinK3sNode(ssh *types.SSH) error {
 		return true
 	})
 
+	c.Logger = p.logger
+	added.Logger = p.logger
 	// join K3s node.
-	if err := cluster.JoinK3sNode(merged, added); err != nil {
+	if err := cluster.JoinK3sNode(c, added); err != nil {
 		return err
 	}
 
 	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
 
-	return nil
+	logFile.Close()
+	// remove join state file and save running state
+	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
+	return cluster.SaveClusterState(c, common.StatusRunning)
 }
 
 func (p *Tencent) Rollback() error {
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
+	}
+	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing rollback logic...\n", p.GetProviderName())
 
 	ids := make([]string, 0)
@@ -297,14 +366,14 @@ func (p *Tencent) Rollback() error {
 	}
 
 	// remove default key-pair folder
-	err := os.RemoveAll(common.GetClusterPath(p.Name, p.GetProviderName()))
+	err = os.RemoveAll(common.GetClusterPath(p.Name, p.GetProviderName()))
 	if err != nil {
 		return fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.Name, p.GetProviderName()), err)
 	}
 
 	p.logger.Infof("[%s] successfully executed rollback logic\n", p.GetProviderName())
 
-	return nil
+	return logFile.Close()
 }
 
 func (p *Tencent) DeleteK3sCluster(f bool) error {
@@ -315,7 +384,19 @@ func (p *Tencent) DeleteK3sCluster(f bool) error {
 	}
 
 	if isConfirmed {
-		p.logger = common.NewLogger(common.Debug)
+		logFile, err := common.GetLogFile(p.Name)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			logFile.Close()
+			// remove log file
+			os.Remove(filepath.Join(common.GetLogPath(), p.Name))
+			// remove state file
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusRunning)))
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
+		}()
+		p.logger = common.NewLogger(common.Debug, logFile)
 		p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
 
 		if err := p.generateClientSDK(); err != nil {
@@ -333,7 +414,7 @@ func (p *Tencent) DeleteK3sCluster(f bool) error {
 }
 
 func (p *Tencent) SSHK3sNode(ssh *types.SSH, ip string) error {
-	p.logger = common.NewLogger(common.Debug)
+	p.logger = common.NewLogger(common.Debug, nil)
 	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
 
 	if err := p.generateClientSDK(); err != nil {
@@ -433,7 +514,7 @@ func (p *Tencent) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.N
 }
 
 func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug)
+	p.logger = common.NewLogger(common.Debug, nil)
 	c := &types.ClusterInfo{
 		Name:     p.Name,
 		Region:   p.Region,
@@ -492,7 +573,7 @@ func (p *Tencent) GetCluster(kubecfg string) *types.ClusterInfo {
 }
 
 func (p *Tencent) DescribeCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug)
+	p.logger = common.NewLogger(common.Debug, nil)
 	c := &types.ClusterInfo{
 		Name:     p.Name,
 		Region:   p.Region,
@@ -567,6 +648,51 @@ func (p *Tencent) DescribeCluster(kubecfg string) *types.ClusterInfo {
 	return c
 }
 
+func (p *Tencent) GetClusterConfig() (map[string]schemas.Field, error) {
+	config := p.GetSSHConfig()
+	sshConfig, err := utils.ConvertToFields(*config)
+	if err != nil {
+		return nil, err
+	}
+	metaConfig, err := utils.ConvertToFields(p.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range sshConfig {
+		metaConfig[k] = v
+	}
+	return metaConfig, nil
+}
+
+func (p *Tencent) GetProviderOption() (map[string]schemas.Field, error) {
+	return utils.ConvertToFields(p.Options)
+}
+
+func (p *Tencent) SetConfig(config []byte) error {
+	c := types.Cluster{}
+	err := json.Unmarshal(config, &c)
+	if err != nil {
+		return err
+	}
+	sourceMeta := reflect.ValueOf(&p.Metadata).Elem()
+	targetMeta := reflect.ValueOf(&c.Metadata).Elem()
+	utils.MergeConfig(sourceMeta, targetMeta)
+	sourceOption := reflect.ValueOf(&p.Options).Elem()
+	b, err := json.Marshal(c.Options)
+	if err != nil {
+		return err
+	}
+	opt := &tencent.Options{}
+	err = json.Unmarshal(b, opt)
+	if err != nil {
+		return err
+	}
+	targetOption := reflect.ValueOf(opt).Elem()
+	utils.MergeConfig(sourceOption, targetOption)
+
+	return nil
+}
+
 func (p *Tencent) generateClientSDK() error {
 	if p.SecretID == "" {
 		p.SecretID = viper.GetString(p.GetProviderName(), secretID)
@@ -613,10 +739,6 @@ func (p *Tencent) generateClientSDK() error {
 
 func (p *Tencent) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, error) {
 	var err error
-
-	if p.KeyIds != "" && ssh.SSHKeyPath == "" {
-		return nil, fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeyIds)
-	}
 
 	if err = p.generateClientSDK(); err != nil {
 		return nil, err
@@ -738,7 +860,10 @@ func (p *Tencent) deleteCluster(f bool) error {
 	}
 
 	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+		if !f {
+			return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+		}
+		return nil
 	}
 
 	taggedResource, err := p.describeResourcesByTags()
@@ -812,13 +937,17 @@ func (p *Tencent) deleteCluster(f bool) error {
 	if err != nil && !f {
 		return fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.Name, p.GetProviderName()), err)
 	}
-
+	// remove log file
+	os.Remove(filepath.Join(common.GetLogPath(), p.Name))
 	p.logger.Debugf("[%s] successfully deleted cluster %s\n", p.GetProviderName(), p.Name)
 
 	return nil
 }
 
-func (p *Tencent) createCheck() error {
+func (p *Tencent) CreateCheck(ssh *types.SSH) error {
+	if p.KeyIds != "" && ssh.SSHKeyPath == "" {
+		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeyIds)
+	}
 	masterNum, _ := strconv.Atoi(p.Master)
 	if masterNum < 1 {
 		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
