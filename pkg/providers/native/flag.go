@@ -63,14 +63,6 @@ func (p *Native) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return cmd.Flags()
 }
 
-func (p *Native) GetStopFlags(cmd *cobra.Command) *pflag.FlagSet {
-	return cmd.Flags()
-}
-
-func (p *Native) GetStartFlags(cmd *cobra.Command) *pflag.FlagSet {
-	return cmd.Flags()
-}
-
 func (p *Native) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return cmd.Flags()
 }

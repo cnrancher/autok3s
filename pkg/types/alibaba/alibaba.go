@@ -21,6 +21,7 @@ type Options struct {
 	VSwitch                 string `json:"v-switch,omitempty" yaml:"v-switch,omitempty"`
 	SecurityGroup           string `json:"security-group,omitempty" yaml:"security-group,omitempty"`
 	InternetMaxBandwidthOut string `json:"internet-max-bandwidth-out,omitempty" yaml:"internet-max-bandwidth-out,omitempty"`
+	EIP                     bool   `json:"eip,omitempty" yaml:"eip,omitempty"`
 }
 
 type Terway struct {

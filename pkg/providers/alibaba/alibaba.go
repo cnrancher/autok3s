@@ -112,6 +112,7 @@ func NewProvider() *Alibaba {
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
 			Region:                  defaultRegion,
 			Zone:                    defaultZoneID,
+			EIP:                     false,
 		},
 		Status: types.Status{
 			MasterNodes: make([]types.Node, 0),
@@ -323,32 +324,6 @@ func (p *Alibaba) DeleteK3sCluster(f bool) error {
 
 		p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
 	}
-
-	return nil
-}
-
-func (p *Alibaba) StartK3sCluster() error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing start logic...\n", p.GetProviderName())
-
-	if err := p.operateCluster(alibaba.StatusStopped, alibaba.StatusRunning, false, p.startCluster); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed start logic\n", p.GetProviderName())
-
-	return nil
-}
-
-func (p *Alibaba) StopK3sCluster(f bool) error {
-	p.logger = common.NewLogger(common.Debug)
-	p.logger.Infof("[%s] executing stop logic...\n", p.GetProviderName())
-
-	if err := p.operateCluster(alibaba.StatusRunning, alibaba.StatusStopped, f, p.stopCluster); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed stop logic\n", p.GetProviderName())
 
 	return nil
 }
@@ -633,14 +608,16 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 	request.SecurityGroupId = p.SecurityGroup
 	request.Amount = requests.NewInteger(num)
 	request.UniqueSuffix = requests.NewBoolean(false)
-	// TODO need to check `--eip` value
-	//bandwidth, err := strconv.Atoi(p.InternetMaxBandwidthOut)
-	//if err != nil {
-	//	p.logger.Warnf("[%s] `--internet-max-bandwidth-out` value %s is invalid, "+
-	//		"need to be integer, will use default value to create instance", p.GetProviderName(), p.InternetMaxBandwidthOut)
-	//	bandwidth = 5
-	//}
-	//request.InternetMaxBandwidthOut = requests.NewInteger(bandwidth)
+	// check `--eip` value
+	if !p.EIP {
+		bandwidth, err := strconv.Atoi(p.InternetMaxBandwidthOut)
+		if err != nil {
+			p.logger.Warnf("[%s] `--internet-max-bandwidth-out` value %s is invalid, "+
+				"need to be integer, will use default value to create instance", p.GetProviderName(), p.InternetMaxBandwidthOut)
+			bandwidth = 5
+		}
+		request.InternetMaxBandwidthOut = requests.NewInteger(bandwidth)
+	}
 
 	if p.Zone != "" {
 		request.ZoneId = p.Zone
@@ -725,36 +702,6 @@ func (p *Alibaba) deleteCluster(f bool) error {
 	return nil
 }
 
-func (p *Alibaba) startCluster(f bool, ids []string) error {
-	request := ecs.CreateStartInstancesRequest()
-	request.Scheme = "https"
-	request.InstanceId = &ids
-
-	if _, err := p.c.StartInstances(request); err != nil {
-		return fmt.Errorf("[%s] calling startInstance error, msg: [%v]", p.GetProviderName(), err)
-	}
-
-	return nil
-}
-
-func (p *Alibaba) stopCluster(f bool, ids []string) error {
-	request := ecs.CreateStopInstancesRequest()
-	request.Scheme = "https"
-	request.InstanceId = &ids
-
-	if f {
-		// similar to power-off operation.
-		// all cached data not written to the storage device will be lost.
-		request.ForceStop = requests.NewBoolean(f)
-	}
-
-	if _, err := p.c.StopInstances(request); err != nil && !f {
-		return fmt.Errorf("[%s] calling stopInstance error, msg: [%v]", p.GetProviderName(), err)
-	}
-
-	return nil
-}
-
 func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 	ids := make([]string, 0)
 	p.m.Range(func(key, value interface{}) bool {
@@ -806,13 +753,19 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 	}
 
 	for _, status := range instanceList {
+		publicIPAddress := status.PublicIpAddress.IpAddress
+		eip := []string{}
+		if p.EIP {
+			publicIPAddress = []string{status.EipAddress.IpAddress}
+			eip = []string{status.EipAddress.AllocationId}
+		}
 		if value, ok := p.m.Load(status.InstanceId); ok {
 			v := value.(types.Node)
 			// add only nodes that run the current command.
 			v.Current = true
 			v.InternalIPAddress = status.VpcAttributes.PrivateIpAddress.IpAddress
-			v.PublicIPAddress = []string{status.EipAddress.IpAddress}
-			v.EipAllocationIds = []string{status.EipAddress.AllocationId}
+			v.PublicIPAddress = publicIPAddress
+			v.EipAllocationIds = eip
 			v.SSH = *ssh
 			// check upload keypair
 			if uploadKeyPair {
@@ -838,8 +791,8 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			InstanceID:        status.InstanceId,
 			InstanceStatus:    status.Status,
 			InternalIPAddress: status.VpcAttributes.PrivateIpAddress.IpAddress,
-			EipAllocationIds:  []string{status.EipAddress.AllocationId},
-			PublicIPAddress:   []string{status.EipAddress.IpAddress}})
+			EipAllocationIds:  publicIPAddress,
+			PublicIPAddress:   eip})
 	}
 
 	p.syncNodeStatusWithInstance(ssh)
@@ -992,45 +945,6 @@ func (p *Alibaba) joinCheck() error {
 	}
 	p.WorkerNodes = workers
 
-	return nil
-}
-
-func (p *Alibaba) startAndStopCheck(aimStatus string) error {
-	instanceList, err := p.describeInstances()
-	if err != nil {
-		return err
-	}
-	masterCnt := 0
-	unexpectedStatusCnt := 0
-	for _, instance := range instanceList {
-		if instance.Status != aimStatus {
-			unexpectedStatusCnt++
-			p.logger.Warnf("[%s] instance [%s] status is %s, but it is expected to be %s\n",
-				p.GetProviderName(), instance.InstanceId, instance.Status, aimStatus)
-		}
-		master := false
-		for _, tag := range instance.Tags.Tag {
-			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
-				master = true
-				masterCnt++
-				break
-			}
-		}
-
-		p.m.Store(instance.InstanceId, types.Node{
-			Master:            master,
-			InstanceID:        instance.InstanceId,
-			InstanceStatus:    instance.Status,
-			InternalIPAddress: instance.VpcAttributes.PrivateIpAddress.IpAddress,
-			PublicIPAddress:   []string{instance.EipAddress.IpAddress},
-			EipAllocationIds:  []string{instance.EipAddress.AllocationId},
-		})
-	}
-	if unexpectedStatusCnt > 0 {
-		return fmt.Errorf("[%s] status of %d instance(s) is unexpected", p.GetProviderName(), unexpectedStatusCnt)
-	}
-	p.Master = strconv.Itoa(masterCnt)
-	p.Worker = strconv.Itoa(len(instanceList) - masterCnt)
 	return nil
 }
 
@@ -1379,34 +1293,36 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 		return nil, err
 	}
 
-	// 1. ensure all instances are successfully created
-	// 2. allocate eip for master and associate
-	// 3. allocate eip for worker and associate
-	// Make sure each step is successful before proceeding to the next step.
-	// Otherwise, the `Rollback()` will cause the eip fail to be released.
-	var associatedEipIds []string
+	if p.EIP {
+		// 1. ensure all instances are successfully created
+		// 2. allocate eip for master and associate
+		// 3. allocate eip for worker and associate
+		// Make sure each step is successful before proceeding to the next step.
+		// Otherwise, the `Rollback()` will cause the eip fail to be released.
+		var associatedEipIds []string
 
-	// allocate eip for master
-	if masterNum > 0 {
-		eipIds, err := p.assignEIPToInstance(masterNum, true)
-		if err != nil {
+		// allocate eip for master
+		if masterNum > 0 {
+			eipIds, err := p.assignEIPToInstance(masterNum, true)
+			if err != nil {
+				return nil, err
+			}
+			associatedEipIds = append(associatedEipIds, eipIds...)
+		}
+
+		// allocate eip for worker
+		if workerNum > 0 {
+			eipIds, err := p.assignEIPToInstance(workerNum, false)
+			if err != nil {
+				return nil, err
+			}
+			associatedEipIds = append(associatedEipIds, eipIds...)
+		}
+
+		// wait eip to be InUse status.
+		if err = p.getEipStatus(associatedEipIds, eipStatusInUse); err != nil {
 			return nil, err
 		}
-		associatedEipIds = append(associatedEipIds, eipIds...)
-	}
-
-	// allocate eip for worker
-	if workerNum > 0 {
-		eipIds, err := p.assignEIPToInstance(workerNum, false)
-		if err != nil {
-			return nil, err
-		}
-		associatedEipIds = append(associatedEipIds, eipIds...)
-	}
-
-	// wait eip to be InUse status.
-	if err = p.getEipStatus(associatedEipIds, eipStatusInUse); err != nil {
-		return nil, err
 	}
 
 	// assemble instance status.
@@ -1897,46 +1813,4 @@ func (p *Alibaba) syncNodeStatusWithInstance(ssh *types.SSH) {
 		}
 		return true
 	})
-}
-
-func (p *Alibaba) operateCluster(expectStatus, targetStatus string, f bool, fn func(f bool, ids []string) error) error {
-	if err := p.generateClientSDK(); err != nil {
-		return err
-	}
-	exist, ids, err := p.IsClusterExist()
-	if err != nil {
-		return err
-	}
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
-	}
-	if len(ids) > 0 {
-		if err := p.startAndStopCheck(expectStatus); err != nil {
-			return err
-		}
-
-		if err := fn(f, ids); err != nil {
-			return err
-		}
-		// wait ecs instances to be target status.
-		if err = p.getInstanceStatus(targetStatus); err != nil {
-			return err
-		}
-
-		p.syncNodeStatusWithInstance(nil)
-		p.Status.Status = targetStatus
-
-		err = cluster.SaveState(&types.Cluster{
-			Metadata: p.Metadata,
-			Options:  p.Options,
-			Status:   p.Status,
-		})
-
-		if err != nil {
-			return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
-		}
-	}
-
-	return nil
 }

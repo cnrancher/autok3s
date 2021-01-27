@@ -228,14 +228,6 @@ func (p *Native) DeleteK3sCluster(f bool) error {
 	return p.CommandNotSupport("delete")
 }
 
-func (p *Native) StartK3sCluster() error {
-	return p.CommandNotSupport("start")
-}
-
-func (p *Native) StopK3sCluster(f bool) error {
-	return p.CommandNotSupport("stop")
-}
-
 func (p *Native) SSHK3sNode(ssh *types.SSH, ip string) error {
 	return p.CommandNotSupport("ssh")
 }
