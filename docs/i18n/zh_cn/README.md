@@ -47,7 +47,7 @@ autok3s 命令中常用的参数如下表所示：
 
 | 参数                         | 描述                                            |
 | :--------------------------- | :---------------------------------------------- |
-| `-d`                         | 使 autok3s 在后台运行。                         |
+| `-d`                         | 开启 debug 模式。                               |
 | `-p`                         | provider，即云服务提供商，详情参考下表。        |
 | `--name`                     | 指定将要创建的集群的名称。                      |
 | `--master`                   | 指定创建的 master 节点数量 。                   |
@@ -55,7 +55,7 @@ autok3s 命令中常用的参数如下表所示：
 | `--registry`                 | 配置`containerd`私有镜像仓库。                  |
 | `--cloud-controller-manager` | 开启 Kubernetes Cloud-Controller-Manager 组件。 |
 | `--ui`                       | 开启 Kubernetes Dashboard UI 组件。             |
-| `--terway 'eni'`             | 开启公有云 CNI 网络插件。                       |
+| `--terway 'eni'`             | 开启公有云 CNI 网络插件（仅适用于阿里云）。     |
 
 ### 云服务提供商参数描述
 
@@ -70,7 +70,7 @@ autok3s 命令中常用的参数如下表所示：
 有关更多用法的详细信息，请参见下面的链接：
 
 - [阿里云](alibaba/README.md) - 在阿里云的 ECS 中初始化 Kubernetes (k3s) 集群。
-- [腾讯云]](tencent/README.md) - 在腾讯云 CVM 中初始化 Kubernetes (k3s) 集群。
+- [腾讯云](tencent/README.md) - 在腾讯云 CVM 中初始化 Kubernetes (k3s) 集群。
 - [AWS](aws/README.md) - 在 AWS EC2 中初始化 Kubernetes (k3s) 集群。
 - [native](native/README.md) - 在任意类型 VM 实例中初始化 Kubernetes (k3s) 集群。
 
