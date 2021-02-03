@@ -56,6 +56,7 @@ const (
 	defaultDeviceName        = "/dev/sda1"
 	requestSpotInstance      = false
 	defaultSpotPrice         = "0.50"
+	dockerScript             = "curl -sSL https://get.docker.com | sh - %s"
 )
 
 const (
@@ -90,6 +91,7 @@ func newProvider() *Amazon {
 			K3sChannel:             k3sChannel,
 			InstallScript:          k3sInstallScript,
 			Cluster:                false,
+			DockerScript:           dockerScript,
 		},
 		Options: typesaws.Options{
 			Region:              defaultRegion,
@@ -131,16 +133,16 @@ func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
 	defer func() {
 		if err != nil {
 			p.logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
 			if c == nil {
 				c = &types.Cluster{
 					Metadata: p.Metadata,
 					Options:  p.Options,
 					Status:   p.Status,
 				}
-				c.Status.Status = common.StatusFailed
-				cluster.SaveClusterState(c, common.StatusFailed)
 			}
+			c.Status.Status = common.StatusFailed
+			cluster.SaveClusterState(c, common.StatusFailed)
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
 		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			p.logger.Info(common.UsageInfoTitle)

@@ -146,11 +146,17 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 	}
 	defer func() {
 		if err != nil {
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
-			if c != nil {
-				c.Status.Status = common.StatusFailed
-				cluster.SaveClusterState(c, common.StatusFailed)
+			p.logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
+			if c == nil {
+				c = &types.Cluster{
+					Metadata: p.Metadata,
+					Options:  p.Options,
+					Status:   p.Status,
+				}
 			}
+			c.Status.Status = common.StatusFailed
+			cluster.SaveClusterState(c, common.StatusFailed)
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
 		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			p.logger.Info(common.UsageInfoTitle)
