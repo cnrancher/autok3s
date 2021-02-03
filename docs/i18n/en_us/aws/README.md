@@ -1,11 +1,14 @@
 # AWS Provider
-It uses the Amazon Cloud SDK to create and manage EC2 instances, and then uses SSH to install k3s cluster to the remove host.
+
+It uses the AWS Cloud SDK to create and manage EC2 instances, and then uses SSH to install k3s cluster to the remove host.
 You can also use it to join hosts as masters/agents to the k3s cluster.
 
 ## Pre-Requests
+
 To ensure that EC2 instances can be created and accessed normally, please check and set the following configuration.
 
 ### Setup Environment
+
 Configure the following environment variables for the host which running `autok3s`.
 
 ```bash
@@ -14,11 +17,13 @@ export AWS_SECRET_ACCESS_KEY='<secret-key>'
 ```
 
 ### Setup IAM
+
 Please refer [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html?icmpid=docs_iam_console) for more IAM settings.
 
 Please make sure your account has permission to manage EC2 instance or other relative resources.
 
 For example:
+
 ```
 {
     "Version": "2012-10-17",
@@ -52,6 +57,7 @@ For example:
 ```
 
 ### Setup Security Group
+
 The ECS instances need to apply the following Security Group Rules:
 
 ```bash
@@ -66,9 +72,11 @@ OutBound    ALL         ALL       ALL                Allow All
 ```
 
 ## Usage
+
 More usage details please running `autok3s <sub-command> --provider aws --help` commands.
 
 ### Quick Start
+
 Create and Start 1 master & 1 worker(agent) k3s cluster.
 
 ```bash
@@ -76,6 +84,7 @@ autok3s -d create -p aws --name myk3s --master 1 --worker 1
 ```
 
 ### Setup K3s HA Cluster
+
 HA(embedded etcd: >= 1.19.1-k3s1) mode. e.g.
 
 ```bash
@@ -89,13 +98,14 @@ autok3s -d create -p aws --name myk3s --master 2 --datastore "mysql://<user>:<pa
 ```
 
 ### Join K3s Nodes
+
 To join master/agent nodes, specify the cluster you want to add, e.g myk3s.
 
 ```bash
 autok3s -d join --provider aws --name myk3s --worker 1
 ```
 
-Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster.  e.g.
+Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster. e.g.
 
 ```bash
 autok3s -d join --provider aws --name myk3s --master 2
@@ -108,6 +118,7 @@ autok3s -d join --provider aws --name myk3s --master 2 --datastore "mysql://<use
 ```
 
 ### Delete K3s Cluster
+
 This command will delete a k3s cluster, e.g myk3s.
 
 ```bash
@@ -115,6 +126,7 @@ autok3s -d delete --provider aws --name myk3s
 ```
 
 ### List K3s Clusters
+
 This command will list the clusters that you have created on this machine.
 
 ```bash
@@ -127,11 +139,13 @@ myk3s    ap-southeast-2  aws   Running  1        0        v1.20.2+k3s1
 ```
 
 ### Describe k3s cluster
+
 This command will show detail information of specified cluster, such as instance status, node IP, kubelet version, etc.
 
 ```bash
 autok3s describe cluster <clusterName>
 ```
+
 > Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster. e.g. `autok3s describe cluster <clusterName> -p aws -r <region>`
 
 ```bash
@@ -156,6 +170,7 @@ Nodes:
 ```
 
 ### Access K3s Cluster
+
 After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 
 ```bash
@@ -171,6 +186,7 @@ autok3s kubectl config use-context <context>
 ```
 
 ### SSH K3s Cluster's Node
+
 Login to specified k3s cluster node via ssh, e.g myk3s.
 
 ```bash
@@ -178,9 +194,11 @@ autok3s ssh --provider aws --name myk3s
 ```
 
 ## Advanced Usage
+
 We integrate some advanced components related to the current provider, e.g. ccm/ui.
 
 ### Setup Private Registry
+
 Below are examples showing how you may configure `/etc/autok3s/registries.yaml` on your current node when using TLS, and make it take effect on k3s cluster by `autok3s`.
 
 ```bash
@@ -223,6 +241,7 @@ autok3s -d create -p aws \
 ```
 
 ### Enable UI Component
+
 This flag will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.
 Please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create user token.
 
