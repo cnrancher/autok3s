@@ -3,6 +3,8 @@ package native
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -98,6 +100,38 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	if err != nil {
 		return err
 	}
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}
+	defer func() {
+		if err != nil {
+			p.logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+			if c == nil {
+				c = &types.Cluster{
+					Metadata: p.Metadata,
+					Options:  p.Options,
+					Status:   p.Status,
+				}
+				c.Status.Status = common.StatusFailed
+				cluster.SaveClusterState(c, common.StatusFailed)
+			}
+		}
+		if err == nil && len(p.Status.MasterNodes) > 0 {
+			p.logger.Info(common.UsageInfoTitle)
+			p.logger.Infof(common.UsageContext, p.Name)
+			p.logger.Info(common.UsagePods)
+			if p.UI {
+				p.logger.Infof("K3s UI URL: https://%s:8999", p.Status.MasterNodes[0].PublicIPAddress[0])
+			}
+			cluster.SaveClusterState(c, common.StatusRunning)
+			// remove creating state file and save running state
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+		}
+		logFile.Close()
+	}()
 	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
 
@@ -108,18 +142,13 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	if ssh.Password == "" && ssh.SSHKeyPath == "" {
 		ssh.SSHKeyPath = defaultSSHKeyPath
 	}
-
-	defer func() {
-		if err == nil && len(p.Status.MasterNodes) > 0 {
-			fmt.Printf(common.UsageInfo, p.Name)
-			if p.UI {
-				fmt.Printf("\nK3s UI URL: https://%s:8999\n", p.Status.MasterNodes[0].PublicIPAddress[0])
-			}
-		}
-	}()
+	c.Status.Status = common.StatusCreating
+	err = cluster.SaveClusterState(c, common.StatusCreating)
+	if err != nil {
+		return err
+	}
 
 	// assemble node status.
-	var c *types.Cluster
 	if c, err = p.assembleNodeStatus(ssh); err != nil {
 		return err
 	}
@@ -132,15 +161,35 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 		return
 	}
 	p.logger.Infof("[%s] successfully executed create logic\n", p.GetProviderName())
-
-	return
+	return nil
 }
 
 func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
+	if p.m == nil {
+		p.m = new(syncmap.Map)
+	}
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}
 	logFile, err := common.GetLogFile(p.Name)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err != nil {
+			if c != nil {
+				c.Status.Status = common.StatusFailed
+				cluster.SaveClusterState(c, common.StatusFailed)
+			}
+		} else {
+			cluster.SaveClusterState(c, common.StatusRunning)
+		}
+		// remove join state file and save running state
+		os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
+		logFile.Close()
+	}()
 	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
 	// set ssh default value
@@ -151,15 +200,20 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 		ssh.SSHKeyPath = defaultSSHKeyPath
 	}
 
+	c.Status.Status = "upgrading"
+	err = cluster.SaveClusterState(c, common.StatusJoin)
+	if err != nil {
+		return err
+	}
+
 	// assemble node status.
-	var merged *types.Cluster
-	if merged, err = p.assembleNodeStatus(ssh); err != nil {
+	if c, err = p.assembleNodeStatus(ssh); err != nil {
 		return err
 	}
 
 	added := &types.Cluster{
-		Metadata: merged.Metadata,
-		Options:  merged.Options,
+		Metadata: c.Metadata,
+		Options:  c.Options,
 		Status:   types.Status{},
 	}
 
@@ -183,25 +237,24 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 		workerIps []string
 	)
 
-	for _, masterNode := range merged.Status.MasterNodes {
+	for _, masterNode := range c.Status.MasterNodes {
 		masterIps = append(masterIps, masterNode.PublicIPAddress...)
 	}
 
-	for _, workerNode := range merged.Status.WorkerNodes {
+	for _, workerNode := range c.Status.WorkerNodes {
 		workerIps = append(workerIps, workerNode.PublicIPAddress...)
 	}
 
 	p.Options.MasterIps = strings.Join(masterIps, ",")
 	p.Options.WorkerIps = strings.Join(workerIps, ",")
-	merged.Logger = p.logger
+	c.Logger = p.logger
 	added.Logger = p.logger
 	// join K3s node.
-	if err := cluster.JoinK3sNode(merged, added); err != nil {
+	if err := cluster.JoinK3sNode(c, added); err != nil {
 		return err
 	}
 
 	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
-
 	return nil
 }
 

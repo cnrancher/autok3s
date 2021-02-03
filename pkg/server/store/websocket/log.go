@@ -87,7 +87,30 @@ func logHandler(apiOp *types.APIRequest) error {
 				return nil
 			}
 			if event.Op == fsnotify.Remove && isProcessState(event.Name, cluster) {
-				logrus.Debugf("close cluster %s logs", cluster)
+				logrus.Infof("close cluster %s logs", cluster)
+				// the tail is about to close, we need to read last bytes of file to show final log
+				offset, err := t.Tell()
+				if err != nil {
+					w.Write([]byte("event: close\ndata: close\n\n"))
+					return err
+				}
+				logFile, err := os.Open(logFilePath)
+				if err != nil {
+					w.Write([]byte("event: close\ndata: close\n\n"))
+					return err
+				}
+				_, err = logFile.Seek(offset, os.SEEK_CUR)
+				if err != nil {
+					w.Write([]byte("event: close\ndata: close\n\n"))
+					return err
+				}
+				scanner := bufio.NewScanner(logFile)
+				for scanner.Scan() {
+					var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
+					w.Write(bs.Bytes())
+					f.Flush()
+				}
+				logFile.Close()
 				t.Stop()
 				t.Cleanup()
 				w.Write([]byte("event: close\ndata: close\n\n"))
