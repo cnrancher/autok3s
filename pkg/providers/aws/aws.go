@@ -143,15 +143,19 @@ func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
 			}
 		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
-			p.logger.Infof(common.UsageInfo, p.Name)
+			p.logger.Info(common.UsageInfoTitle)
+			p.logger.Infof(common.UsageContext, p.Name)
+			p.logger.Info(common.UsagePods)
 			if p.UI {
 				if p.CloudControllerManager {
-					p.logger.Infof("\nK3s UI URL: https://<using `kubectl get svc -A` get UI address>:8999\n")
+					p.logger.Infof("K3s UI URL: https://<using `kubectl get svc -A` get UI address>:8999")
 				} else {
-					p.logger.Infof("\nK3s UI URL: https://%s:8999\n", p.Status.MasterNodes[0].PublicIPAddress[0])
+					p.logger.Infof("K3s UI URL: https://%s:8999", p.Status.MasterNodes[0].PublicIPAddress[0])
 				}
 			}
-			fmt.Println("")
+			cluster.SaveClusterState(c, common.StatusRunning)
+			// remove creating state file and save running state
+			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
 		}
 		logFile.Close()
 	}()
@@ -192,14 +196,16 @@ func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
 		}
 		p.logger.Infof("[%s] successfully deploy aws additional manifests\n", p.GetProviderName())
 	}
-	// remove creating state file and save running state
-	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
-	return cluster.SaveClusterState(c, common.StatusRunning)
+	return nil
 }
 
 func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
 	if p.m == nil {
 		p.m = new(syncmap.Map)
+	}
+	logFile, err := common.GetLogFile(p.Name)
+	if err != nil {
+		return err
 	}
 	c := &types.Cluster{
 		Metadata: p.Metadata,
@@ -208,18 +214,18 @@ func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
 	}
 	defer func() {
 		if err != nil {
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
 			if c != nil {
 				c.Status.Status = common.StatusFailed
 				cluster.SaveClusterState(c, common.StatusFailed)
 			}
-			return
+		} else {
+			cluster.SaveClusterState(c, common.StatusRunning)
 		}
+		// remove join state file and save running state
+		os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
+		logFile.Close()
 	}()
-	logFile, err := common.GetLogFile(p.Name)
-	if err != nil {
-		return err
-	}
+
 	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
 	if ssh.User == "" {
@@ -264,10 +270,7 @@ func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
 	}
 
 	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
-	logFile.Close()
-	// remove join state file and save running state
-	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
-	return cluster.SaveClusterState(c, common.StatusRunning)
+	return nil
 }
 
 func (p *Amazon) DeleteK3sCluster(f bool) (err error) {

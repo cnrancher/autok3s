@@ -24,9 +24,9 @@ const (
 	StatusCreating     = "Creating"
 	StatusJoin         = "Join"
 	StatusFailed       = "Failed"
-	UsageInfo          = `=========================== Prompt Info ===========================
-Use 'autok3s kubectl config use-context %s'
-Use 'autok3s kubectl get pods -A' get POD status`
+	UsageInfoTitle     = "=========================== Prompt Info ==========================="
+	UsageContext       = "Use 'autok3s kubectl config use-context %s'"
+	UsagePods          = "Use 'autok3s kubectl get pods -A' get POD status`"
 )
 
 var (
