@@ -109,6 +109,11 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	if cluster.Cluster {
 		master0ExtraArgs += " --cluster-init"
 	}
+
+	// add docker script for different provider
+	if cluster.DockerScript != "" {
+		dockerCommand = cluster.DockerScript
+	}
 	if err := initMaster(k3sScript, k3sMirror, dockerMirror, publicIP, master0ExtraArgs, cluster, cluster.MasterNodes[0]); err != nil {
 		return err
 	}
@@ -242,6 +247,9 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 		return errors.New("[cluster] k3s token can not be empty")
 	}
 
+	if merged.DockerScript != "" {
+		dockerCommand = merged.DockerScript
+	}
 	errChan := make(chan error)
 	waitGroupDone := make(chan bool)
 	waitGroup := &sync.WaitGroup{}
@@ -563,6 +571,7 @@ func DeployExtraManifest(cluster *types.Cluster, cmds []string) error {
 
 func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
 	if strings.Contains(extraArgs, "--docker") {
+		logger.Debugf("[cluster] install docker command %s", fmt.Sprintf(dockerCommand, dockerMirror))
 		if _, err := execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
 			return err
 		}

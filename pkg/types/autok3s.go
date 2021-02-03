@@ -31,6 +31,7 @@ type Metadata struct {
 	InstallScript          string `json:"installScript,omitempty" yaml:"installScript,omitempty"`
 	Mirror                 string `json:"mirror,omitempty" yaml:"mirror,omitempty"`
 	DockerMirror           string `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
+	DockerScript           string `json:"dockerScript,omitempty" yaml:"dockerScript,omitempty"`
 	Network                string `json:"network,omitempty" yaml:"network,omitempty"`
 	UI                     bool   `json:"ui,omitempty" yaml:"ui,omitempty"`
 	CloudControllerManager bool   `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
