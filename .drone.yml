@@ -86,7 +86,7 @@ steps:
       BY: dapper
       CROSS: true
     commands:
-      - make autok3s build only
+      - make autok3s build
     volumes:
       - name: docker
         path: /var/run/docker.sock
