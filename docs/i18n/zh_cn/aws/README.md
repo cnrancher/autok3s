@@ -1,11 +1,6 @@
-<<<<<<< HEAD:docs/i18n/zh_cn/aws/README.md
 # aws Provider
 
 在亚马逊创建对应的 EC2 实例，通过所创建的实例初始化 k3s 集群，或将一个或多个 EC2 实例作为 k3s 节点加入到 k3s 集群中。
-=======
-# AWS Provider
-在亚马逊创建对应的EC2实例，通过所创建的实例初始化k3s集群，或将一个或多个EC2实例作为k3s节点加入到k3s集群中。
->>>>>>> 06d3c89... feat(autok3s): support hosted UI and API:docs/i18n/zh_cn/amazone/README.md
 
 ## 前置要求
 
@@ -75,10 +70,7 @@ OutBound    ALL         ALL       ALL                Allow All
 ```
 
 ## 使用方式
-<<<<<<< HEAD:docs/i18n/zh_cn/aws/README.md
 
-=======
->>>>>>> 06d3c89... feat(autok3s): support hosted UI and API:docs/i18n/zh_cn/amazone/README.md
 更多参数请运行`autok3s <sub-command> --provider aws --help`命令。
 
 ### 快速启动
@@ -151,12 +143,8 @@ myk3s    ap-southeast-2  aws   Running  1        0        v1.20.2+k3s1
 ```bash
 autok3s describe cluster <clusterName>
 ```
-<<<<<<< HEAD:docs/i18n/zh_cn/aws/README.md
 
 > 注意：如果使用不同的 provider 创建的集群名称相同，describe 时会显示多个集群信息，可以使用`-p <provider> -r <region>`对 provider 及 region 进一步过滤。e.g. `autok3s describe cluster <clusterName> -p aws -r <region>`
-=======
-> 注意：如果使用不同的provider创建的集群名称相同，describe时会显示多个集群信息，可以使用`-p <provider> -r <region>`对provider及region进一步过滤。e.g. `autok3s describe cluster <clusterName> -p aws -r <region>`
->>>>>>> 06d3c89... feat(autok3s): support hosted UI and API:docs/i18n/zh_cn/amazone/README.md
 
 ```bash
 Name: myk3s
