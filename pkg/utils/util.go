@@ -7,9 +7,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/rancher/wrangler/pkg/schemas"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -102,4 +105,55 @@ func WaitForBackoff(fn func() (bool, error), backoff wait.Backoff) error {
 		return err
 	}
 	return nil
+}
+
+func ConvertToFields(obj interface{}) (map[string]schemas.Field, error) {
+	t := reflect.TypeOf(obj)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("can't convert non struct type obj %v", obj)
+	}
+	num := t.NumField()
+	fields := make(map[string]schemas.Field, 0)
+	for i := 0; i < num; i++ {
+		f := t.Field(i)
+		if v, ok := f.Tag.Lookup("json"); ok {
+			fieldName := strings.Split(v, ",")[0]
+			field := schemas.Field{
+				Type:    f.Type.String(),
+				Default: reflect.ValueOf(obj).Field(i).Interface(),
+			}
+			fields[fieldName] = field
+		}
+	}
+	return fields, nil
+}
+
+func MergeConfig(source, target reflect.Value) {
+	if source.Kind() == reflect.Ptr {
+		source = source.Elem()
+	}
+	if target.Kind() == reflect.Ptr {
+		target = target.Elem()
+	}
+	for i := 0; i < source.NumField(); i++ {
+		sField := source.Field(i)
+		for j := 0; j < target.NumField(); j++ {
+			tField := target.Field(j)
+			if sField.Type().Kind() == tField.Type().Kind() &&
+				source.Type().Field(i).Name == target.Type().Field(j).Name {
+				if sField.Type().Kind() == reflect.Struct {
+					MergeConfig(sField, tField)
+				} else {
+					// only merge non empty value
+					if !tField.IsZero() {
+						sField.Set(tField)
+					}
+				}
+				break
+			}
+		}
+	}
 }

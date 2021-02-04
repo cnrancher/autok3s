@@ -21,6 +21,9 @@ const (
 	TagClusterPrefix   = "autok3s-"
 	StatusRunning      = "Running"
 	StatusStopped      = "Stopped"
+	StatusCreating     = "Creating"
+	StatusJoin         = "Join"
+	StatusFailed       = "Failed"
 	UsageInfo          = `=========================== Prompt Info ===========================
 Use 'autok3s kubectl config use-context %s'
 Use 'autok3s kubectl get pods -A' get POD status`
@@ -42,4 +45,8 @@ func GetDefaultSSHKeyPath(clusterName, providerName string) string {
 
 func GetClusterPath(clusterName, providerName string) string {
 	return filepath.Join(CfgPath, providerName, "clusters", clusterName)
+}
+
+func GetClusterStatePath() string {
+	return filepath.Join(CfgPath, "clusters")
 }

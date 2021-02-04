@@ -54,14 +54,9 @@ func listCluster() {
 	if err != nil {
 		logrus.Fatalf("failed to unmarshal state file, msg: %v\n", err)
 	}
-
-	var (
-		p           providers.Provider
-		filters     []*types.ClusterInfo
-		clusterList []*types.Cluster
-	)
-
+	var p providers.Provider
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	filters := []*types.ClusterInfo{}
 	for _, r := range result {
 		p, err = c.GetProviderByState(r)
 		if err != nil {
@@ -79,20 +74,12 @@ func listCluster() {
 			if err := cluster.OverwriteCfg(r.Name); err != nil {
 				logrus.Errorf("failed to remove unexist cluster %s from kube config", r.Name)
 			}
+			if err := cluster.DeleteState(r.Name, r.Provider); err != nil {
+				logrus.Errorf("failed to remove unexist cluster %s from state: %v", r.Name, err)
+			}
 			continue
 		}
-
 		filters = append(filters, p.GetCluster(kubeCfg))
-		clusterList = append(clusterList, &types.Cluster{
-			Metadata: r.Metadata,
-			Options:  r.Options,
-			Status:   r.Status,
-		})
-	}
-
-	// remove useless clusters from .state.
-	if err := cluster.FilterState(clusterList); err != nil {
-		logrus.Errorf("failed to remove useless clusters\n")
 	}
 
 	for _, f := range filters {

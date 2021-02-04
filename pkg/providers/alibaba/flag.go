@@ -59,7 +59,7 @@ func (p *Alibaba) GetUsageExample(action string) string {
 	}
 }
 
-func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
+func (p *Alibaba) GetOptionFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{
 		{
@@ -88,7 +88,7 @@ func (p *Alibaba) GetCreateFlags(cmd *cobra.Command) *pflag.FlagSet {
 		},
 	}...)
 
-	return utils.ConvertFlags(cmd, fs)
+	return fs
 }
 
 func (p *Alibaba) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
@@ -165,7 +165,7 @@ func (p *Alibaba) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 	return utils.ConvertFlags(cmd, fs)
 }
 
-func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
+func (p *Alibaba) GetCredentialFlags() []types.Flag {
 	fs := []types.Flag{
 		{
 			Name:     accessKeyID,
@@ -185,7 +185,7 @@ func (p *Alibaba) GetCredentialFlags(cmd *cobra.Command) *pflag.FlagSet {
 		},
 	}
 
-	return utils.ConvertFlags(cmd, fs)
+	return fs
 }
 
 func (p *Alibaba) GetSSHConfig() *types.SSH {

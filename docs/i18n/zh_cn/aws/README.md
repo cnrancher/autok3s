@@ -1,6 +1,11 @@
+<<<<<<< HEAD:docs/i18n/zh_cn/aws/README.md
 # aws Provider
 
 在亚马逊创建对应的 EC2 实例，通过所创建的实例初始化 k3s 集群，或将一个或多个 EC2 实例作为 k3s 节点加入到 k3s 集群中。
+=======
+# AWS Provider
+在亚马逊创建对应的EC2实例，通过所创建的实例初始化k3s集群，或将一个或多个EC2实例作为k3s节点加入到k3s集群中。
+>>>>>>> 06d3c89... feat(autok3s): support hosted UI and API:docs/i18n/zh_cn/amazone/README.md
 
 ## 前置要求
 
@@ -41,7 +46,12 @@ export AWS_SECRET_ACCESS_KEY='<secret-key>'
                 "ec2:TerminateInstances",
                 "ec2:StartInstances",
                 "ec2:StopInstances",
+                "ec2:CreateInstanceProfile",
                 "ec2:RevokeSecurityGroupIngress",
+                "ec2:DeleteTags",
+                "elasticloadbalancing:Describe*",
+                "iam:Get*",
+                "iam:List*"
             ],
             "Resource": "*"
         }
@@ -65,7 +75,10 @@ OutBound    ALL         ALL       ALL                Allow All
 ```
 
 ## 使用方式
+<<<<<<< HEAD:docs/i18n/zh_cn/aws/README.md
 
+=======
+>>>>>>> 06d3c89... feat(autok3s): support hosted UI and API:docs/i18n/zh_cn/amazone/README.md
 更多参数请运行`autok3s <sub-command> --provider aws --help`命令。
 
 ### 快速启动
@@ -138,8 +151,12 @@ myk3s    ap-southeast-2  aws   Running  1        0        v1.20.2+k3s1
 ```bash
 autok3s describe cluster <clusterName>
 ```
+<<<<<<< HEAD:docs/i18n/zh_cn/aws/README.md
 
 > 注意：如果使用不同的 provider 创建的集群名称相同，describe 时会显示多个集群信息，可以使用`-p <provider> -r <region>`对 provider 及 region 进一步过滤。e.g. `autok3s describe cluster <clusterName> -p aws -r <region>`
+=======
+> 注意：如果使用不同的provider创建的集群名称相同，describe时会显示多个集群信息，可以使用`-p <provider> -r <region>`对provider及region进一步过滤。e.g. `autok3s describe cluster <clusterName> -p aws -r <region>`
+>>>>>>> 06d3c89... feat(autok3s): support hosted UI and API:docs/i18n/zh_cn/amazone/README.md
 
 ```bash
 Name: myk3s
@@ -226,7 +243,7 @@ configs:
 如果您要使用 AWS CCM 功能需要提前准备好两个 IAM policies，以保证 CCM 功能的正常使用，具体内容请参考[这里](https://kubernetes.github.io/cloud-provider-aws/prerequisites.html)
 
 ```bash
-autok3s -d create \
+autok3s -d create -p aws \
     ... \
     --cloud-controller-manager \
     --iam-instance-profile-control <iam policy for control plane> \
@@ -239,7 +256,7 @@ autok3s -d create \
 访问 Token 等设置请参考 [此文档](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) 。
 
 ```bash
-autok3s -d create \
+autok3s -d create -p aws \
     ... \
     --ui
 ```
