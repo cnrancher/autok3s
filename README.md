@@ -1,18 +1,23 @@
 # autok3s
+
 [![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cnrancher/autok3s)](https://goreportcard.com/report/github.com/cnrancher/autok3s) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/cnrancher/autok3s)](https://goreportcard.com/report/github.com/cnrancher/autok3s)
 ![GitHub release](https://img.shields.io/github/v/release/cnrancher/autok3s.svg)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?color=blue)](http://github.com/cnrancher/autok3s/pulls)
 
 English / [简体中文](docs/i18n/zh_cn/README.md)
 
-[K3s](https://github.com/k3s-io/k3s) is a fully certified Kubernetes offering, it can replace the "full-fat" K8s in some cases.
+## What is AutoK3s
 
-AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it can help you **Run K3s Everywhere**.
+[K3s](https://github.com/k3s-io/k3s) is a fully certified Kubernetes offering, it can replace the "full-fat" K8s in some cases.Using K3s to create K3s clusters in public cloud providers is a complicated process. In addtion, users are required to fill in different parameters and fields in different cloud providers to create K3s clusters in them. AutoK3s is made to simplify this process.
+
+AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it can help you **Run K3s Everywhere**. You can use AutoK3s to create and launch K3s clusters, or to add nodes in existing K3s clusters. AutoK3s not only improves user experience of cluster management on public clouds, but also inherites kubectl, provides users with accessible cluster management abilities. Currently, AutoK3s supports **Alibaba, Tencent, and AWS** cloud services. If the cloud providers you are using are not listed above, you can always use **native** mode to bootstrap clusters in you VM instances. We will support more cloud providers based on our user community's feedbacks.
 
 <!-- toc -->
 
 - [Key Features](#key-features)
+- [Frequently-used commands](#Frequently-used-commands)
+- [Frequently-used parameters](#Frequently-used-parameters)
 - [Providers](#providers)
 - [Quick Start](#quick-start)
 - [Demo Video](#demo-video)
@@ -23,12 +28,39 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 
 ## Key Features
 
-- Quick provisioning time with API, CLI and UI dashboard
-- Cloud provider Integration(simplify setting up [CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller) of each cloud)
-- Flexible installation options, like K3s cluster HA and datastore(embedded etcd, RDS, SQLite, etc.)
-- Low cost(try spot instances in each cloud)
-- Simplify operations by UI dashboard
-- Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator)
+- Quick provisioning time with API, CLI and UI dashboard.
+- Cloud provider Integration(simplify setting up [CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller) of each cloud).
+- Flexible installation options, like K3s cluster HA and datastore(embedded etcd, RDS, SQLite, etc.).
+- Low cost(try spot instances in each cloud).
+- Simplify operations by UI dashboard.
+- Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator).
+
+## Frequently-used Commands
+
+These commands are frequently used in AutoK3s:
+
+- `autok3s create`: To create and lauch a K3s cluster
+- `autok3s join`：To add a node or multiple nodes for an existing K3s cluster.
+
+## Frequently-used Parameters
+
+These parameters are frequently used in AutoK3s:
+
+| Parameters           | Description                                                                          |
+| :------------------- | :----------------------------------------------------------------------------------- |
+| `-d` or `--debug`    | To enable debug mode.                                                                |
+| `-p` or `--provider` | To specify which cloud provider to use, please see the chart below for more details. |
+| `-n` or `--name`     | To specify the name of the cluster.                                                  |
+| `--master`           | To specify the number of master nodes that you want to create or add.                |
+| `--worker`           | To specify the number of master nodes that you want to create or add.                |
+
+### Parameters for Cloud Providers
+
+| Parameters                           | Description                           |
+| :----------------------------------- | :------------------------------------ |
+| `-p alibaba` or `--provider alibaba` | To specify Alibaba as cloud provider. |
+| `-p tencent` or `--provider tencent` | To specify Tencent as cloud provider. |
+| `-p aws` or `--provider aws`         | To specify AWS as cloud provider.     |
 
 ## Providers
 
@@ -47,7 +79,21 @@ Autok3s can run in two different modes: Local mode and Rancher mode.
 
 In this mode, you can use Autok3s via CLI or a local UI.
 
-The following commands use the `alibaba` provider, please check the [prerequisites](docs/i18n/en_us/alibaba/README.md) before you run that:
+#### CLI
+
+The following commands are examples for creating a K3s cluster and adding nodes for an existing cluster in `alibaba` provider. Please make sure all [prerequisites](docs/i18n/en_us/alibaba/README.md) are met before executing these commands.
+
+##### Creating a K3s Cluster
+
+You can use `autok3s create` command to create a K3s cluster. A typical `autok3s create` command usually includes the following args:
+
+```bash
+autok3s -d create -p <cloud provider> --name <cluster name> --master <number of master nodes> --worker <number of worker nodes>
+```
+
+**example**:
+
+The following command use Alibaba as cloud provider, create a K3s cluster named "myk3s", and assign it with 1 master node and 1 worker node.
 
 ```bash
 export ECS_ACCESS_KEY_ID='<Your access key ID>'
@@ -55,6 +101,24 @@ export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
 
 autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
+
+##### Adding Nodes for an Existing K3s Cluster
+
+You can use `autok3s join` command to add nodes for an existing K3s cluster. A typical `autok3s join` command usually includes the following args:
+
+```bash
+autok3s -d join -p <cloud provider> --name <cluster name> --master <number of master nodes> --worker <number of worker nodes>
+```
+
+**example**:
+
+The following command uses Alibaba as cloud provider, adds a worker node to an existing K3s cluster named "myk3s":
+
+```bash
+autok3s -d join --provider alibaba --name myk3s --worker 1
+```
+
+#### UI
 
 If you want to enable the local UI, please run `autok3s serve` .
 
