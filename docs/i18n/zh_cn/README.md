@@ -68,9 +68,9 @@ autok3s join -p alibaba --name myk3s --worker 1
 
 ## 演示视频
 
-示程序在 1 分钟左右就能将 Kubernetes (k3s)安装到阿里云的 ECS 实例上。
+以下这个演示程序在 1 分钟左右就能将 Kubernetes (k3s)安装到阿里云的 ECS 实例上。
 
-观看演示:
+观看演示：
 
 [![asciicast](https://asciinema.org/a/EL5P2ILES8GAvdlhaxLMnY8Pg.svg)](https://asciinema.org/a/EL5P2ILES8GAvdlhaxLMnY8Pg)
 
@@ -79,10 +79,10 @@ autok3s join -p alibaba --name myk3s --worker 1
 使用 `Makefile` 管理项目的编译、测试与打包。
 项目支持使用 `dapper`，`dapper`安装步骤请参考[dapper](https://github.com/rancher/dapper)。
 
-- 依赖: `GO111MODULE=on go mod vendor`
-- 编译: `BY=dapper make autok3s`
-- 测试: `BY=dapper make autok3s unit`
-- 打包: `BY=dapper make autok3s package only`
+- 依赖： `GO111MODULE=on go mod vendor`
+- 编译： `BY=dapper make autok3s`
+- 测试： `BY=dapper make autok3s unit`
+- 打包： `BY=dapper make autok3s package only`
 
 # 开源协议
 
