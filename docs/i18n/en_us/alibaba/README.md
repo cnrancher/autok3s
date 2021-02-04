@@ -49,7 +49,14 @@ This provider needs certain permissions to access Alibaba Cloud, so need to crea
         "ecs:RunInstances",
         "ecs:ListTagResources",
         "ecs:StartInstances",
-        "ecs:StopInstances"
+        "ecs:StopInstances",
+        "ecs:CreateSecurityGroup",
+        "ecs:ModifySecurityGroupRule",
+        "ecs:ModifySecurityGroupEgressRule",
+        "ecs:DescribeSecurityGroup*",
+        "ecs:AuthorizeSecurityGroup",
+        "ecs:RevokeSecurityGroup",
+        "ecs:RevokeSecurityGroupEgress"
       ],
       "Resource": [
         "*"

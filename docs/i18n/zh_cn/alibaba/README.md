@@ -48,7 +48,14 @@ export ECS_ACCESS_KEY_SECRET='<secret-access>'
         "ecs:RunInstances",
         "ecs:ListTagResources",
         "ecs:StartInstances",
-        "ecs:StopInstances"
+        "ecs:StopInstances",
+        "ecs:CreateSecurityGroup",
+        "ecs:ModifySecurityGroupRule",
+        "ecs:ModifySecurityGroupEgressRule",
+        "ecs:DescribeSecurityGroup*",
+        "ecs:AuthorizeSecurityGroup",
+        "ecs:RevokeSecurityGroup",
+        "ecs:RevokeSecurityGroupEgress"
       ],
       "Resource": [
         "*"
