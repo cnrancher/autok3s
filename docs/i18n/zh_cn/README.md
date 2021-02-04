@@ -7,7 +7,9 @@
 
 简体中文 / [English](../../../README.md)
 
-快速创建并启动 k3s 集群，同时可以使用它来为 k3s 集群添加节点，提升公有云体验的同时，继承 kubectl 从而提供便捷的集群能力。
+K3s是经过完全认证的Kubernetes产品，在某些情况下可以替代完整的K8s。
+
+AutoK3s是用于简化K3s集群管理的轻量级工具，您可以使用Autok3s在任何地方运行K3s，Run K3s Everywhere。
 
 <!-- toc -->
 
@@ -16,59 +18,60 @@
 - [快速体验](#快速体验)
 - [演示视频](#演示视频)
 - [开发者指南](#开发者指南)
-- [开源协议](#开源协议)
 
 <!-- /toc -->
 
 ## 关键特性
 
-- 使用 `autok3s create` 命令，在多个公有云提供商中快速启动 Kubernetes (k3s) 集群
-- 使用 `autok3s join` 命令，添加节点至已存在的 Kubernetes (k3s) 集群
-- 自动为创建的 Kubernetes (k3s) 集群生成可供访问的 `kubeconfig` 文件
-- 集成 `kubectl` 以提供访问集群的能力
-- 支持创建 Kubernetes k3s HA 集群
-- 使用`--registry`以支持配置`containerd`私有镜像仓库
-- 集成扩展参数 `--cloud-controller-manager` 以开启 Kubernetes Cloud-Controller-Manager 组件
-- 集成扩展参数 `--ui` 以开启 Kubernetes Dashboard UI 组件
-- 集成扩展参数 `例如 --terway 'eni'` 以开启公有云 CNI 网络插件
+- 通过API，CLI和UI等方式快速创建K3s
+- 云提供商集成（简化每个云的[CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller)设置）
+- 灵活的安装选项，例如K3s群集HA和数据存储（内置etcd，RDS，SQLite等）
+- 低成本（尝试每个云中的竞价实例）
+- 通过UI简化操作
+- 多云之间弹性迁移，借助诸如[backup-restore-operator](https://github.com/rancher/backup-restore-operator)这样的工具
 
 ## 支持的云提供商
 
-有关更多用法的详细信息，请参见下面的链接：
+Autok3s可以支持以下云厂商，我们会根据社区反馈添加更多支持：
 
-- [alibaba](alibaba/README.md) - 在阿里云的 ECS 中初始化 Kubernetes (k3s) 集群
-- [tencent](tencent/README.md) - 在腾讯云 CVM 中初始化 Kubernetes (k3s) 集群
-- [native](native/README.md) - 在任意类型 VM 实例中初始化 Kubernetes (k3s) 集群
-- [aws](aws/README.md) - 在亚马逊 EC2 中初始化 Kubernetes (k3s) 集群
+- [alibaba](alibaba/README.md) - 在阿里云的 ECS 中初始化 k3s 集群
+- [tencent](tencent/README.md) - 在腾讯云 CVM 中初始化 K3s 集群
+- [native](native/README.md) - 在任意类型 VM 实例中初始化 K3s 集群
+- [aws](aws/README.md) - 在亚马逊 EC2 中初始化 K3s 集群
 
 ## 快速体验
 
-以下命令使用`alibaba`作为云提供商，相关的前置条件请参考[alibaba](alibaba/README.md)云提供商文档。
+Autok3s可以两种不同的运行模式：Local Mode 和 Rancher Mode。
+
+### Local Mode
+
+在此模式下，可以使用CLI或本地UI。
+
+以下命令使用Alibaba ECS Provider，请在运行之前检查[前提条件](alibaba/README.md)：
 
 ```bash
 export ECS_ACCESS_KEY_ID='<Your access key ID>'
 export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
+
 autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
 
-### 添加 k3s 节点
+如果要启用本地UI，请运行 `autok3s serve` 。
 
-以下代码是为已有的 k3s 集群添加 k3s 节点的示例。名为“myk3s”的集群是已经运行在阿里云上 的 k3s 集群。这个命令使用了阿里云`alibaba`作为云提供商，为“myk3s”集群添加了 1 个 worker 节点。
+![autok3s-local-ui](../../assets/autok3s-local-ui.png)
 
-```bash
-export ECS_ACCESS_KEY_ID='<Your access key ID>'
-export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
+### Rancher Mode
 
-autok3s join -p alibaba --name myk3s --worker 1
-```
+在这种模式下，您可以将Autok3s放入[Rancher](https://github.com/rancher/rancher)。
+它将作为Rancher的扩展，使您可以构建一套托管K3s服务。
 
-## 快速体验 UI
+Autok3s创建的K3s集群可以自动导入Rancher，并充分利用Rancher的Kubernetes管理功能。
 
-如果您不想使用命令行工具体验，可以使用`autok3s`内置 UI 来体验相关功能，请运行命令 `autok3s serve`
+此模式正在开发中。
 
 ## 演示视频
 
-以下这个演示程序在 1 分钟左右就能将 Kubernetes (k3s)安装到阿里云的 ECS 实例上。
+在以下演示中，我们将在1分钟左右的时间内把K3s安装到 Alibaba ECS 云主机上。
 
 观看演示：
 
@@ -84,18 +87,3 @@ autok3s join -p alibaba --name myk3s --worker 1
 - 测试： `BY=dapper make autok3s unit`
 - 打包： `BY=dapper make autok3s package only`
 
-# 开源协议
-
-Copyright (c) 2020 [Rancher Labs, Inc.](http://rancher.com)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
