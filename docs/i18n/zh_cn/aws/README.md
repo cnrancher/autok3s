@@ -41,7 +41,8 @@ export AWS_SECRET_ACCESS_KEY='<secret-key>'
                 "ec2:DeleteTags",
                 "elasticloadbalancing:Describe*",
                 "iam:Get*",
-                "iam:List*"
+                "iam:List*",
+                "iam:PassRole"
             ],
             "Resource": "*"
         }

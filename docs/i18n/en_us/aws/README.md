@@ -48,7 +48,8 @@ For example:
                 "ec2:DeleteTags",
                 "elasticloadbalancing:Describe*",
                 "iam:Get*",
-                "iam:List*"
+                "iam:List*",
+                "iam:PassRole"
             ],
             "Resource": "*"
         }
