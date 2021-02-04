@@ -6,8 +6,9 @@
 
 English / [简体中文](docs/i18n/zh_cn/README.md)
 
-AutoK3s is a lightweight tool for quickly creating and managing k3s clusters on multiple cloud providers.
-It can help users quickly complete the personalized configuration of the k3s cluster, while providing convenient kubectl access capabilities.
+[K3s](https://github.com/k3s-io/k3s) is a fully certified Kubernetes offering, it can replace the "full-fat" K8s in some cases.
+
+AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it can help you **Run K3s Everywhere**.
 
 <!-- toc -->
 
@@ -21,26 +22,32 @@ It can help users quickly complete the personalized configuration of the k3s clu
 <!-- /toc -->
 
 ## Key Features
-- Bootstrap Kubernetes with k3s onto multiple cloud providers with `autok3s create`
-- Join nodes into an existing k3s cluster with `autok3s join`
-- Automatically generate `kubeconfig` file for the cluster which you created
-- Integrate `kubectl` to provide access to the cluster
-- Bootstrap a HA Kubernetes with k3s cluster
-- Support `containerd` private registry with `--registry` flag
-- Provide additional option to enable Kubernetes Cloud-Controller-Manager with `--cloud-controller-manager`
-- Provide additional option to enable Kubernetes Dashboard UI with `--ui`
-- Provide additional option to enable cloud platform's CNI plugin, e.g `--terway 'eni'`
+
+- Quick provisioning time with API, CLI and UI dashboard
+- Cloud provider Integration(simplify setting up [CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller) of each cloud)
+- Flexible installation options, like K3s cluster HA and datastore(embedded etcd, RDS, SQLite, etc.)
+- Low cost(try spot instances in each cloud)
+- Simplify operations by UI dashboard
+- Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator)
 
 ## Providers
-See the providers' links below for more usage details:
 
-- [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap Kubernetes with k3s onto Alibaba ECS
-- [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap Kubernetes with k3s onto Tencent CVM
-- [native](docs/i18n/en_us/native/README.md) - Bootstrap Kubernetes with k3s onto any VM
-- [aws](docs/i18n/en_us/aws/README.md) - Bootstrap Kubernetes with k3s onto Amazon EC2
+Autok3s can support the following providers, we are happy to add more if you need:
+
+- [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap K3s onto Alibaba ECS
+- [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap K3s onto Tencent CVM
+- [native](docs/i18n/en_us/native/README.md) - Bootstrap K3s onto any VM
+- [aws](docs/i18n/en_us/aws/README.md) - Bootstrap K3s onto Amazon EC2
 
 ## Quick Start
-The following command use the `alibaba` provider, with prerequisites that refer to the [alibaba](docs/i18n/en_us/alibaba/README.md) document.
+
+Autok3s can run in two different modes: Local mode and Rancher mode.
+
+### Local Mode
+
+In this mode, you can use Autok3s via CLI or a local UI.
+
+The following commands use the `alibaba` provider, please check the [prerequisites](docs/i18n/en_us/alibaba/README.md) before you run that:
 
 ```bash
 export ECS_ACCESS_KEY_ID='<Your access key ID>'
@@ -49,18 +56,29 @@ export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
 autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
 
-## Quick Start with UI
+If you want to enable the local UI, please run `autok3s serve` .
 
-If you want to use hosted UI instead of command line, please run `autok3s serve`
+![autok3s-local-ui](./docs/assets/autok3s-local-ui.png)
+
+### Rancher Mode
+
+In this mode, you can put Autok3s into [Rancher](https://github.com/rancher/rancher).
+It will serve as an extension that allows you to build the managed K3s service.
+
+The K3s cluster created by Autok3s can be automatically imported into Rancher, and take full advantage of Rancher's Kubernetes management capabilities.
+
+This mode is working in progress.
 
 ## Demo Video
-The demo install Kubernetes (k3s) onto Alibaba ECS machines in around 1 minutes.
+
+In the demo, we install K3s onto Alibaba ECS machines in around 1 minute.
 
 Watch the demo:
 
 [![asciicast](https://asciinema.org/a/EL5P2ILES8GAvdlhaxLMnY8Pg.svg)](https://asciinema.org/a/EL5P2ILES8GAvdlhaxLMnY8Pg)
 
 ## Developers' Guide
+
 Use `Makefile` to manage project compilation, testing and packaging.
 Of course, you can also choose to compile using `dapper`.
 Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
