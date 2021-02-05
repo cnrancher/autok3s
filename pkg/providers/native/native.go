@@ -132,6 +132,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 		}
 		logFile.Close()
 	}()
+	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
 	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
 
@@ -178,12 +179,7 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 		return err
 	}
 	defer func() {
-		if err != nil {
-			if c != nil {
-				c.Status.Status = common.StatusFailed
-				cluster.SaveClusterState(c, common.StatusFailed)
-			}
-		} else {
+		if err == nil {
 			cluster.SaveClusterState(c, common.StatusRunning)
 		}
 		// remove join state file and save running state
