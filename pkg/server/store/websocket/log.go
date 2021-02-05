@@ -87,7 +87,7 @@ func logHandler(apiOp *types.APIRequest) error {
 				return nil
 			}
 			if event.Op == fsnotify.Remove && isProcessState(event.Name, cluster) {
-				logrus.Infof("close cluster %s logs", cluster)
+				logrus.Debugf("close cluster %s logs", cluster)
 				// the tail is about to close, we need to read last bytes of file to show final log
 				offset, err := t.Tell()
 				if err != nil {

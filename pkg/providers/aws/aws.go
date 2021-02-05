@@ -128,6 +128,7 @@ func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
 	c := &types.Cluster{
 		Metadata: p.Metadata,
 		Options:  p.Options,
+		SSH:      *ssh,
 		Status:   p.Status,
 	}
 	defer func() {
@@ -137,6 +138,7 @@ func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
 				c = &types.Cluster{
 					Metadata: p.Metadata,
 					Options:  p.Options,
+					SSH:      *ssh,
 					Status:   p.Status,
 				}
 			}
@@ -156,11 +158,12 @@ func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
 				}
 			}
 			cluster.SaveClusterState(c, common.StatusRunning)
-			// remove creating state file and save running state
+			// remove creating/failed state file and save running state
 			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
 		}
 		logFile.Close()
 	}()
+	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
 
 	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing create logic...", p.GetProviderName())
@@ -215,12 +218,7 @@ func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
 		Status:   p.Status,
 	}
 	defer func() {
-		if err != nil {
-			if c != nil {
-				c.Status.Status = common.StatusFailed
-				cluster.SaveClusterState(c, common.StatusFailed)
-			}
-		} else {
+		if err == nil {
 			cluster.SaveClusterState(c, common.StatusRunning)
 		}
 		// remove join state file and save running state
@@ -242,6 +240,7 @@ func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
 
 	c, err = p.generateInstance(p.joinCheck, ssh)
 	if err != nil {
+		p.logger.Errorf("%v", err)
 		return err
 	}
 
@@ -688,6 +687,7 @@ func (p *Amazon) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, 
 		}
 		c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik,local-storage"
 	}
+	c.SSH = *ssh
 
 	return c, err
 }
@@ -1075,8 +1075,9 @@ func (p *Amazon) CreateCheck(ssh *types.SSH) error {
 	}
 
 	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` is already exist",
-			p.GetProviderName(), p.Name)
+		context := strings.Split(p.Name, ".")
+		return fmt.Errorf("[%s] calling preflight error: cluster `%s` at region %s is already exist",
+			p.GetProviderName(), context[0], p.Region)
 	}
 
 	// check key pair

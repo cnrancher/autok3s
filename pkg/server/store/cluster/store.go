@@ -76,8 +76,7 @@ func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 		err = p.CreateK3sCluster(sshConfig)
 		if err != nil {
 			logrus.Errorf("create cluster error: %v", err)
-			err = p.Rollback()
-			logrus.Errorf("rollback cluster error: %v", err)
+			p.Rollback()
 		}
 	}()
 
@@ -106,15 +105,19 @@ func (c *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 func (c *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	clusterInfo, err := cluster.GetClusterByID(id)
 	if err != nil {
-		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found, got error: %v", id, err))
+		// find from failed cluster
+		clusterInfo, err = readClusterState(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", id, common.StatusFailed)))
+		if err != nil {
+			return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found, got error: %v", id, err))
+		}
 	}
+	clusterName := strings.Split(id, ".")[0]
 	obj := apis.Cluster{
 		Metadata: clusterInfo.Metadata,
 		Options:  clusterInfo.Options,
+		SSH:      clusterInfo.SSH,
 	}
-	if len(clusterInfo.Status.MasterNodes) > 0 {
-		obj.SSH = clusterInfo.Status.MasterNodes[0].SSH
-	}
+	obj.Name = clusterName
 	return types.APIObject{
 		Type:   schema.ID,
 		ID:     id,
@@ -189,7 +192,8 @@ func (c *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.
 				case fsnotify.Remove:
 					if strings.HasSuffix(event.Name, fmt.Sprintf("_%s", common.StatusRunning)) ||
 						strings.HasSuffix(event.Name, fmt.Sprintf("_%s", common.StatusFailed)) {
-						context := strings.Split(event.Name, "_")
+						_, fileName := filepath.Split(event.Name)
+						context := strings.Split(fileName, "_")
 						arrayInfo := strings.Split(context[0], ".")
 						result <- types.APIEvent{
 							Name:         "resource.remove",

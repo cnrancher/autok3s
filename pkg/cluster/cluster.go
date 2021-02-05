@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -1076,6 +1077,7 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 				if len(roles) == 0 {
 					roles = append(roles, "<none>")
 				}
+				sort.Strings(roles)
 				n.Roles = strings.Join(roles, ",")
 				// get status
 				conditions := node.Status.Conditions

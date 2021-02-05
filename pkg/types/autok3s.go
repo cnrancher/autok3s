@@ -9,6 +9,7 @@ type AutoK3s struct {
 type Cluster struct {
 	Metadata `json:",inline" mapstructure:",squash"`
 	Options  interface{} `json:"options,omitempty"`
+	SSH      `json:",inline"`
 
 	Status `json:"status" yaml:"status"`
 	Logger *logrus.Logger `json:"-" yaml:"-"`

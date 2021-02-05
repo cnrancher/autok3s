@@ -175,6 +175,7 @@ func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
 		}
 		logFile.Close()
 	}()
+	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
 
 	p.logger = common.NewLogger(common.Debug, logFile)
 	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
@@ -259,12 +260,7 @@ func (p *Alibaba) JoinK3sNode(ssh *types.SSH) (err error) {
 		Status:   p.Status,
 	}
 	defer func() {
-		if err != nil {
-			if c != nil {
-				c.Status.Status = common.StatusFailed
-				cluster.SaveClusterState(c, common.StatusFailed)
-			}
-		} else {
+		if err == nil {
 			cluster.SaveClusterState(c, common.StatusRunning)
 		}
 		// remove join state file and save running state
@@ -1029,6 +1025,10 @@ func (p *Alibaba) CreateCheck(ssh *types.SSH) error {
 		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
 			p.GetProviderName())
 	}
+	if masterNum > 1 && !p.Cluster && p.DataStore == "" {
+		return fmt.Errorf("[%s] calling preflight error: need to set `--cluster` or `--datastore` when `--master` number > 1",
+			p.GetProviderName())
+	}
 
 	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
 		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
@@ -1041,8 +1041,9 @@ func (p *Alibaba) CreateCheck(ssh *types.SSH) error {
 	}
 
 	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` is already exist",
-			p.GetProviderName(), p.Name)
+		context := strings.Split(p.Name, ".")
+		return fmt.Errorf("[%s] calling preflight error: cluster `%s` at region %s is already exist",
+			p.GetProviderName(), context[0], p.Region)
 	}
 
 	if p.Region != defaultRegion && p.Zone == defaultZoneID && p.VSwitch == "" {

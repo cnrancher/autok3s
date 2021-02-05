@@ -89,13 +89,13 @@ func joinHandler() http.Handler {
 			rw.Write([]byte(err.Error()))
 			return
 		}
+		provider.GenerateClusterName()
 
 		go func() {
 			err := provider.JoinK3sNode(&apiCluster.SSH)
 			if err != nil {
 				logrus.Errorf("join cluster error: %v", err)
-				err = provider.Rollback()
-				logrus.Errorf("rollback cluster error: %v", err)
+				provider.Rollback()
 			}
 		}()
 
