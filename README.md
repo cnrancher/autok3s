@@ -1,4 +1,4 @@
-# autok3s
+# AutoK3s
 
 [![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cnrancher/autok3s)](https://goreportcard.com/report/github.com/cnrancher/autok3s)
@@ -16,10 +16,13 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 <!-- toc -->
 
 - [Key Features](#key-features)
-- [Frequently-used commands](#Frequently-used-commands)
-- [Frequently-used parameters](#Frequently-used-parameters)
-- [Providers](#providers)
+- [Supported Providers](#supported-providers)
+- [Frequently-used commands](#frequently-used-commands)
+- [Frequently-used parameters](#frequently-used-parameters)
 - [Quick Start](#quick-start)
+- [User Guide](#user-guide)
+- [Local Mode](#local-mode)
+- [Rancher Mode](#rancher-mode)
 - [Demo Video](#demo-video)
 - [Developers' Guide](#developers-guide)
 - [License](#license)
@@ -35,34 +38,7 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 - Simplify operations by UI dashboard.
 - Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator).
 
-## Frequently-used Commands
-
-These commands are frequently used in AutoK3s:
-
-- `autok3s create`: To create and lauch a K3s cluster
-- `autok3s join`：To add a node or multiple nodes for an existing K3s cluster.
-
-## Frequently-used Parameters
-
-These parameters are frequently used in AutoK3s:
-
-| Parameters           | Description                                                                          |
-| :------------------- | :----------------------------------------------------------------------------------- |
-| `-d` or `--debug`    | To enable debug mode.                                                                |
-| `-p` or `--provider` | To specify which cloud provider to use, please see the chart below for more details. |
-| `-n` or `--name`     | To specify the name of the cluster.                                                  |
-| `--master`           | To specify the number of master nodes that you want to create or add.                |
-| `--worker`           | To specify the number of master nodes that you want to create or add.                |
-
-### Parameters for Cloud Providers
-
-| Parameters                           | Description                           |
-| :----------------------------------- | :------------------------------------ |
-| `-p alibaba` or `--provider alibaba` | To specify Alibaba as cloud provider. |
-| `-p tencent` or `--provider tencent` | To specify Tencent as cloud provider. |
-| `-p aws` or `--provider aws`         | To specify AWS as cloud provider.     |
-
-## Providers
+## Supported Providers
 
 Autok3s can support the following providers, we are happy to add more if you need:
 
@@ -71,19 +47,53 @@ Autok3s can support the following providers, we are happy to add more if you nee
 - [native](docs/i18n/en_us/native/README.md) - Bootstrap K3s onto any VM
 - [aws](docs/i18n/en_us/aws/README.md) - Bootstrap K3s onto Amazon EC2
 
+## Frequently-used Commands
+
+These commands are frequently used in AutoK3s:
+
+- `autok3s create`: To create and lauch a K3s cluster
+- `autok3s join`: To add a node or multiple nodes for an existing K3s cluster.
+
+## Frequently-used Parameters
+
+These parameters are frequently used in AutoK3s:
+
+- `-d` or `--debug`: To enable debug mode.
+- `-p` or `--provider`: To specify which cloud provider to use, please see the description below for more details.
+- `-n` or `--name`: To specify the name of the cluster.
+- `--master`: To specify the number of master nodes that you want to create or add.
+- `--worker`: To specify the number of worker nodes that you want to create or add.
+
+`-p` or `--provider` parameter has the following options:
+
+- `-p alibaba` or `--provider alibaba`: To specify Alibaba as cloud provider.
+- `-p tencent` or `--provider tencent`: To specify Tencent as cloud provider.
+- `-p aws` or `--provider aws`: To specify AWS as cloud provider.
+
 ## Quick Start
 
-Autok3s can run in two different modes: Local mode and Rancher mode.
+The commands below can create a K3s cluster on Alibaba ECS.
 
-### Local Mode
+```bash
+export ECS_ACCESS_KEY_ID='<Your access key ID>'
+export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
+
+autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
+```
+
+## User Guide
+
+AutoK3s has two running modes: Local Mode and Rancher Mode.
+
+## Local Mode
 
 In this mode, you can use Autok3s via CLI or a local UI.
 
-#### CLI
+### CLI
 
 The following commands are examples for creating a K3s cluster and adding nodes for an existing cluster in `alibaba` provider. Please make sure all [prerequisites](docs/i18n/en_us/alibaba/README.md) are met before executing these commands.
 
-##### Creating a K3s Cluster
+#### Creating a K3s Cluster
 
 You can use `autok3s create` command to create a K3s cluster. A typical `autok3s create` command usually includes the following args:
 
@@ -102,7 +112,7 @@ export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
 autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
 
-##### Adding Nodes for an Existing K3s Cluster
+#### Adding Nodes for an Existing K3s Cluster
 
 You can use `autok3s join` command to add nodes for an existing K3s cluster. A typical `autok3s join` command usually includes the following args:
 
@@ -118,13 +128,13 @@ The following command uses Alibaba as cloud provider, adds a worker node to an e
 autok3s -d join --provider alibaba --name myk3s --worker 1
 ```
 
-#### UI
+### UI
 
-If you want to enable the local UI, please run `autok3s serve` .
+If you want to enable the local UI, please run `autok3s serve`.
 
 ![autok3s-local-ui](./docs/assets/autok3s-local-ui.png)
 
-### Rancher Mode
+## Rancher Mode
 
 In this mode, you can put Autok3s into [Rancher](https://github.com/rancher/rancher).
 It will serve as an extension that allows you to build the managed K3s service.
