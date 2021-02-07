@@ -64,12 +64,6 @@ These parameters are frequently used in AutoK3s:
 - `--master`: To specify the number of master nodes that you want to create or add.
 - `--worker`: To specify the number of worker nodes that you want to create or add.
 
-`-p` or `--provider` parameter has the following options:
-
-- `-p alibaba` or `--provider alibaba`: To specify Alibaba as cloud provider.
-- `-p tencent` or `--provider tencent`: To specify Tencent as cloud provider.
-- `-p aws` or `--provider aws`: To specify AWS as cloud provider.
-
 ## Quick Start
 
 The commands below can create a K3s cluster on Alibaba ECS.
@@ -103,7 +97,7 @@ autok3s -d create -p <cloud provider> --name <cluster name> --master <number of 
 
 **example**:
 
-The following command use Alibaba as cloud provider, create a K3s cluster named "myk3s", and assign it with 1 master node and 1 worker node.
+The following command uses Alibaba as cloud provider, creates a K3s cluster named "myk3s", and assign it with 1 master node and 1 worker node.
 
 ```bash
 export ECS_ACCESS_KEY_ID='<Your access key ID>'

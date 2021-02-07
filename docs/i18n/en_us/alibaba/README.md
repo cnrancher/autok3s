@@ -1,22 +1,29 @@
 # Alibaba Provider
-It uses the Alibaba Cloud SDK to create and manage hosts, and then uses SSH to install the k3s cluster to the remote host.
-You can also use it to join hosts as masters/agents to the k3s cluster.
 
-## Pre-Requests
-To ensure that ECS instances can be created and accessed normally, please check and set the following configuration.
+English / [简体中文](docs/i18n/zh_cn/alibaba/README.md)
 
-### Setup Environment
-Configure the following environment variables for the host which running `autok3s`.
+## Introduction
+
+This article provides users with the instrcutions to create and launch a K3s cluster on an Alibaba ECS instance, and to add nodes for an existing K3s cluster on Alibaba ECS instance. In additon, this article provides guidance of advanced usages of running K3s on Alibaba ECS, such as enabling Alibaba Terway CNI, enabling Alibaba CCM, and enabling UI components.
+
+## Prerequisites
+
+To ensure that ECS instances can be created and accessed successfully, please follow the instrctions below.
+
+### Setting up Environment
+
+Configure the following environment variables as showed below for the host on which you are running `autok3s`.
 
 ```bash
 export ECS_ACCESS_KEY_ID='<access-key>'
 export ECS_ACCESS_KEY_SECRET='<secret-access>'
 ```
 
-### Setup RAM
-What is RAM role of an instance, please see [here](https://www.alibabacloud.com/help/doc-detail/54235.htm).
+### Setting up RAM
 
-This provider needs certain permissions to access Alibaba Cloud, so need to create a few RAM policies for your ECS instances:
+Please visit [here](https://www.alibabacloud.com/help/doc-detail/54235.htm) to better understand RAM role in Alibaba.
+
+This provider needs certain permissions to access Alibaba Cloud. Therefore, you need to create some RAM policies for your ECS instance. The code below is an example of setting up a set of RAM policies such that you can access your ECS instance:
 
 ```json
 {
@@ -58,72 +65,45 @@ This provider needs certain permissions to access Alibaba Cloud, so need to crea
         "ecs:RevokeSecurityGroup",
         "ecs:RevokeSecurityGroupEgress"
       ],
-      "Resource": [
-        "*"
-      ],
+      "Resource": ["*"],
       "Effect": "Allow"
     },
     {
-      "Action": [
-        "cr:Get*",
-        "cr:List*",
-        "cr:PullRepository"
-      ],
-      "Resource": [
-        "*"
-      ],
+      "Action": ["cr:Get*", "cr:List*", "cr:PullRepository"],
+      "Resource": ["*"],
       "Effect": "Allow"
     },
     {
-      "Action": [
-        "slb:*"
-      ],
-      "Resource": [
-        "*"
-      ],
+      "Action": ["slb:*"],
+      "Resource": ["*"],
       "Effect": "Allow"
     },
     {
-      "Action": [
-        "cms:*"
-      ],
-      "Resource": [
-        "*"
-      ],
+      "Action": ["cms:*"],
+      "Resource": ["*"],
       "Effect": "Allow"
     },
     {
-      "Action": [
-        "vpc:*"
-      ],
-      "Resource": [
-        "*"
-      ],
+      "Action": ["vpc:*"],
+      "Resource": ["*"],
       "Effect": "Allow"
     },
     {
-      "Action": [
-        "log:*"
-      ],
-      "Resource": [
-        "*"
-      ],
+      "Action": ["log:*"],
+      "Resource": ["*"],
       "Effect": "Allow"
     },
     {
-      "Action": [
-        "nas:*"
-      ],
-      "Resource": [
-        "*"
-      ],
+      "Action": ["nas:*"],
+      "Resource": ["*"],
       "Effect": "Allow"
     }
   ]
 }
 ```
 
-### Setup Security Group
+### Setting up Security Group
+
 The ECS instances need to apply the following Security Group Rules:
 
 ```bash
@@ -137,57 +117,88 @@ InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only fo
 OutBound    ALL         ALL       ALL                Allow All
 ```
 
-## Usage
-More usage details please running `autok3s <sub-command> --provider alibaba --help` commands.
+## Creating a K3s cluster
 
-### Quick Start
-Create and Start 1 master & 1 worker(agent) k3s cluster.
+Please use `autok3s create` command to create a cluster in your ECS instance.
+
+### Normal Cluster
+
+The following command uses Alibaba as cloud provider, creates a K3s cluster named "myk3s", and assign it with 1 master node and 1 worker node:
 
 ```bash
 autok3s -d create -p alibaba --name myk3s --master 1 --worker 1
 ```
 
-### Setup K3s HA Cluster
-HA(embedded etcd: >= 1.19.1-k3s1) mode. e.g.
+### HA Cluster
+
+Please use one of the following commands to create an HA cluster.
+
+#### Embedded etcd
+
+The following command uses Alibaba as cloud provider, creates an HA K3s cluster named "myk3s", and assigns it with 3 master nodes.
 
 ```bash
 autok3s -d create -p alibaba --name myk3s --master 3 --cluster
 ```
 
-HA(external database) mode need `--master` greater than 1, also need to specify `--datastore`, e.g.
+#### External Database
+
+The following requirements must be met before creating an HA K3s cluster with external database:
+
+- The number of master nodes in this cluster must be greater or equal to 1.
+- The external database information must be specified within `--datastore "PATH"` parameter.
+
+In the example below, `--master 2` specifies the number of master nodes to be 2, while `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
+
+Run the command below and create an HA K3s cluster with external database:
 
 ```bash
 autok3s -d create -p alibaba --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-### Join K3s Nodes
-To join master/agent nodes, specify the cluster you want to add, e.g myk3s.
+## Join K3s Nodes
+
+Please use `autok3s join` command to add one or more nodes for an existing K3s cluster.
+
+### Normal Cluster
+
+The command below shows how to add a worker node for an existing K3s cluster named "myk3s".
 
 ```bash
 autok3s -d join --provider alibaba --name myk3s --worker 1
 ```
 
-Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster.  e.g.
+### HA Cluster
+
+The commands to add one or more nodes for an existing HA K3s cluster varies based on the types of HA cluster. Please choose one of the following commands to run.
+
+#### Embedded etcd
+
+Run the command below, to add 2 master nodes for an Embedded etcd HA cluster(embedded etcd: >= 1.19.1-k3s1).
 
 ```bash
 autok3s -d join --provider alibaba --name myk3s --master 2
 ```
 
-Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
+#### External Database
+
+Run the command below, to add 2 master nodes for an HA cluster with external database, you will need to fill in `--datastore "PATH"` as well.
 
 ```bash
 autok3s -d join --provider alibaba --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-### Delete K3s Cluster
-This command will delete a k3s cluster, e.g myk3s.
+## Delete K3s Cluster
+
+This command will delete a k3s cluster named "myk3s".
 
 ```bash
 autok3s -d delete --provider alibaba --name myk3s
 ```
 
-### List K3s Clusters
-This command will list the clusters that you have created on this machine.
+## List K3s Clusters
+
+This command will list all the clusters that you have created on this instance.
 
 ```bash
 autok3s list
@@ -199,13 +210,15 @@ myk3s  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
 myk3s  ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 ```
 
-### Describe k3s cluster
+## Describe k3s cluster
+
 This command will show detail information of specified cluster, such as instance status, node IP, kubelet version, etc.
 
 ```bash
 autok3s describe cluster <clusterName>
 ```
-> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster. e.g. `autok3s describe cluster <clusterName> -p alibaba -r <region>`
+
+> Note: There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster, for example: `autok3s describe cluster <clusterName> -p alibaba -r <region>`, should narrow down the result quite well.
 
 ```bash
 Name: myk3s
@@ -255,7 +268,8 @@ Nodes:
     version: v1.19.5+k3s2
 ```
 
-### Access K3s Cluster
+## Access K3s Cluster
+
 After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 
 ```bash
@@ -270,18 +284,25 @@ autok3s kubectl config get-contexts
 autok3s kubectl config use-context <context>
 ```
 
-### SSH K3s Cluster's Node
+## SSH K3s Cluster's Node
+
 Login to specified k3s cluster node via ssh, e.g myk3s.
 
 ```bash
 autok3s ssh --provider alibaba --name myk3s
 ```
 
-## Advanced Usage
-We integrate some advanced components related to the current provider, e.g. terway/ccm/ui.
+## Other Usages
 
-### Setup Private Registry
-Below are examples showing how you may configure `/etc/autok3s/registries.yaml` on your current node when using TLS, and make it take effect on k3s cluster by `autok3s`.
+Please run `autok3s <sub-command> --provider alibaba --help` commands, to discover other usages of AutoK3s.
+
+## Advanced Usages
+
+We integrate some advanced components such as private registries, Terway, Alibaba Cloud Controller Manager(CCM) and UI, related to the current provider.
+
+### Setting up Private Registry
+
+Below are examples showing how you may configure `/etc/autok3s/registries.yaml` on your current node when using TLS, and making it take effect on k3s cluster by `autok3s`.
 
 ```bash
 mirrors:
@@ -299,7 +320,7 @@ configs:
       ca_file:   # path to the ca file used in the registry
 ```
 
-When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
 
 ```bash
 autok3s -d create \
@@ -310,7 +331,8 @@ autok3s -d create \
     --registry /etc/autok3s/registries.yaml
 ```
 
-### Enable Alibaba Terway CNI Plugin
+### Enabling Alibaba Terway CNI Plugin
+
 The instance's type determines the number of EIPs that a K3S cluster can assign to a cluster POD, more detail see [here](https://www.alibabacloud.com/help/zh/doc-detail/97467.htm).
 
 ```bash
@@ -319,7 +341,8 @@ autok3s -d create \
     --terway "eni"
 ```
 
-### Enable Alibaba Cloud Controller Manager
+### Enabling Alibaba Cloud Controller Manager(CCM)
+
 ```bash
 autok3s -d create \
     ... \
@@ -327,8 +350,9 @@ autok3s -d create \
 ```
 
 ### Enable UI Component
+
 This flag will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.
-Please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create user token.
+Please follow instructions in this [doc](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create a user token.
 
 ```bash
 autok3s -d create \
