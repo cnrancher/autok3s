@@ -61,12 +61,6 @@ AutoK3s 命令中常用的参数如下：
 - `--master`：指定创建的 master 节点数量。
 - `--worker`：指定创建的 worker 节点数量。
 
-云服务提供商的参数详情如下：
-
-- `-p alibaba`或`--provider alibaba`：指定阿里云作为云服务提供商。
-- `-p tencent`或`--provider tencent`：指定腾讯云作为云服务提供商。
-- `-p aws`或`--provider aws`：指定 AWS 作为云服务提供商。
-
 ## 快速体验
 
 运行以下命令，即可在阿里云 ECS 上快速创建和启动一个 K3s 集群。
