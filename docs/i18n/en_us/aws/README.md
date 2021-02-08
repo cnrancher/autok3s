@@ -1,6 +1,6 @@
 # AWS Provider
 
-English / [简体中文](docs/i18n/zh_cn/aws/README.md)
+English / [简体中文](https://github.com/cnrancher/autok3s/blob/master/docs/i18n/zh_cn/aws/README.md)
 
 ## Introduction
 

@@ -1,6 +1,6 @@
 # Tencent Provider
 
-简体中文 / [English](docs/i18n/en_us/tencent/README.md)
+简体中文 / [English](https://github.com/cnrancher/autok3s/blob/master/docs/i18n/en_us/tencent/README.md)
 
 ## 概述
 
