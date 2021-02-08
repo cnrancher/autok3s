@@ -42,7 +42,10 @@ func ptyHandler(apiOp *types.APIRequest) error {
 
 	ctx, cancel := context.WithCancel(apiOp.Request.Context())
 	go func() {
-		newPty(ctx, w, reader, cancel)
+		err = newPty(ctx, w, reader, cancel)
+		if err != nil {
+			logrus.Errorf("execute kubectl error: %v", err)
+		}
 	}()
 	t := time.NewTicker(30 * time.Second)
 	defer t.Stop()

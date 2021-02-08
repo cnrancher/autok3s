@@ -763,51 +763,53 @@ func (p *Amazon) runInstances(num int, master bool) error {
 		if err != nil {
 			return fmt.Errorf("[%s] failed request spot instance: %v", p.GetProviderName(), err)
 		}
-		requestID := spotInstanceRequest.SpotInstanceRequests[0].SpotInstanceRequestId
-		p.logger.Debugf("[%s] waiting for spot instance full filled", p.GetProviderName())
-		err = utils.WaitFor(func() (bool, error) {
-			err := p.client.WaitUntilSpotInstanceRequestFulfilled(&ec2.DescribeSpotInstanceRequestsInput{
-				SpotInstanceRequestIds: []*string{requestID},
+		for _, spotRequest := range spotInstanceRequest.SpotInstanceRequests {
+			requestID := spotRequest.SpotInstanceRequestId
+			p.logger.Debugf("[%s] waiting for spot instance full filled", p.GetProviderName())
+			err = utils.WaitFor(func() (bool, error) {
+				err := p.client.WaitUntilSpotInstanceRequestFulfilled(&ec2.DescribeSpotInstanceRequestsInput{
+					SpotInstanceRequestIds: []*string{requestID},
+				})
+				if err != nil {
+					if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "InvalidSpotInstanceRequestID.NotFound" {
+						return false, nil
+					}
+					return false, err
+				}
+				return true, nil
 			})
 			if err != nil {
-				if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "InvalidSpotInstanceRequestID.NotFound" {
-					return false, nil
-				}
-				return false, err
+				return fmt.Errorf("[%s] wait for fulfilling spot request error: %v", p.GetProviderName(), err)
 			}
-			return true, nil
-		})
-		if err != nil {
-			return fmt.Errorf("[%s] wait for fulfilling spot request error: %v", p.GetProviderName(), err)
-		}
-		p.logger.Debugf("[%s] resolve instance information by spot request id %s", p.GetProviderName(), *requestID)
-		err = utils.WaitFor(func() (bool, error) {
-			spotInstance, err := p.client.DescribeSpotInstanceRequests(&ec2.DescribeSpotInstanceRequestsInput{
-				SpotInstanceRequestIds: []*string{requestID},
-			})
-			if err != nil {
-				return false, err
-			}
-			if spotInstance != nil && spotInstance.SpotInstanceRequests != nil {
-				instanceIDs := []*string{}
-				for _, spotIns := range spotInstance.SpotInstanceRequests {
-					instanceIDs = append(instanceIDs, spotIns.InstanceId)
-				}
-				output, err := p.client.DescribeInstances(&ec2.DescribeInstancesInput{
-					InstanceIds: instanceIDs,
+			p.logger.Debugf("[%s] resolve instance information by spot request id %s", p.GetProviderName(), *requestID)
+			err = utils.WaitFor(func() (bool, error) {
+				spotInstance, err := p.client.DescribeSpotInstanceRequests(&ec2.DescribeSpotInstanceRequestsInput{
+					SpotInstanceRequestIds: []*string{requestID},
 				})
 				if err != nil {
 					return false, err
 				}
-				for _, ins := range output.Reservations {
-					instanceList = append(instanceList, ins.Instances[0])
+				if spotInstance != nil && spotInstance.SpotInstanceRequests != nil {
+					instanceIDs := []*string{}
+					for _, spotIns := range spotInstance.SpotInstanceRequests {
+						instanceIDs = append(instanceIDs, spotIns.InstanceId)
+					}
+					output, err := p.client.DescribeInstances(&ec2.DescribeInstancesInput{
+						InstanceIds: instanceIDs,
+					})
+					if err != nil {
+						return false, err
+					}
+					for _, ins := range output.Reservations {
+						instanceList = append(instanceList, ins.Instances[0])
+					}
+					return true, nil
 				}
-				return true, nil
+				return false, nil
+			})
+			if err != nil {
+				return fmt.Errorf("[%s] failed to get instance by spot instance: %v", p.GetProviderName(), err)
 			}
-			return false, nil
-		})
-		if err != nil {
-			return fmt.Errorf("[%s] failed to get instance by spot instance: %v", p.GetProviderName(), err)
 		}
 	} else {
 		input := &ec2.RunInstancesInput{
