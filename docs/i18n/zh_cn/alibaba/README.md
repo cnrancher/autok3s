@@ -212,7 +212,7 @@ myk3s  ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 
 ## 查看集群详细信息
 
-显示具体的 k3s 信息，包括实例状态、主机 ip、集群版本等信息。
+显示具体的 K3s 信息，包括实例状态、主机 ip、集群版本等信息。
 
 ```bash
 autok3s describe cluster <clusterName>
