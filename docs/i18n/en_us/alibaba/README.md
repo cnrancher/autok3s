@@ -104,7 +104,7 @@ This provider needs certain permissions to access Alibaba Cloud. Therefore, you 
 
 ### Setting up Security Group
 
-The ECS instances need to apply the following Security Group Rules:
+The ECS instances need to apply the following **minimum** Security Group Rules:
 
 ```bash
 Rule        Protocol    Port      Source             Description
