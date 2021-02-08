@@ -104,7 +104,7 @@ export ECS_ACCESS_KEY_SECRET='<secret-access>'
 
 ### 设置安全组
 
-ECS 实例需要应用以下安全组规则：
+ECS 实例**至少**需要应用以下安全组规则：
 
 ```bash
 Rule        Protocol    Port      Source             Description
@@ -119,7 +119,7 @@ OutBound    ALL         ALL       ALL                Allow All
 
 ## 创建集群
 
-请使用`autok3s create`命令在 VM 实例中创建集群。
+请使用`autok3s create`命令在阿里云 ECS 实例中创建集群。
 
 ### 创建普通集群
 
