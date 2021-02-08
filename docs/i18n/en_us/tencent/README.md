@@ -1,79 +1,81 @@
 # Tencent Provider
-It uses the Tencent Cloud SDK to create and manage hosts, and then uses SSH to install the K3s cluster to the remote host. You can also use it to join hosts as masters/agents to the K3s cluster.
 
-## Pre-Requests
-To ensure that CVM instances can be created and accessed normally, please check and set the following configuration.
+English / [简体中文](docs/i18n/zh_cn/tencent/README.md)
 
-### Setup Environment
-Configure the following environment variables for the host which running `autok3s`.
+## Introduction
+
+This article provides users with the instrcutions to create and launch a K3s cluster on an Tencent CVM instance, and to add nodes for an existing K3s cluster on Tencent CVM instance. In additon, this article provides guidance of advanced usages of running K3s on Tencent CVM, such as setting up private registry, enabling Tencent CCM, and enabling UI components.
+
+## Prerequisites
+
+To ensure that CVM instances can be created and accessed successfully, please follow the instructions below.
+
+### Setting up Environment
+
+Configure the following environment variables as showed below for the host on which you are running `autok3s`.
 
 ```bash
 export CVM_SECRET_ID='<secret-id>'
 export CVM_SECRET_KEY='<secret-key>'
 ```
 
-### Setup RAM
-This provider needs certain permissions to access Tencent Cloud, so need to create a few RAM policies for your CMV instances:
+### Setting up RAM
+
+This provider needs certain permissions to access Tencent Cloud, so need to create a few RAM policies for your CVM instances:
 
 ```json
 {
-    "version": "2.0",
-    "statement": [
-        {
-            "action": [
-                "cvm:RunInstances",
-                "cvm:DescribeInstances",
-                "cvm:TerminateInstances",
-                "cvm:StartInstances",
-                "cvm:StopInstances",
-                "cvm:DescribeInstancesStatus",
-                "cvm:AllocateAddresses",
-                "cvm:ReleaseAddresses",
-                "cvm:AssociateAddress",
-                "cvm:DisassociateAddress",
-                "cvm:DescribeAddresses",
-                "cvm:DescribeImages"
-            ],
-            "resource": "*",
-            "effect": "allow"
-        },
-        {
-            "action": [
-                "vpc:*"
-            ],
-            "resource": "*",
-            "effect": "allow"
-        },
-        {
-            "action": [
-                "tag:AddResourceTag",
-                "tag:DescribeResourcesByTags",
-                "tag:AttachResourcesTag"
-            ],
-            "resource": "*",
-            "effect": "allow"
-        },
-        {
-            "action": [
-                "ccs:Describe*",
-                "ccs:CreateClusterRoute"
-            ],
-            "resource": "*",
-            "effect": "allow"
-        },
-        {
-            "action": [
-                "clb:*"
-            ],
-            "resource": "*",
-            "effect": "allow"
-        }
-    ]
+  "version": "2.0",
+  "statement": [
+    {
+      "action": [
+        "cvm:RunInstances",
+        "cvm:DescribeInstances",
+        "cvm:TerminateInstances",
+        "cvm:StartInstances",
+        "cvm:StopInstances",
+        "cvm:DescribeInstancesStatus",
+        "cvm:AllocateAddresses",
+        "cvm:ReleaseAddresses",
+        "cvm:AssociateAddress",
+        "cvm:DisassociateAddress",
+        "cvm:DescribeAddresses",
+        "cvm:DescribeImages"
+      ],
+      "resource": "*",
+      "effect": "allow"
+    },
+    {
+      "action": ["vpc:*"],
+      "resource": "*",
+      "effect": "allow"
+    },
+    {
+      "action": [
+        "tag:AddResourceTag",
+        "tag:DescribeResourcesByTags",
+        "tag:AttachResourcesTag"
+      ],
+      "resource": "*",
+      "effect": "allow"
+    },
+    {
+      "action": ["ccs:Describe*", "ccs:CreateClusterRoute"],
+      "resource": "*",
+      "effect": "allow"
+    },
+    {
+      "action": ["clb:*"],
+      "resource": "*",
+      "effect": "allow"
+    }
+  ]
 }
 ```
 
-### Setup Security Group
-The ECS instances need to apply the following Security Group Rules:
+### Setting up Security Group
+
+The CVM instances need to apply the following **minimum** Security Group Rules:
 
 ```bash
 Rule        Protocol    Port      Source             Description
@@ -86,55 +88,85 @@ InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only fo
 OutBound    ALL         ALL       ALL                Allow All
 ```
 
-## Usage
-More usage details please running `autok3s <sub-command> --provider tencent --help` commands.
+## Creating a K3s cluster
 
-### Quick Start
-Create and Start 1 master & 1 worker(agent) k3s cluster.
+### Normal Cluster
+
+The following command uses Tencent as cloud provider, creates a K3s cluster named "myk3s", and assign it with 1 master node and 1 worker node:
+
 ```bash
 autok3s -d create -p tencent --name myk3s --master 1 --worker 1
 ```
 
-### Setup K3s HA Cluster
-HA(embedded etcd: >= 1.19.1-k3s1) mode, e.g.
+### HA Cluster
+
+Please use one of the following commands to create an HA cluster.
+
+#### Embedded etcd
+
+The following command uses Tencent as cloud provider, creates an HA K3s cluster named "myk3s", and assigns it with 3 master nodes.
 
 ```bash
 autok3s -d create -p tencent --name myk3s --master 3 --cluster
 ```
 
-HA(external database) mode need `--master` greater than 1, also need to specify `--datastore`, e.g.
+#### External Database
+
+The following requirements must be met before creating an HA K3s cluster with external database:
+
+- The number of master nodes in this cluster must be greater or equal to 1.
+- The external database information must be specified within `--datastore "PATH"` parameter.
+
+In the example below, `--master 2` specifies the number of master nodes to be 2, while `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
+
+Run the command below and create an HA K3s cluster with external database:
 
 ```bash
 autok3s -d create -p tencent --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-### Join K3s Nodes
-To join master/agent nodes, specify the cluster you want to add, e.g myk3s.
+## Join K3s Nodes
+
+Please use `autok3s join` command to add one or more nodes for an existing K3s cluster.
+
+### Normal Cluster
+
+The command below shows how to add a worker node for an existing K3s cluster named "myk3s".
 
 ```bash
 autok3s -d join --provider tencent --name myk3s --worker 1
 ```
 
-Join master nodes to (embedded etcd: >= 1.19.1-k3s1) HA cluster e.g.
+### HA Cluster
+
+The commands to add one or more nodes for an existing HA K3s cluster varies based on the types of HA cluster. Please choose one of the following commands to run.
+
+#### Embedded etcd
+
+Run the command below, to add 2 master nodes for an Embedded etcd HA cluster(embedded etcd: >= 1.19.1-k3s1).
 
 ```bash
 autok3s -d join --provider tencent --name myk3s --master 2
 ```
 
-Join master nodes to (external database) HA cluster, also need to specify `--datastore`, e.g.
+#### External Database
+
+Run the command below, to add 2 master nodes for an HA cluster with external database, you will need to fill in `--datastore "PATH"` as well.
 
 ```bash
 autok3s -d join --provider tencent --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
-### Delete K3s Cluster
-This command will delete a k3s cluster, e.g myk3s.
+## Delete K3s Cluster
+
+This command will delete a k3s cluster named "myk3s".
 
 ```bash
 autok3s -d delete --provider tencent --name myk3s
 ```
 
-### List K3s Clusters
+## List K3s Clusters
+
 This command will list the clusters that you have created on this machine.
 
 ```bash
@@ -147,12 +179,14 @@ myk3s  cn-hangzhou  alibaba   Running  2        2        v1.19.5+k3s2
 myk3s  ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 ```
 
-### Describe k3s cluster
+## Describe k3s cluster
+
 This command will show detail information of specified cluster, such as instance status, node IP, kubelet version, etc.
 
 ```bash
 autok3s describe cluster <clusterName>
 ```
+
 > Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster. e.g. `autok3s describe cluster <clusterName> -p tencent -r <region>`
 
 ```bash
@@ -194,7 +228,8 @@ Nodes:
     version: v1.19.5+k3s2
 ```
 
-### Access K3s Cluster
+## Access K3s Cluster
+
 After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
 
 ```bash
@@ -209,17 +244,22 @@ autok3s kubectl config get-contexts
 autok3s kubectl config use-context <context>
 ```
 
-### SSH K3s Cluster's Node
+## SSH K3s Cluster's Node
+
 Login to specified k3s cluster node via ssh, e.g myk3s.
 
 ```bash
 autok3s ssh --provider tencent --name myk3s
 ```
 
-## Advanced Usage
-We integrate some advanced components related to the current provider, e.g. ccm/ui.
+## Other Usages
 
-### Setup Private Registry
+More usage details please running `autok3s <sub-command> --provider tencent --help` commands.
+
+## Advanced Usages
+
+### Setting up Private Registry
+
 Below are examples showing how you may configure `/etc/autok3s/registries.yaml` on your current node when using TLS, and make it take effect on k3s cluster by `autok3s`.
 
 ```bash
@@ -245,6 +285,7 @@ autok3s -d create -p tencent --name myk3s --master 3 --registry /etc/autok3s/reg
 ```
 
 ### Enable Tencent Cloud Controller Manager
+
 You should create cluster route table if enabled CCM, and set `--router` with you router table name.
 
 Autok3s uses `10.42.0.0/16` as default cluster CIDR, your route table should set the same cidr-block.
@@ -260,6 +301,7 @@ export QCloudCcsAPIRegion=<your-region>
 ```
 
 Then using `<your-route-table-name>` value for `--router`, the `--vpc` should be the same with vpc you set for route table name.
+
 ```bash
 autok3s -d create \
     ... \
@@ -269,6 +311,7 @@ autok3s -d create \
 The cluster route table will not **DELETE AUTOMATICALLY**, please remove router with [route-ctl](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/tree/master/route-ctl).
 
 ### Enable UI Component
+
 This flags will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.
 Please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create user token.
 

@@ -8,7 +8,7 @@ This article provides users with the instrcutions to create and launch a K3s clu
 
 ## Prerequisites
 
-To ensure that ECS instances can be created and accessed successfully, please follow the instrctions below.
+To ensure that ECS instances can be created and accessed successfully, please follow the instructions below.
 
 ### Setting up Environment
 
