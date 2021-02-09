@@ -9,9 +9,9 @@ English / [简体中文](docs/i18n/zh_cn/README.md)
 
 ## What is AutoK3s
 
-[K3s](https://github.com/k3s-io/k3s) is a fully certified Kubernetes offering, it can replace the "full-fat" K8s in some cases.Using K3s to create K3s clusters in public cloud providers is a complicated process. In addtion, users are required to fill in different parameters and fields in different cloud providers to create K3s clusters in them. AutoK3s is made to simplify this process.
+[K3s](https://github.com/k3s-io/k3s) is a fully certified Kubernetes offering, it can replace the "full-fat" K8s in some cases. Using K3s to create K3s clusters in public cloud providers is a complicated process. Users are required to fill in different parameters and fields in different cloud providers to create K3s clusters in them. AutoK3s is made to simplify this process.
 
-AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it can help you **Run K3s Everywhere**. You can use AutoK3s to create and launch K3s clusters, or to add nodes in existing K3s clusters. AutoK3s not only improves user experience of cluster management on public clouds, but also inherites kubectl, provides users with accessible cluster management abilities. Currently, AutoK3s supports **Alibaba, Tencent, and AWS** cloud services. If the cloud providers you are using are not listed above, you can always use **native** mode to bootstrap clusters in you VM instances. We will support more cloud providers based on our user community's feedbacks.
+AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it can help you **Run K3s Everywhere**. You can use AutoK3s to create and launch K3s clusters, or to add nodes in existing K3s clusters. AutoK3s not only improves user experience of cluster management on cloud providers, but also inherites kubectl, which can provide users with convenient cluster management abilities. Currently, AutoK3s supports **Alibaba, Tencent, and AWS** cloud services. If the cloud providers you are using are not listed above, you can always use **native** mode to bootstrap clusters in you VM instances. We will support more cloud providers based on our user community's feedbacks.
 
 <!-- toc -->
 
@@ -31,8 +31,8 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 
 ## Key Features
 
-- Quick provisioning time with API, CLI and UI dashboard.
-- Cloud provider Integration(simplify setting up [CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller) of each cloud).
+- Shorter provisioning time with API, CLI and UI dashboard.
+- Cloud provider Integration(simplifies the setup process of [CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller) on cloud providers).
 - Flexible installation options, like K3s cluster HA and datastore(embedded etcd, RDS, SQLite, etc.).
 - Low cost(try spot instances in each cloud).
 - Simplify operations by UI dashboard.
@@ -59,7 +59,7 @@ These commands are frequently used in AutoK3s:
 These parameters are frequently used in AutoK3s:
 
 - `-d` or `--debug`: To enable debug mode.
-- `-p` or `--provider`: To specify which cloud provider to use, please see the description below for more details.
+- `-p` or `--provider`: To specify which cloud provider to use.
 - `-n` or `--name`: To specify the name of the cluster.
 - `--master`: To specify the number of master nodes that you want to create or add.
 - `--worker`: To specify the number of worker nodes that you want to create or add.

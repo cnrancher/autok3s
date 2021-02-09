@@ -277,7 +277,7 @@ autok3s kubectl config use-context myk3s.cn-hangzhou.alibaba
 autok3s kubectl <sub-commands> <flags>
 ```
 
-在多个群集的场景下，可以通过切换上下文来完成对不同群集的访问。
+在多个集群的场景下，可以通过切换上下文来完成对不同集群的访问。
 
 ```bash
 autok3s kubectl config get-contexts

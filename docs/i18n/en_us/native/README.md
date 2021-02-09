@@ -4,7 +4,7 @@ English / [简体中文](https://github.com/cnrancher/autok3s/blob/master/docs/i
 
 ## Introduction
 
-This article provides users with the instrcutions to create and launch a K3s cluster on a virtual machine(VM), and to add nodes for an existing K3s cluster on the VM. In additon, this article provides guidance of advanced usages of running K3s on VM, such as setting up private registry, and enabling UI components.
+This article provides users with the instructions to create and launch a K3s cluster on a virtual machine(VM), and to add nodes for an existing K3s cluster on the VM. In additon, this article provides guidance of advanced usages of running K3s on VM, such as setting up private registry, and enabling UI components.
 
 ## Prerequisites
 
@@ -68,7 +68,7 @@ The following requirements must be met before creating an HA K3s cluster with ex
 - The number of master nodes in this cluster must be greater or equal to 1.
 - The external database information must be specified within `--datastore "PATH"` parameter.
 
-In the example below, `--master-ips <master-ip-1,master-ip-2>` specifies the number of master nodes to be 2, while `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
+In the example below, `--master-ips <master-ip-1,master-ip-2>` specifies the number of master nodes to be 2, `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
 
 Run the command below and create an HA K3s cluster with external database:
 
@@ -131,7 +131,7 @@ autok3s -d join \
 
 ## Access K3s Cluster
 
-After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
+After the cluster is created, `autok3s` will automatically merge the `kubeconfig` so that you can access the cluster.
 
 ```bash
 autok3s kubectl config use-context myk3s
@@ -155,7 +155,7 @@ We integrate some advanced components such as private registries and UI related 
 
 ### Setting up Private Registry
 
-When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
 
 ```bash
 autok3s -d create \

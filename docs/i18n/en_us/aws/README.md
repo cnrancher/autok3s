@@ -4,7 +4,7 @@ English / [简体中文](https://github.com/cnrancher/autok3s/blob/master/docs/i
 
 ## Introduction
 
-This article provides users with the instrcutions to create and launch a K3s cluster on an AWS EC2 instance, and to add nodes for an existing K3s cluster on AWS EC2 instance. In additon, this article provides guidance of advanced usages of running K3s on AWS EC2, such as setting up private registry, enabling AWS CCM, and enabling UI components.
+This article provides users with the instructions to create and launch a K3s cluster on an AWS EC2 instance, and to add nodes for an existing K3s cluster on AWS EC2 instance. In additon, this article provides guidance of advanced usages of running K3s on AWS EC2, such as setting up private registry, enabling AWS CCM, and enabling UI components.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ To ensure that EC2 instances can be created and accessed successfully, please fo
 
 ### Setting up Environment
 
-Configure the following environment variables for the host which running `autok3s`.
+Configure the following environment variables for the host on which you are running `autok3s`.
 
 ```bash
 export AWS_ACCESS_KEY_ID='<access-key>'
@@ -106,7 +106,7 @@ The following requirements must be met before creating an HA K3s cluster with ex
 - The number of master nodes in this cluster must be greater or equal to 1.
 - The external database information must be specified within `--datastore "PATH"` parameter.
 
-In the example below, `--master 2` specifies the number of master nodes to be 2, while `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
+In the example below, `--master 2` specifies the number of master nodes to be 2, `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
 
 Run the command below and create an HA K3s cluster with external database:
 
@@ -200,7 +200,7 @@ Nodes:
 
 ## Access K3s Cluster
 
-After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
+After the cluster is created, `autok3s` will automatically merge the `kubeconfig` so that you can access the cluster.
 
 ```bash
 autok3s kubectl config use-context myk3s.ap-southeast-2.aws
@@ -216,7 +216,7 @@ autok3s kubectl config use-context <context>
 
 ## SSH K3s Cluster's Node
 
-Login to specified k3s cluster node via ssh, e.g myk3s.
+Login to a specific k3s cluster node via ssh, e.g myk3s.
 
 ```bash
 autok3s ssh --provider aws --name myk3s
@@ -250,7 +250,7 @@ configs:
       ca_file:   # path to the ca file used in the registry
 ```
 
-When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+When running `autok3s create` or `autok3s join` command, it will take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
 
 ```bash
 autok3s -d create \
