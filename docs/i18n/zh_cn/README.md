@@ -11,7 +11,7 @@
 
 [K3s](https://github.com/k3s-io/k3s)是经过完全认证的 Kubernetes 产品，在某些情况下可以替代完整的 K8s。使用 K3s 在公有云中创建集群的过程比较复杂，在各个公有云中创建 K3s 集群所需填写的参数也有差异。为了降低 K3s 的使用门槛，简化使用 K3s 的过程，我们开发了 AutoK3s 这一款辅助工具。
 
-AutoK3s 是用于简化 K3s 集群管理的轻量级工具，您可以使用 Autok3s 在任何地方运行 K3s，Run K3s Everywhere。您可以使用 AutoK3s 快速创建并启动 K3s 集群，也可以使用它来为已有的 K3s 集群添加节点，不仅提升公有云的使用体验，同时还继承了 kubectl，提供了便捷的集群能力。目前 AutoK3s 支持的云服务提供商包括**阿里云、腾讯云和 AWS**，如果您使用的云服务提供商不属于以上三家，您可以使用`native`模式，在任意类型的虚拟机实例中初始化 k3s 集群。在后续的开发过程中，我们会根据社区反馈，为其他云服务提供商提供适配。
+AutoK3s 是用于简化 K3s 集群管理的轻量级工具，您可以使用 AutoK3s 在任何地方运行 K3s，Run K3s Everywhere。您可以使用 AutoK3s 快速创建并启动 K3s 集群，也可以使用它来为已有的 K3s 集群添加节点，不仅提升公有云的使用体验，同时还继承了 kubectl，提供了便捷的集群能力。目前 AutoK3s 支持的云服务提供商包括**阿里云、腾讯云和 AWS**，如果您使用的云服务提供商不属于以上三家，您可以使用`native`模式，在任意类型的虚拟机实例中初始化 K3s 集群。在后续的开发过程中，我们会根据社区反馈，为其他云服务提供商提供适配。
 
 <!-- toc -->
 
@@ -30,12 +30,12 @@ AutoK3s 是用于简化 K3s 集群管理的轻量级工具，您可以使用 Aut
 
 ## 关键特性
 
-- 通过 API，CLI 和 UI 等方式快速创建 K3s。
+- 通过 API、CLI 和 UI 等方式快速创建 K3s。
 - 云提供商集成（简化每个云的[CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller)设置）。
-- 灵活的安装选项，例如 K3s 群集 HA 和数据存储（内置 etcd，RDS，SQLite 等）。
+- 灵活的安装选项，例如 K3s 集群 HA 和数据存储（内置 etcd、RDS、SQLite 等）。
 - 低成本（尝试每个云中的竞价实例）。
 - 通过 UI 简化操作。
-- 多云之间弹性迁移，借助诸如[backup-restore-operator](https://github.com/rancher/backup-restore-operator)这样的工具。
+- 多云之间弹性迁移，借助诸如[backup-restore-operator](https://github.com/rancher/backup-restore-operator)这样的工具进行弹性迁移。
 
 ## 支持的云提供商
 
@@ -56,7 +56,7 @@ AutoK3s 可以支持以下云厂商，我们会根据社区反馈添加更多支
 AutoK3s 命令中常用的参数如下：
 
 - `-d`或`--debug`：开启 debug 模式。
-- `-p`或`--provider`：provider，即云服务提供商，详情参考下文描述。
+- `-p`或`--provider`：provider，即云服务提供商。
 - `-n`或`--name`：指定将要创建的集群的名称。
 - `--master`：指定创建的 master 节点数量。
 - `--worker`：指定创建的 worker 节点数量。

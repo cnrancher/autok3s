@@ -4,7 +4,7 @@ English / [简体中文](https://github.com/cnrancher/autok3s/blob/master/docs/i
 
 ## Introduction
 
-This article provides users with the instrcutions to create and launch a K3s cluster on an Tencent CVM instance, and to add nodes for an existing K3s cluster on Tencent CVM instance. In additon, this article provides guidance of advanced usages of running K3s on Tencent CVM, such as setting up private registry, enabling Tencent CCM, and enabling UI components.
+This article provides users with the instructions to create and launch a K3s cluster on an Tencent CVM instance, and to add nodes for an existing K3s cluster on Tencent CVM instance. In additon, this article provides guidance of advanced usages of running K3s on Tencent CVM, such as setting up private registry, enabling Tencent CCM, and enabling UI components.
 
 ## Prerequisites
 
@@ -230,7 +230,7 @@ Nodes:
 
 ## Access K3s Cluster
 
-After the cluster created, `autok3s` will automatically merge the `kubeconfig` which necessary for us to access the cluster.
+After the cluster is created, `autok3s` will automatically merge the `kubeconfig` so that you can access the cluster.
 
 ```bash
 autok3s kubectl config use-context myk3s.ap-guangzhou.tencent
@@ -246,7 +246,7 @@ autok3s kubectl config use-context <context>
 
 ## SSH K3s Cluster's Node
 
-Login to specified k3s cluster node via ssh, e.g myk3s.
+Login to a specific k3s cluster node via ssh, e.g myk3s.
 
 ```bash
 autok3s ssh --provider tencent --name myk3s
