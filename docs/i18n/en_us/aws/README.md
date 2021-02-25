@@ -25,7 +25,7 @@ Please refer [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.ht
 
 Please make sure your account has permission to manage EC2 instance or other relative resources.
 
-For example:
+<details>
 
 ```json
 {
@@ -60,9 +60,13 @@ For example:
 }
 ```
 
+</details>
+
 ### Setting up Security Group
 
 The EC2 instances need to apply the following **minimum** Security Group Rules:
+
+<details>
 
 ```bash
 Rule        Protocol    Port      Source             Description
@@ -74,6 +78,8 @@ InBound     UDP         8472      K3s server & agent (Optional) Required only fo
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
 ```
+
+</details>
 
 ## Creating a K3s cluster
 

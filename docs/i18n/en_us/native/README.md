@@ -16,6 +16,8 @@ You will need a VM that is capable of running popular Linux distributions such a
 
 The VM needs to apply the following **minimum** Security Group Rules:
 
+<details>
+
 ```bash
 Rule        Protocol    Port      Source             Description
 InBound     TCP         22        ALL                SSH Connect Port
@@ -26,6 +28,8 @@ InBound     UDP         8472      K3s server & agent (Optional) Required only fo
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
 ```
+
+</details>
 
 ## Creating a K3s cluster
 

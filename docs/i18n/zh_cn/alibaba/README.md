@@ -25,6 +25,8 @@ export ECS_ACCESS_KEY_SECRET='<secret-access>'
 
 您需要以下权限来访问阿里云，因此需要确保为 ECS 实例创建以下 RAM 规则。
 
+<details>
+
 ```json
 {
   "Version": "1",
@@ -102,9 +104,13 @@ export ECS_ACCESS_KEY_SECRET='<secret-access>'
 }
 ```
 
+</details>
+
 ### 设置安全组
 
 ECS 实例**至少**需要应用以下安全组规则：
+
+<details>
 
 ```bash
 Rule        Protocol    Port      Source             Description
@@ -116,6 +122,8 @@ InBound     UDP         8472      K3s server & agent (Optional) Required only fo
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
 ```
+
+</details>
 
 ## 创建集群
 

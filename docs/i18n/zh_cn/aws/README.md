@@ -25,6 +25,8 @@ export AWS_SECRET_ACCESS_KEY='<secret-key>'
 
 您的账号需要创建 EC2 及相关资源的权限，因此需要确保具有以下资源的权限：
 
+<details>
+
 ```json
 {
   "Version": "2012-10-17",
@@ -58,9 +60,13 @@ export AWS_SECRET_ACCESS_KEY='<secret-key>'
 }
 ```
 
+</details>
+
 ### 设置安全组
 
 EC2 实例**至少**需要应用以下安全组规则：
+
+<details>
 
 ```bash
 Rule        Protocol    Port      Source             Description
@@ -72,6 +78,8 @@ InBound     UDP         8472      K3s server & agent (Optional) Required only fo
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
 ```
+
+</details>
 
 ## 创建集群
 

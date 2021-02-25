@@ -1,11 +1,15 @@
-# AutoK3s
+<div align="center">
+  <h1>AutoK3s</h1>
+  <p>
+    <img alt="Build Status" src="http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg">
+    <img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/cnrancher/autok3s">
+    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?color=default&label=release&logo=github">
+    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?include_prereleases&label=pre-release&logo=github">
+  </p>
+  <span>简体中文 / </span> <a href="../../../README.md">English</a>
+</div>
 
-[![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cnrancher/autok3s)](https://goreportcard.com/report/github.com/cnrancher/autok3s)
-![GitHub release](https://img.shields.io/github/v/release/cnrancher/autok3s.svg?color=blue)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?color=blue)](http://github.com/cnrancher/autok3s/pulls)
-
-简体中文 / [English](../../../README.md)
+<hr />
 
 ## 什么是 AutoK3s
 
@@ -19,6 +23,7 @@ AutoK3s 是用于简化 K3s 集群管理的轻量级工具，您可以使用 Aut
 - [支持的云提供商](#支持的云提供商)
 - [常用命令](#常用命令)
 - [常用参数](#常用参数)
+- [安装脚本](#安装脚本)
 - [快速体验](#快速体验)
 - [使用指南](#使用指南)
 - [Local Mode](#local-mode)
@@ -60,6 +65,14 @@ AutoK3s 命令中常用的参数如下：
 - `-n`或`--name`：指定将要创建的集群的名称。
 - `--master`：指定创建的 master 节点数量。
 - `--worker`：指定创建的 worker 节点数量。
+
+## 安装脚本
+
+在MacOS或者Linux系统环境使用以下脚本安装AutoK3s，Windows用户请前往Releases页面下载对应的可执行程序。
+
+```bash
+curl -sS http://rancher-mirror.cnrancher.com/autok3s/install.sh  | INSTALL_AUTOK3S_MIRROR=cn sh
+```
 
 ## 快速体验
 
@@ -125,7 +138,24 @@ autok3s -d join --provider alibaba --name myk3s --worker 1
 
 如果要启用本地 UI，请运行 `autok3s serve`，如下图所示。
 
-![autok3s-local-ui](../../assets/autok3s-local-ui.png)
+<table>
+  <tr>
+      <td width="50%" align="center"><b>快速开始</b></td>
+      <td width="50%" align="center"><b>集群详情</b></td>
+  </tr>
+  <tr>
+     <td><img src="./docs/assets/quick-start.jpg"/></td>
+     <td><img src="./docs/assets/cluster-detail.jpg"/></td>
+  </tr>
+  <tr>
+      <td width="50%" align="center"><b>操作集群资源</b></td>
+      <td width="50%" align="center"><b>SSH集群节点</b></td>
+  </tr>
+  <tr>
+     <td><img src="./docs/assets/kubectl.jpg"/></td>
+     <td><img src="./docs/assets/node-ssh.jpg"/></td>
+  </tr>
+</table>
 
 ## Rancher Mode
 
