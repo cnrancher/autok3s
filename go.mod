@@ -39,7 +39,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.35.24
 	github.com/briandowns/spinner v1.11.1
-	github.com/creack/pty v1.1.7
+	github.com/creack/pty v1.1.11
 	github.com/docker/docker v20.10.0-beta1.0.20201108103107-c7109494fe65+incompatible
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/ghodss/yaml v1.0.0
