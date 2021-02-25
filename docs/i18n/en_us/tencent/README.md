@@ -23,6 +23,8 @@ export CVM_SECRET_KEY='<secret-key>'
 
 This provider needs certain permissions to access Tencent Cloud, so need to create a few RAM policies for your CVM instances:
 
+<details>
+
 ```json
 {
   "version": "2.0",
@@ -73,9 +75,13 @@ This provider needs certain permissions to access Tencent Cloud, so need to crea
 }
 ```
 
+</details>
+
 ### Setting up Security Group
 
 The CVM instances need to apply the following **minimum** Security Group Rules:
+
+<details>
 
 ```bash
 Rule        Protocol    Port      Source             Description
@@ -87,6 +93,8 @@ InBound     UDP         8472      K3s server & agent (Optional) Required only fo
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
 ```
+
+</details>
 
 ## Creating a K3s cluster
 

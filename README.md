@@ -1,11 +1,15 @@
-# AutoK3s
+<div align="center">
+  <h1>AutoK3s</h1>
+  <p>
+    <img alt="Build Status" src="http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg">
+    <img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/cnrancher/autok3s">
+    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?color=default&label=release&logo=github">
+    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?include_prereleases&label=pre-release&logo=github">
+  </p>
+  <span>English / </span> <a href="docs/i18n/zh_cn/README.md">简体中文</a>
+</div>
 
-[![Build Status](http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg)](http://drone-pandaria.cnrancher.com/cnrancher/autok3s)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cnrancher/autok3s)](https://goreportcard.com/report/github.com/cnrancher/autok3s)
-![GitHub release](https://img.shields.io/github/v/release/cnrancher/autok3s.svg)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?color=blue)](http://github.com/cnrancher/autok3s/pulls)
-
-English / [简体中文](docs/i18n/zh_cn/README.md)
+<hr />
 
 ## What is AutoK3s
 
@@ -19,6 +23,7 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 - [Supported Providers](#supported-providers)
 - [Frequently-used commands](#frequently-used-commands)
 - [Frequently-used parameters](#frequently-used-parameters)
+- [Install Script (tl;dr)](#install-script-tldr) 
 - [Quick Start](#quick-start)
 - [User Guide](#user-guide)
 - [Local Mode](#local-mode)
@@ -42,10 +47,11 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 
 Autok3s can support the following providers, we are happy to add more if you need:
 
+- [aws](docs/i18n/en_us/aws/README.md) - Bootstrap K3s onto Amazon EC2
 - [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap K3s onto Alibaba ECS
 - [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap K3s onto Tencent CVM
 - [native](docs/i18n/en_us/native/README.md) - Bootstrap K3s onto any VM
-- [aws](docs/i18n/en_us/aws/README.md) - Bootstrap K3s onto Amazon EC2
+
 
 ## Frequently-used Commands
 
@@ -63,6 +69,14 @@ These parameters are frequently used in AutoK3s:
 - `-n` or `--name`: To specify the name of the cluster.
 - `--master`: To specify the number of master nodes that you want to create or add.
 - `--worker`: To specify the number of worker nodes that you want to create or add.
+
+## Install Script (tl;dr)
+
+AutoK3s is distributed as a static Go binary. You can use the shell script on MacOS and Linux, or visit the Releases page to download the executable for Windows.
+
+```bash
+curl -sS http://rancher-mirror.cnrancher.com/autok3s/install.sh  | sh
+```
 
 ## Quick Start
 
@@ -126,7 +140,24 @@ autok3s -d join --provider alibaba --name myk3s --worker 1
 
 If you want to enable the local UI, please run `autok3s serve`.
 
-![autok3s-local-ui](./docs/assets/autok3s-local-ui.png)
+<table>
+  <tr>
+      <td width="50%" align="center"><b>Quick Start</b></td>
+      <td width="50%" align="center"><b>Clusters Detail</b></td>
+  </tr>
+  <tr>
+     <td><img src="./docs/assets/quick-start.jpg"/></td>
+     <td><img src="./docs/assets/cluster-detail.jpg"/></td>
+  </tr>
+  <tr>
+      <td width="50%" align="center"><b>Operate Cluster Resources</b></td>
+      <td width="50%" align="center"><b>SSH Cluster Nodes</b></td>
+  </tr>
+  <tr>
+     <td><img src="./docs/assets/kubectl.jpg"/></td>
+     <td><img src="./docs/assets/node-ssh.jpg"/></td>
+  </tr>
+</table>
 
 ## Rancher Mode
 

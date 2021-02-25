@@ -25,6 +25,8 @@ Please visit [here](https://www.alibabacloud.com/help/doc-detail/54235.htm) to b
 
 This provider needs certain permissions to access Alibaba Cloud. Therefore, you need to create some RAM policies to grant these permissions for your ECS instance. The code below is an example of setting up a set of RAM policies such that you can access your ECS instance:
 
+<details>
+
 ```json
 {
   "Version": "1",
@@ -102,9 +104,13 @@ This provider needs certain permissions to access Alibaba Cloud. Therefore, you 
 }
 ```
 
+</details>
+
 ### Setting up Security Group
 
 The ECS instance needs to apply the following **minimum** Security Group Rules:
+
+<details>
 
 ```bash
 Rule        Protocol    Port      Source             Description
@@ -116,6 +122,8 @@ InBound     UDP         8472      K3s server & agent (Optional) Required only fo
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
 ```
+
+</details>
 
 ## Creating a K3s cluster
 
