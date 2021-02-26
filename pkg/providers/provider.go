@@ -7,9 +7,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/apis"
 
-	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -26,32 +24,34 @@ type Provider interface {
 	GetProviderName() string
 	// Get command usage example.
 	GetUsageExample(action string) string
+	// create flags
+	GetCreateFlags() []types.Flag
 	// Create flags of provider options.
 	GetOptionFlags() []types.Flag
 	// Join command flags.
-	GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet
+	GetJoinFlags() []types.Flag
 	// Delete command flags.
-	GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet
+	GetDeleteFlags() []types.Flag
 	// SSH command flags.
-	GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet
+	GetSSHFlags() []types.Flag
 	// Credential flags.
 	GetCredentialFlags() []types.Flag
 	// Use this method to bind Viper, although it is somewhat repetitive.
 	BindCredentialFlags() *pflag.FlagSet
 	// Generate cluster name.
-	GenerateClusterName()
-	// Generate create/join extra args for master nodes
+	GenerateClusterName() string
+	// create/join extra master args for different provider
 	GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string
-	// Generate create/join extra args for worker nodes
+	// create/join extra worker args for different provider
 	GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string
 	// K3s create cluster interface.
-	CreateK3sCluster(ssh *types.SSH) error
+	CreateK3sCluster() error
 	// K3s join node interface.
-	JoinK3sNode(ssh *types.SSH) error
+	JoinK3sNode() error
 	// K3s delete cluster interface.
 	DeleteK3sCluster(f bool) error
 	// K3s ssh node interface.
-	SSHK3sNode(ssh *types.SSH, node string) error
+	SSHK3sNode(node string) error
 	// K3s check cluster exist.
 	IsClusterExist() (bool, []string, error)
 	// Rollback when error occurs.
@@ -64,13 +64,22 @@ type Provider interface {
 	GetCluster(kubecfg string) *types.ClusterInfo
 	// get default ssh config for provider
 	GetSSHConfig() *types.SSH
-	// get cluster configuration of provider
-	GetClusterConfig() (map[string]schemas.Field, error)
-	GetProviderOption() (map[string]schemas.Field, error)
 	// set cluster configuration of provider
 	SetConfig(config []byte) error
 	// validate create flags
-	CreateCheck(ssh *types.SSH) error
+	CreateCheck() error
+	// merge metadata configs for provider
+	SetMetadata(config *types.Metadata)
+	// merge provider options
+	SetOptions(opt []byte) error
+	// validate join flags
+	JoinCheck() error
+	// get cluster config options
+	GetClusterOptions() []types.Flag
+	// get create command options
+	GetCreateOptions() []types.Flag
+	// convert options to specified provider option interface
+	GetProviderOptions(opt []byte) (interface{}, error)
 }
 
 // RegisterProvider registers a provider.Factory by name.
@@ -101,9 +110,11 @@ func ListProviders() []apis.Provider {
 	defer providersMutex.Unlock()
 	list := make([]apis.Provider, 0)
 	for p := range providers {
-		list = append(list, apis.Provider{
-			Name: p,
-		})
+		if p != "native" {
+			list = append(list, apis.Provider{
+				Name: p,
+			})
+		}
 	}
 	return list
 }

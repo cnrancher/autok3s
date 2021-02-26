@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/server/ui"
 
@@ -24,6 +23,8 @@ func Start() http.Handler {
 	initCredential(s.Schemas)
 	initKubeconfig(s.Schemas)
 	initLogs(s.Schemas)
+	initTemplates(s.Schemas)
+
 	apiroot.Register(s.Schemas, []string{"v1"})
 	router := mux.NewRouter()
 	router.UseEncodedPath()
@@ -34,9 +35,9 @@ func Start() http.Handler {
 		responsewriter.NoCache,
 		responsewriter.DenyFrameOptions,
 		responsewriter.ContentType,
-		serve,
+		ui.ServeAssetNotFound,
 	}
-	router.PathPrefix("/ui/").Handler(middleware.Handler(http.StripPrefix("/ui/", http.FileServer(ui.AssetFile()))))
+	router.PathPrefix("/ui/").Handler(middleware.Handler(http.StripPrefix("/ui/", ui.ServeAsset())))
 
 	router.Path("/").HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		http.Redirect(rw, req, "/ui/", http.StatusFound)
@@ -69,16 +70,4 @@ func Start() http.Handler {
 	})
 
 	return router
-}
-
-func serve(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		path := strings.TrimPrefix(req.URL.Path, "/ui/")
-		if _, err := ui.Asset(path); err != nil {
-			b, _ := ui.Asset("index.html")
-			rw.Write(b)
-			return
-		}
-		next.ServeHTTP(rw, req)
-	})
 }

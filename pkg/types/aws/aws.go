@@ -18,4 +18,5 @@ type Options struct {
 	RequestSpotInstance          bool              `json:"request-spot-instance,omitempty" yaml:"request-spot-instance,omitempty"`
 	SpotPrice                    string            `json:"spot-price,omitempty" yaml:"spot-price,omitempty"`
 	Tags                         map[string]string `json:"tags,omitempty" yaml:"tags,omitempty"`
+	CloudControllerManager       bool              `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
 }

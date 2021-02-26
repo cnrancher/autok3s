@@ -1,6 +1,8 @@
 package types
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+)
 
 type AutoK3s struct {
 	Clusters []Cluster `json:"clusters" yaml:"clusters"`
@@ -16,27 +18,28 @@ type Cluster struct {
 }
 
 type Metadata struct {
-	Name                   string `json:"name" yaml:"name"`
-	Provider               string `json:"provider" yaml:"provider"`
-	Master                 string `json:"master" yaml:"master"`
-	Worker                 string `json:"worker" yaml:"worker"`
-	Token                  string `json:"token,omitempty" yaml:"token,omitempty"`
-	IP                     string `json:"ip,omitempty" yaml:"ip,omitempty"`
-	ClusterCIDR            string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
-	MasterExtraArgs        string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
-	WorkerExtraArgs        string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
-	Registry               string `json:"registry,omitempty" yaml:"registry,omitempty"`
-	DataStore              string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
-	K3sVersion             string `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
-	K3sChannel             string `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`
-	InstallScript          string `json:"installScript,omitempty" yaml:"installScript,omitempty"`
-	Mirror                 string `json:"mirror,omitempty" yaml:"mirror,omitempty"`
-	DockerMirror           string `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
-	DockerScript           string `json:"dockerScript,omitempty" yaml:"dockerScript,omitempty"`
-	Network                string `json:"network,omitempty" yaml:"network,omitempty"`
-	UI                     bool   `json:"ui,omitempty" yaml:"ui,omitempty"`
-	CloudControllerManager bool   `json:"cloud-controller-manager,omitempty" yaml:"cloud-controller-manager,omitempty"`
-	Cluster                bool   `json:"cluster,omitempty" yaml:"cluster,omitempty"`
+	Name            string `json:"name" yaml:"name"`
+	Provider        string `json:"provider" yaml:"provider"`
+	Master          string `json:"master" yaml:"master"`
+	Worker          string `json:"worker" yaml:"worker"`
+	Token           string `json:"token,omitempty" yaml:"token,omitempty"`
+	IP              string `json:"ip,omitempty" yaml:"ip,omitempty"`
+	ClusterCidr     string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
+	MasterExtraArgs string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
+	WorkerExtraArgs string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
+	Registry        string `json:"registry,omitempty" yaml:"registry,omitempty"`
+	DataStore       string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
+	K3sVersion      string `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
+	K3sChannel      string `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`
+	InstallScript   string `json:"installScript,omitempty" yaml:"installScript,omitempty"`
+	Mirror          string `json:"mirror,omitempty" yaml:"mirror,omitempty"`
+	DockerMirror    string `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
+	DockerScript    string `json:"dockerScript,omitempty" yaml:"dockerScript,omitempty"`
+	Network         string `json:"network,omitempty" yaml:"network,omitempty"`
+	UI              bool   `json:"ui" yaml:"ui"`
+	Cluster         bool   `json:"cluster" yaml:"cluster"`
+	ContextName     string `json:"context-name" yaml:"context-name"`
+	RegistryContent string `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
 }
 
 type Status struct {
@@ -59,10 +62,9 @@ type Node struct {
 }
 
 type SSH struct {
-	Port             string `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty"`
-	User             string `json:"user,omitempty" yaml:"user,omitempty"`
-	Password         string `json:"password,omitempty" yaml:"password,omitempty"`
-	SSHKey           string `json:"ssh-key,omitempty" yaml:"ssh-key,omitempty"`
+	SSHPort          string `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty" default:"22"`
+	SSHUser          string `json:"ssh-user,omitempty" yaml:"ssh-user,omitempty"`
+	SSHPassword      string `json:"ssh-password,omitempty" yaml:"ssh-password,omitempty"`
 	SSHKeyPath       string `json:"ssh-key-path,omitempty" yaml:"ssh-key-path,omitempty"`
 	SSHCert          string `json:"ssh-cert,omitempty" yaml:"ssh-cert,omitempty"`
 	SSHCertPath      string `json:"ssh-cert-path,omitempty" yaml:"ssh-cert-path,omitempty"`
@@ -87,6 +89,7 @@ const (
 )
 
 type ClusterInfo struct {
+	ID       string        `json:"id,omitempty"`
 	Name     string        `json:"name,omitempty"`
 	Region   string        `json:"region,omitempty"`
 	Zone     string        `json:"zone,omitempty"`

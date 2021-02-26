@@ -6,11 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
@@ -23,18 +21,14 @@ import (
 	"github.com/cnrancher/autok3s/pkg/utils"
 	"github.com/cnrancher/autok3s/pkg/viper"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
-	"github.com/rancher/wrangler/pkg/schemas"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/syncmap"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
-	k3sVersion               = ""
-	k3sChannel               = "stable"
 	k3sInstallScript         = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
 	accessKeyID              = "access-key"
 	accessKeySecret          = "access-secret"
@@ -43,12 +37,8 @@ const (
 	internetMaxBandwidthOut  = "5"
 	diskCategory             = "cloud_ssd"
 	diskSize                 = "40"
-	master                   = "0"
-	worker                   = "0"
-	ui                       = false
 	terway                   = "none"
 	terwayMaxPoolSize        = "5"
-	cloudControllerManager   = false
 	resourceTypeEip          = "EIP"
 	eipStatusAvailable       = "Available"
 	eipStatusInUse           = "InUse"
@@ -61,52 +51,38 @@ const (
 	defaultZoneID            = "cn-hangzhou-i"
 	defaultSecurityGroupName = "autok3s"
 	vpcStatusAvailable       = "Available"
-	defaultCidr              = "10.42.0.0/16"
 	defaultUser              = "root"
 )
 
-// ProviderName is the name of this provider.
-const ProviderName = "alibaba"
+// providerName is the name of this provider.
+const providerName = "alibaba"
 
 var (
 	k3sMirror           = "INSTALL_K3S_MIRROR=cn"
-	dockerMirror        = "--mirror Aliyun"
 	deployCCMCommand    = "echo \"%s\" | base64 -d > \"%s/cloud-controller-manager.yaml\""
 	deployTerwayCommand = "echo \"%s\" | base64 -d > \"%s/terway.yaml\""
 )
 
-type checkFun func() error
-
 type Alibaba struct {
-	types.Metadata  `json:",inline"`
-	alibaba.Options `json:",inline"`
-	types.Status    `json:"status"`
+	*cluster.ProviderBase `json:",inline"`
+	alibaba.Options       `json:",inline"`
 
-	c      *ecs.Client
-	v      *vpc.Client
-	m      *sync.Map
-	logger *logrus.Logger
+	c *ecs.Client
+	v *vpc.Client
 }
 
 func init() {
-	providers.RegisterProvider(ProviderName, func() (providers.Provider, error) {
+	providers.RegisterProvider(providerName, func() (providers.Provider, error) {
 		return newProvider(), nil
 	})
 }
 
 func newProvider() *Alibaba {
+	base := cluster.NewBaseProvider()
+	base.Provider = providerName
+	base.InstallScript = k3sInstallScript
 	return &Alibaba{
-		Metadata: types.Metadata{
-			Provider:               ProviderName,
-			Master:                 master,
-			Worker:                 worker,
-			UI:                     ui,
-			CloudControllerManager: cloudControllerManager,
-			K3sVersion:             k3sVersion,
-			K3sChannel:             k3sChannel,
-			InstallScript:          k3sInstallScript,
-			Cluster:                false,
-		},
+		ProviderBase: base,
 		Options: alibaba.Options{
 			DiskCategory:            diskCategory,
 			DiskSize:                diskSize,
@@ -117,12 +93,8 @@ func newProvider() *Alibaba {
 			Region:                  defaultRegion,
 			Zone:                    defaultZoneID,
 			EIP:                     false,
+			CloudControllerManager:  false,
 		},
-		Status: types.Status{
-			MasterNodes: make([]types.Node, 0),
-			WorkerNodes: make([]types.Node, 0),
-		},
-		m: new(syncmap.Map),
 	}
 }
 
@@ -130,200 +102,66 @@ func (p *Alibaba) GetProviderName() string {
 	return p.Provider
 }
 
-func (p *Alibaba) GenerateClusterName() {
-	p.Name = fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.GetProviderName())
+func (p *Alibaba) GenerateClusterName() string {
+	p.ContextName = fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.GetProviderName())
+	return p.ContextName
 }
 
-func (p *Alibaba) CreateK3sCluster(ssh *types.SSH) (err error) {
-	logFile, err := common.GetLogFile(p.Name)
-	if err != nil {
-		return err
-	}
-	c := &types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-		Status:   p.Status,
-	}
-	defer func() {
-		if err != nil {
-			p.logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
-			if c == nil {
-				c = &types.Cluster{
-					Metadata: p.Metadata,
-					Options:  p.Options,
-					Status:   p.Status,
-				}
-			}
-			c.Status.Status = common.StatusFailed
-			cluster.SaveClusterState(c, common.StatusFailed)
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+func (p *Alibaba) GenerateManifest() []string {
+	extraManifests := make([]string, 0)
+	if strings.EqualFold(p.Terway.Mode, "eni") {
+		// deploy additional Terway manifests.
+		t := &alibaba.Terway{
+			Mode:          p.Terway.Mode,
+			AccessKey:     p.AccessKey,
+			AccessSecret:  p.AccessSecret,
+			CIDR:          p.Terway.CIDR,
+			SecurityGroup: p.SecurityGroup,
+			VSwitches:     fmt.Sprintf(`{"%s":["%s"]}`, p.Region, p.VSwitch),
+			MaxPoolSize:   p.Terway.MaxPoolSize,
 		}
-		if err == nil && len(p.Status.MasterNodes) > 0 {
-			p.logger.Info(common.UsageInfoTitle)
-			p.logger.Infof(common.UsageContext, p.Name)
-			p.logger.Info(common.UsagePods)
-			if p.UI {
-				if p.CloudControllerManager {
-					p.logger.Infof("K3s UI URL: https://<using `kubectl get svc -A` get UI address>:8999")
-				} else {
-					p.logger.Infof("K3s UI URL: https://%s:8999", p.Status.MasterNodes[0].PublicIPAddress[0])
-				}
-			}
-			cluster.SaveClusterState(c, common.StatusRunning)
-			// remove creating state file and save running state
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
+		tmpl := fmt.Sprintf(terwayTmpl, t.AccessKey, t.AccessSecret, t.SecurityGroup, t.CIDR,
+			t.VSwitches, t.MaxPoolSize)
+		extraManifests = append(extraManifests, fmt.Sprintf(deployTerwayCommand,
+			base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
+	}
+	if p.CloudControllerManager {
+		// deploy additional Alibaba cloud-controller-manager manifests.
+		aliCCM := &alibaba.CloudControllerManager{
+			Region:       p.Region,
+			AccessKey:    p.AccessKey,
+			AccessSecret: p.AccessSecret,
 		}
-		logFile.Close()
-	}()
-	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
-
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing create logic...", p.GetProviderName())
-	p.logger.Infof("[%s] begin to create cluster %s", p.GetProviderName(), p.Name)
-	if ssh.User == "" {
-		ssh.User = defaultUser
+		tmpl := fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, p.ClusterCidr, aliCCM.Region)
+		extraManifests = append(extraManifests, fmt.Sprintf(deployCCMCommand,
+			base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
 	}
-
-	c.Status.Status = common.StatusCreating
-	err = cluster.SaveClusterState(c, common.StatusCreating)
-	if err != nil {
-		return err
-	}
-
-	c, err = p.generateInstance(func() error {
-		return nil
-	}, ssh)
-	if err != nil {
-		return
-	}
-
-	c.Logger = p.logger
-	// initialize K3s cluster.
-	if err = cluster.InitK3sCluster(c); err != nil {
-		return
-	}
-	p.logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
-
-	if option, ok := c.Options.(alibaba.Options); ok {
-		extraManifests := make([]string, 0)
-		if strings.EqualFold(option.Terway.Mode, "eni") {
-			// deploy additional Terway manifests.
-			terway := &alibaba.Terway{
-				Mode:          option.Terway.Mode,
-				AccessKey:     option.AccessKey,
-				AccessSecret:  option.AccessSecret,
-				CIDR:          option.Terway.CIDR,
-				SecurityGroup: option.SecurityGroup,
-				VSwitches:     fmt.Sprintf(`{"%s":["%s"]}`, option.Region, option.VSwitch),
-				MaxPoolSize:   option.Terway.MaxPoolSize,
-			}
-			tmpl := fmt.Sprintf(terwayTmpl, terway.AccessKey, terway.AccessSecret, terway.SecurityGroup, terway.CIDR,
-				terway.VSwitches, terway.MaxPoolSize)
-			extraManifests = append(extraManifests, fmt.Sprintf(deployTerwayCommand,
-				base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
-		}
-		if c.CloudControllerManager {
-			// deploy additional Alibaba cloud-controller-manager manifests.
-			aliCCM := &alibaba.CloudControllerManager{
-				Region:       option.Region,
-				AccessKey:    option.AccessKey,
-				AccessSecret: option.AccessSecret,
-			}
-			if c.ClusterCIDR == "" {
-				c.ClusterCIDR = defaultCidr
-			}
-			tmpl := fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, c.ClusterCIDR, aliCCM.Region)
-			extraManifests = append(extraManifests, fmt.Sprintf(deployCCMCommand,
-				base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
-		}
-		p.logger.Infof("[%s] start deploy Alibaba additional manifests", p.GetProviderName())
-		if err := cluster.DeployExtraManifest(c, extraManifests); err != nil {
-			return err
-		}
-		p.logger.Infof("[%s] successfully deploy Alibaba additional manifests", p.GetProviderName())
-	}
-
-	return nil
+	return extraManifests
 }
 
-func (p *Alibaba) JoinK3sNode(ssh *types.SSH) (err error) {
-	if p.m == nil {
-		p.m = new(syncmap.Map)
+func (p *Alibaba) CreateK3sCluster() (err error) {
+	if p.SSHUser == "" {
+		p.SSHUser = defaultUser
 	}
-	logFile, err := common.GetLogFile(p.Name)
-	if err != nil {
-		return err
-	}
-	c := &types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-		Status:   p.Status,
-	}
-	defer func() {
-		if err == nil {
-			cluster.SaveClusterState(c, common.StatusRunning)
-		}
-		// remove join state file and save running state
-		os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
-		logFile.Close()
-	}()
+	return p.InitCluster(p.Options, p.GenerateManifest, p.generateInstance)
+}
 
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing join logic...", p.GetProviderName())
-	if ssh.User == "" {
-		ssh.User = defaultUser
+func (p *Alibaba) JoinK3sNode() (err error) {
+	if p.SSHUser == "" {
+		p.SSHUser = defaultUser
 	}
-	c.Status.Status = "upgrading"
-	err = cluster.SaveClusterState(c, common.StatusJoin)
-	if err != nil {
-		return err
-	}
-
-	c, err = p.generateInstance(p.joinCheck, ssh)
-	if err != nil {
-		return err
-	}
-
-	added := &types.Cluster{
-		Metadata: c.Metadata,
-		Options:  c.Options,
-		Status:   types.Status{},
-	}
-
-	p.m.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		// filter the number of nodes that are not generated by current command.
-		if v.Current {
-			if v.Master {
-				added.Status.MasterNodes = append(added.Status.MasterNodes, v)
-			} else {
-				added.Status.WorkerNodes = append(added.Status.WorkerNodes, v)
-			}
-		}
-		return true
-	})
-
-	c.Logger = p.logger
-	added.Logger = p.logger
-	// join K3s node.
-	if err := cluster.JoinK3sNode(c, added); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
-	return nil
+	return p.JoinNodes(p.generateInstance, func() error { return nil })
 }
 
 func (p *Alibaba) Rollback() error {
-	logFile, err := common.GetLogFile(p.Name)
+	logFile, err := common.GetLogFile(p.ContextName)
 	if err != nil {
 		return err
 	}
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
-
+	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 	ids := make([]string, 0)
-	p.m.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		if v.RollBack {
 			ids = append(ids, key.(string))
@@ -331,7 +169,7 @@ func (p *Alibaba) Rollback() error {
 		return true
 	})
 
-	p.logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
+	p.Logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
 		p.releaseEipAddresses(true)
@@ -362,121 +200,21 @@ func (p *Alibaba) Rollback() error {
 		}
 	}
 
-	// remove default key-pair folder
-	err = os.RemoveAll(common.GetClusterPath(p.Name, p.GetProviderName()))
-	if err != nil {
-		return fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.Name, p.GetProviderName()), err)
-	}
-
-	p.logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
-
+	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
 	return logFile.Close()
 }
 
 func (p *Alibaba) DeleteK3sCluster(f bool) error {
-	isConfirmed := true
-
-	if !f {
-		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.GetProviderName(), p.Name))
-	}
-
-	if isConfirmed {
-		logFile, err := common.GetLogFile(p.Name)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			logFile.Close()
-			// remove log file
-			os.Remove(filepath.Join(common.GetLogPath(), p.Name))
-			// remove state file
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusRunning)))
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
-		}()
-		p.logger = common.NewLogger(common.Debug, logFile)
-		p.logger.Infof("[%s] executing delete cluster logic...", p.GetProviderName())
-
-		if err := p.generateClientSDK(); err != nil {
-			return err
-		}
-
-		if err := p.deleteCluster(f); err != nil {
-			return err
-		}
-
-		p.logger.Infof("[%s] successfully excuted delete cluster logic", p.GetProviderName())
-	}
-
-	return nil
+	return p.DeleteCluster(f, p.deleteInstance)
 }
 
-func (p *Alibaba) SSHK3sNode(ssh *types.SSH, node string) error {
-	p.logger = common.NewLogger(common.Debug, nil)
-	p.logger.Infof("[%s] executing ssh logic...", p.GetProviderName())
-
-	if err := p.generateClientSDK(); err != nil {
-		return err
-	}
-
-	instanceList, err := p.syncClusterInstance(ssh)
-	if err != nil {
-		return err
-	}
-
-	ids := make(map[string]string, len(instanceList))
-	for _, instance := range instanceList {
-		instanceInfo := ""
-		if instance.EipAddress.IpAddress != "" {
-			instanceInfo = instance.EipAddress.IpAddress
-		} else if instance.EipAddress.IpAddress == "" && len(instance.PublicIpAddress.IpAddress) > 0 {
-			instanceInfo = instance.PublicIpAddress.IpAddress[0]
-		}
-		if instanceInfo != "" {
-			for _, t := range instance.Tags.Tag {
-				if t.TagKey != "master" && t.TagKey != "worker" {
-					continue
-				}
-				if t.TagValue == "true" {
-					instanceInfo = fmt.Sprintf("%s (%s)", instanceInfo, t.TagKey)
-					break
-				}
-			}
-			if instance.Status != alibaba.StatusRunning {
-				instanceInfo = fmt.Sprintf("%s - Unhealthy(instance is %s)", instanceInfo, instance.Status)
-			}
-			ids[instance.InstanceId] = instanceInfo
-		}
-	}
-
-	// sync master/worker count
-	p.Metadata.Master = strconv.Itoa(len(p.Status.MasterNodes))
-	p.Metadata.Worker = strconv.Itoa(len(p.Status.WorkerNodes))
+func (p *Alibaba) SSHK3sNode(ip string) error {
 	c := &types.Cluster{
 		Metadata: p.Metadata,
 		Options:  p.Options,
 		Status:   p.Status,
 	}
-	err = cluster.SaveState(c)
-
-	if err != nil {
-		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
-	}
-	if node == "" {
-		node = strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
-	}
-
-	if node == "" {
-		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
-	}
-
-	// ssh K3s node.
-	if err := cluster.SSHK3sNode(node, c, ssh); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed ssh logic", p.GetProviderName())
-
-	return nil
+	return p.Connect(ip, &p.SSH, c, p.getInstanceNodes, p.isInstanceRunning)
 }
 
 func (p *Alibaba) IsClusterExist() (bool, []string, error) {
@@ -491,10 +229,17 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 	request := ecs.CreateListTagResourcesRequest()
 	request.Scheme = "https"
 	request.ResourceType = "instance"
-	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
+	request.Tag = &[]ecs.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.ContextName}}
 
 	response, err := p.c.ListTagResources(request)
-	if err != nil || !response.IsSuccess() {
+	if err != nil {
+		if e, ok := err.(*errors.ServerError); ok {
+			if e.ErrorCode() == "InvalidAccessKeyId.NotFound" {
+				return false, nil, fmt.Errorf("[%s] invalid credential: %s", p.GetProviderName(), e.Message())
+			} else if e.ErrorCode() == "Forbidden.AccessKeyDisabled" {
+				return false, nil, fmt.Errorf("[%s] your access key is disabled", p.GetProviderName())
+			}
+		}
 		return false, nil, err
 	}
 	if len(response.TagResources.TagResource) > 0 {
@@ -509,7 +254,7 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 
 func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(alibaba.Options); ok {
-		if cluster.CloudControllerManager {
+		if option.CloudControllerManager {
 			extraArgs := fmt.Sprintf(" --kubelet-arg=cloud-provider=external --kubelet-arg=provider-id=%s.%s --node-name=%s.%s",
 				option.Region, master.InstanceID, option.Region, master.InstanceID)
 			return extraArgs
@@ -523,165 +268,35 @@ func (p *Alibaba) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.N
 }
 
 func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug, nil)
 	c := &types.ClusterInfo{
+		ID:       p.ContextName,
 		Name:     p.Name,
 		Region:   p.Region,
 		Zone:     p.Zone,
 		Provider: p.GetProviderName(),
 	}
-	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
-	if err != nil {
-		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Status = types.ClusterStatusUnknown
-		c.Version = types.ClusterStatusUnknown
+	if kubecfg == "" {
 		return c
 	}
-	c.Status = cluster.GetClusterStatus(client)
-	if c.Status == types.ClusterStatusRunning {
-		c.Version = cluster.GetClusterVersion(client)
-	} else {
-		c.Version = types.ClusterStatusUnknown
-	}
-	if p.c == nil {
-		if err := p.generateClientSDK(); err != nil {
-			p.logger.Errorf("[%s] failed to generate alibaba client sdk for cluster %s: %v", p.GetProviderName(), p.Name, err)
-			c.Master = "0"
-			c.Worker = "0"
-			return c
-		}
-	}
-	instanceList, err := p.describeInstances()
-	if err != nil {
-		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Master = "0"
-		c.Worker = "0"
-		return c
-	}
-	masterCount := 0
-	workerCount := 0
-	for _, ins := range instanceList {
-		isMaster := false
-		for _, tag := range ins.Tags.Tag {
-			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
-				isMaster = true
-				masterCount++
-				break
-			}
-		}
-		if !isMaster {
-			workerCount++
-		}
-	}
-	c.Master = strconv.Itoa(masterCount)
-	c.Worker = strconv.Itoa(workerCount)
 
-	return c
+	return p.GetClusterStatus(kubecfg, c, p.getInstanceNodes)
 }
 
 func (p *Alibaba) DescribeCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug, nil)
 	c := &types.ClusterInfo{
 		Name:     p.Name,
 		Region:   p.Region,
 		Zone:     p.Zone,
 		Provider: p.GetProviderName(),
 	}
-	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
-	if err != nil {
-		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Status = types.ClusterStatusUnknown
-		c.Version = types.ClusterStatusUnknown
-		return c
-	}
-	c.Status = cluster.GetClusterStatus(client)
-	if p.c == nil {
-		if err := p.generateClientSDK(); err != nil {
-			p.logger.Errorf("[%s] failed to generate alibaba client sdk for cluster %s: %v", p.GetProviderName(), p.Name, err)
-			c.Master = "0"
-			c.Worker = "0"
-			return c
-		}
-	}
-	instanceList, err := p.describeInstances()
-	if err != nil {
-		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Master = "0"
-		c.Worker = "0"
-		return c
-	}
-	instanceNodes := make([]types.ClusterNode, 0)
-	masterCount := 0
-	workerCount := 0
-	for _, instance := range instanceList {
-		n := types.ClusterNode{
-			InstanceID:              instance.InstanceId,
-			InstanceStatus:          instance.Status,
-			InternalIP:              instance.VpcAttributes.PrivateIpAddress.IpAddress,
-			ExternalIP:              []string{instance.EipAddress.IpAddress},
-			Status:                  types.ClusterStatusUnknown,
-			ContainerRuntimeVersion: types.ClusterStatusUnknown,
-			Version:                 types.ClusterStatusUnknown,
-		}
-		isMaster := false
-		for _, tag := range instance.Tags.Tag {
-			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
-				isMaster = true
-				masterCount++
-				break
-			}
-		}
-		if !isMaster {
-			workerCount++
-		}
-		instanceNodes = append(instanceNodes, n)
-	}
-	c.Master = strconv.Itoa(masterCount)
-	c.Worker = strconv.Itoa(workerCount)
-	c.Nodes = instanceNodes
-	if c.Status == types.ClusterStatusRunning {
-		c.Version = cluster.GetClusterVersion(client)
-		nodes, err := cluster.DescribeClusterNodes(client, instanceNodes)
-		if err != nil {
-			p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
-			return c
-		}
-		c.Nodes = nodes
-	} else {
-		c.Version = types.ClusterStatusUnknown
-	}
-	return c
-}
-
-func (p *Alibaba) GetClusterConfig() (map[string]schemas.Field, error) {
-	config := p.GetSSHConfig()
-	sshConfig, err := utils.ConvertToFields(*config)
-	if err != nil {
-		return nil, err
-	}
-	metaConfig, err := utils.ConvertToFields(p.Metadata)
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range sshConfig {
-		metaConfig[k] = v
-	}
-	return metaConfig, nil
-}
-
-func (p *Alibaba) GetProviderOption() (map[string]schemas.Field, error) {
-	return utils.ConvertToFields(p.Options)
+	return p.Describe(kubecfg, c, p.getInstanceNodes)
 }
 
 func (p *Alibaba) SetConfig(config []byte) error {
-	c := types.Cluster{}
-	err := json.Unmarshal(config, &c)
+	c, err := p.SetClusterConfig(config)
 	if err != nil {
 		return err
 	}
-	sourceMeta := reflect.ValueOf(&p.Metadata).Elem()
-	targetMeta := reflect.ValueOf(&c.Metadata).Elem()
-	utils.MergeConfig(sourceMeta, targetMeta)
 	sourceOption := reflect.ValueOf(&p.Options).Elem()
 	b, err := json.Marshal(c.Options)
 	if err != nil {
@@ -696,6 +311,24 @@ func (p *Alibaba) SetConfig(config []byte) error {
 	utils.MergeConfig(sourceOption, targetOption)
 
 	return nil
+}
+
+func (p *Alibaba) SetOptions(opt []byte) error {
+	sourceOption := reflect.ValueOf(&p.Options).Elem()
+	option := &alibaba.Options{}
+	err := json.Unmarshal(opt, option)
+	if err != nil {
+		return err
+	}
+	targetOption := reflect.ValueOf(option).Elem()
+	utils.MergeConfig(sourceOption, targetOption)
+	return nil
+}
+
+func (p *Alibaba) GetProviderOptions(opt []byte) (interface{}, error) {
+	options := &alibaba.Options{}
+	err := json.Unmarshal(opt, options)
+	return options, err
 }
 
 func (p *Alibaba) generateClientSDK() error {
@@ -739,7 +372,7 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 	if !p.EIP {
 		bandwidth, err := strconv.Atoi(p.InternetMaxBandwidthOut)
 		if err != nil {
-			p.logger.Warnf("[%s] `--internet-max-bandwidth-out` value %s is invalid, "+
+			p.Logger.Warnf("[%s] `--internet-max-bandwidth-out` value %s is invalid, "+
 				"need to be integer, will use default value to create instance", p.GetProviderName(), p.InternetMaxBandwidthOut)
 			bandwidth = 5
 		}
@@ -753,17 +386,17 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 		request.Password = password
 	}
 
-	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
+	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.ContextName}}
 
 	for k, v := range p.Tags {
 		tag = append(tag, ecs.RunInstancesTag{Key: k, Value: v})
 	}
 
 	if master {
-		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name)
+		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.ContextName)
 		tag = append(tag, ecs.RunInstancesTag{Key: "master", Value: "true"})
 	} else {
-		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.Name)
+		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.ContextName)
 		tag = append(tag, ecs.RunInstancesTag{Key: "worker", Value: "true"})
 	}
 	request.Tag = &tag
@@ -774,27 +407,28 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 			p.GetProviderName(), p.Region, p.Zone, request.InstanceName, err)
 	}
 	for _, id := range response.InstanceIdSets.InstanceIdSet {
-		p.m.Store(id, types.Node{Master: master, RollBack: true, InstanceID: id, InstanceStatus: alibaba.StatusPending})
+		p.M.Store(id, types.Node{Master: master, RollBack: true, InstanceID: id, InstanceStatus: alibaba.StatusPending})
 	}
 
 	return nil
 }
 
-func (p *Alibaba) deleteCluster(f bool) error {
+func (p *Alibaba) deleteInstance(f bool) (string, error) {
 	exist, ids, err := p.IsClusterExist()
 	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
+		return "", fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
 	}
 	if !exist {
+		p.Logger.Errorf("[%s] cluster %s is not exist", p.GetProviderName(), p.Name)
 		if !f {
-			return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+			return "", fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
 		}
-		return nil
+		return p.ContextName, nil
 	}
 
 	p.releaseEipAddresses(false)
 	if err == nil && len(ids) > 0 {
-		p.logger.Infof("[%s] cluster %s will be deleted", p.GetProviderName(), p.Name)
+		p.Logger.Infof("[%s] cluster %s will be deleted", p.GetProviderName(), p.Name)
 
 		request := ecs.CreateDeleteInstancesRequest()
 		request.Scheme = "https"
@@ -810,43 +444,28 @@ func (p *Alibaba) deleteCluster(f bool) error {
 			}
 			return true, nil
 		}); err != nil {
-			return fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
+			return "", fmt.Errorf("[%s] calling deleteInstance error, msg: %v", p.GetProviderName(), err)
 		}
 	}
 
-	err = cluster.OverwriteCfg(p.Name)
-
-	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: %v", p.GetProviderName(), err)
-	}
-
-	err = cluster.DeleteState(p.Name, p.Provider)
-
-	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .state file error, msg: %v", p.GetProviderName(), err)
-	}
-
 	// remove default key-pair folder
-	err = os.RemoveAll(common.GetClusterPath(p.Name, p.GetProviderName()))
+	err = os.RemoveAll(common.GetClusterPath(p.ContextName, p.GetProviderName()))
 	if err != nil && !f {
-		return fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.Name, p.GetProviderName()), err)
+		return "", fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.ContextName, p.GetProviderName()), err)
 	}
-	// remove log file
-	os.Remove(filepath.Join(common.GetLogPath(), p.Name))
-	p.logger.Infof("[%s] successfully deleted cluster %s", p.GetProviderName(), p.Name)
 
-	return nil
+	return p.ContextName, nil
 }
 
 func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 	ids := make([]string, 0)
-	p.m.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, value interface{}) bool {
 		ids = append(ids, key.(string))
 		return true
 	})
 
 	if len(ids) > 0 {
-		p.logger.Infof("[%s] waiting for the instances %s to be in `%s` status...", p.GetProviderName(), ids, aimStatus)
+		p.Logger.Infof("[%s] waiting for the instances %s to be in `%s` status...", p.GetProviderName(), ids, aimStatus)
 		request := ecs.CreateDescribeInstanceStatusRequest()
 		request.Scheme = "https"
 		request.InstanceId = &ids
@@ -862,10 +481,10 @@ func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 
 			for _, status := range response.InstanceStatuses.InstanceStatus {
 				if status.Status == aimStatus {
-					if value, ok := p.m.Load(status.InstanceId); ok {
+					if value, ok := p.M.Load(status.InstanceId); ok {
 						v := value.(types.Node)
 						v.InstanceStatus = aimStatus
-						p.m.Store(status.InstanceId, v)
+						p.M.Store(status.InstanceId, v)
 					}
 					continue
 				}
@@ -877,15 +496,19 @@ func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 		}
 	}
 
-	p.logger.Infof("[%s] instances %s are in `%s` status", p.GetProviderName(), ids, aimStatus)
+	p.Logger.Infof("[%s] instances %s are in `%s` status", p.GetProviderName(), ids, aimStatus)
 
 	return nil
 }
 
-func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, publicKey string) (*types.Cluster, error) {
+func (p *Alibaba) isInstanceRunning(state string) bool {
+	return state == alibaba.StatusRunning
+}
+
+func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, publicKey string) error {
 	instanceList, err := p.describeInstances()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, status := range instanceList {
@@ -895,7 +518,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			publicIPAddress = []string{status.EipAddress.IpAddress}
 			eip = []string{status.EipAddress.AllocationId}
 		}
-		if value, ok := p.m.Load(status.InstanceId); ok {
+		if value, ok := p.M.Load(status.InstanceId); ok {
 			v := value.(types.Node)
 			// add only nodes that run the current command.
 			v.Current = true
@@ -905,13 +528,14 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			v.SSH = *ssh
 			// check upload keypair
 			if uploadKeyPair {
-				p.logger.Infof("[%s] Waiting for upload keypair...", p.GetProviderName())
+				p.Logger.Infof("[%s] Waiting for upload keypair...", p.GetProviderName())
 				if err := p.uploadKeyPair(v, publicKey); err != nil {
-					return nil, err
+					return err
 				}
-				v.SSH.Password = ""
+				v.SSH.SSHPassword = ""
+				ssh.SSHPassword = ""
 			}
-			p.m.Store(status.InstanceId, v)
+			p.M.Store(status.InstanceId, v)
 			continue
 		}
 		master := false
@@ -921,7 +545,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 				break
 			}
 		}
-		p.m.Store(status.InstanceId, types.Node{
+		p.M.Store(status.InstanceId, types.Node{
 			Master:            master,
 			RollBack:          false,
 			InstanceID:        status.InstanceId,
@@ -930,14 +554,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			EipAllocationIds:  publicIPAddress,
 			PublicIPAddress:   eip})
 	}
-
-	p.syncNodeStatusWithInstance(ssh)
-
-	return &types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-		Status:   p.Status,
-	}, nil
+	return nil
 }
 
 func (p *Alibaba) describeInstances() ([]ecs.Instance, error) {
@@ -945,7 +562,7 @@ func (p *Alibaba) describeInstances() ([]ecs.Instance, error) {
 	request.Scheme = "https"
 	pageSize := 20
 	request.PageSize = requests.NewInteger(pageSize)
-	request.Tag = &[]ecs.DescribeInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
+	request.Tag = &[]ecs.DescribeInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.ContextName}}
 	if p.Zone != "" {
 		request.ZoneId = p.Zone
 	}
@@ -1005,7 +622,7 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 			p.GetProviderName(), p.VSwitch)
 	}
 
-	p.ClusterCIDR = vSwitchCIDR
+	p.ClusterCidr = vSwitchCIDR
 
 	request := ecs.CreateDescribeVpcsRequest()
 	request.Scheme = "https"
@@ -1020,8 +637,8 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 	return response.Vpcs.Vpc[0].CidrBlock, nil
 }
 
-func (p *Alibaba) CreateCheck(ssh *types.SSH) error {
-	if p.KeyPair != "" && ssh.SSHKeyPath == "" {
+func (p *Alibaba) CreateCheck() error {
+	if p.KeyPair != "" && p.SSHKeyPath == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --key-pair %s", p.GetProviderName(), p.KeyPair)
 	}
 
@@ -1040,15 +657,24 @@ func (p *Alibaba) CreateCheck(ssh *types.SSH) error {
 			p.GetProviderName())
 	}
 
+	// check name exist
+	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+	if err != nil {
+		return err
+	}
+
+	if state != nil && state.Status != common.StatusFailed {
+		return fmt.Errorf("[%s] cluster %s is already exist", p.GetProviderName(), p.Name)
+	}
+
 	exist, _, err := p.IsClusterExist()
 	if err != nil {
 		return err
 	}
 
 	if exist {
-		context := strings.Split(p.Name, ".")
 		return fmt.Errorf("[%s] calling preflight error: cluster `%s` at region %s is already exist",
-			p.GetProviderName(), context[0], p.Region)
+			p.GetProviderName(), p.Name, p.Region)
 	}
 
 	if p.Region != defaultRegion && p.Zone == defaultZoneID && p.VSwitch == "" {
@@ -1058,7 +684,7 @@ func (p *Alibaba) CreateCheck(ssh *types.SSH) error {
 	return nil
 }
 
-func (p *Alibaba) joinCheck() error {
+func (p *Alibaba) JoinCheck() error {
 	if p.Master == "0" && p.Worker == "0" {
 		return fmt.Errorf("[%s] calling preflight error: `--master` or `--worker` number must >= 1", p.GetProviderName())
 	}
@@ -1067,7 +693,7 @@ func (p *Alibaba) joinCheck() error {
 			p.GetProviderName())
 	}
 
-	exist, ids, err := p.IsClusterExist()
+	exist, _, err := p.IsClusterExist()
 
 	if err != nil {
 		return err
@@ -1077,18 +703,6 @@ func (p *Alibaba) joinCheck() error {
 		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
 			p.GetProviderName(), p.Name)
 	}
-
-	// remove invalid worker nodes from .state file.
-	workers := make([]types.Node, 0)
-	for _, w := range p.WorkerNodes {
-		for _, e := range ids {
-			if e == w.InstanceID {
-				workers = append(workers, w)
-				break
-			}
-		}
-	}
-	p.WorkerNodes = workers
 
 	return nil
 }
@@ -1143,14 +757,14 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 	}
 
 	// add tags for eips
-	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
-	p.logger.Infof("[%s] tagging eip(s): %s", p.GetProviderName(), eipIds)
+	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.ContextName}}
+	p.Logger.Infof("[%s] tagging eip(s): %s", p.GetProviderName(), eipIds)
 
 	if err := p.tagVpcResources(resourceTypeEip, eipIds, tag); err != nil {
-		p.logger.Errorf("[%s] error when tag eip(s): %s", p.GetProviderName(), err)
+		p.Logger.Errorf("[%s] error when tag eip(s): %s", p.GetProviderName(), err)
 	}
 
-	p.logger.Infof("[%s] successfully tagged eip(s): %s", p.GetProviderName(), eipIds)
+	p.Logger.Infof("[%s] successfully tagged eip(s): %s", p.GetProviderName(), eipIds)
 	return eips, nil
 }
 
@@ -1216,53 +830,53 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 		// unassociate master eip address.
 		for _, master := range p.MasterNodes {
 			if master.RollBack == rollBack {
-				p.logger.Infof("[%s] unassociating eip address for %d master(s)", p.GetProviderName(), len(p.MasterNodes))
+				p.Logger.Infof("[%s] unassociating eip address for %d master(s)", p.GetProviderName(), len(p.MasterNodes))
 
 				for _, allocationID := range master.EipAllocationIds {
 					if err := p.unassociateEipAddress(allocationID); err != nil {
-						p.logger.Errorf("[%s] error when unassociating eip address %s: %v", p.GetProviderName(), allocationID, err)
+						p.Logger.Errorf("[%s] error when unassociating eip address %s: %v", p.GetProviderName(), allocationID, err)
 					}
 					releaseEipIds = append(releaseEipIds, allocationID)
 				}
 
-				p.logger.Infof("[%s] successfully unassociated eip address for master(s)", p.GetProviderName())
+				p.Logger.Infof("[%s] successfully unassociated eip address for master(s)", p.GetProviderName())
 			}
 		}
 
 		// unassociate worker eip address.
 		for _, worker := range p.WorkerNodes {
 			if worker.RollBack == rollBack {
-				p.logger.Infof("[%s] unassociating eip address for %d worker(s)", p.GetProviderName(), len(p.WorkerNodes))
+				p.Logger.Infof("[%s] unassociating eip address for %d worker(s)", p.GetProviderName(), len(p.WorkerNodes))
 
 				for _, allocationID := range worker.EipAllocationIds {
 					if err := p.unassociateEipAddress(allocationID); err != nil {
-						p.logger.Errorf("[%s] error when unassociating eip address %s: %v", p.GetProviderName(), allocationID, err)
+						p.Logger.Errorf("[%s] error when unassociating eip address %s: %v", p.GetProviderName(), allocationID, err)
 					}
 					releaseEipIds = append(releaseEipIds, allocationID)
 				}
 
-				p.logger.Infof("[%s] successfully unassociated eip address for worker(s)", p.GetProviderName())
+				p.Logger.Infof("[%s] successfully unassociated eip address for worker(s)", p.GetProviderName())
 			}
 		}
 
 		// no eip need rollback
 		if len(releaseEipIds) == 0 {
-			p.logger.Infof("[%s] no eip need execute rollback logic", p.GetProviderName())
+			p.Logger.Infof("[%s] no eip need execute rollback logic", p.GetProviderName())
 			return
 		}
 	}
 
 	// list eips with tags.
-	tags := []vpc.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
+	tags := []vpc.ListTagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.ContextName}}
 	allocationIds, err := p.listVpcTagResources(resourceTypeEip, releaseEipIds, tags)
 	if err != nil {
-		p.logger.Errorf("[%s] error when query eip address: %v", p.GetProviderName(), err)
+		p.Logger.Errorf("[%s] error when query eip address: %v", p.GetProviderName(), err)
 	}
 
 	if !rollBack {
 		for _, allocationID := range allocationIds {
 			if err := p.unassociateEipAddress(allocationID); err != nil {
-				p.logger.Errorf("[%s] error when unassociating eip address %s: %v", p.GetProviderName(), allocationID, err)
+				p.Logger.Errorf("[%s] error when unassociating eip address %s: %v", p.GetProviderName(), allocationID, err)
 			}
 		}
 	}
@@ -1273,17 +887,17 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 	// eip can be released only when status is `Available`.
 	// wait eip to be `Available` status.
 	if err := p.getEipStatus(allocationIds, eipStatusAvailable); err != nil {
-		p.logger.Errorf("[%s] error when query eip status: %v", p.GetProviderName(), err)
+		p.Logger.Errorf("[%s] error when query eip status: %v", p.GetProviderName(), err)
 	}
 
 	// release eips.
 	for _, allocationID := range allocationIds {
-		p.logger.Infof("[%s] releasing eip: %s", p.GetProviderName(), allocationID)
+		p.Logger.Infof("[%s] releasing eip: %s", p.GetProviderName(), allocationID)
 
 		if err := p.releaseEipAddress(allocationID); err != nil {
-			p.logger.Errorf("[%s] error when releasing eip address %s: %v", p.GetProviderName(), allocationID, err)
+			p.Logger.Errorf("[%s] error when releasing eip address %s: %v", p.GetProviderName(), allocationID, err)
 		} else {
-			p.logger.Infof("[%s] successfully released eip: %s", p.GetProviderName(), allocationID)
+			p.Logger.Infof("[%s] successfully released eip: %s", p.GetProviderName(), allocationID)
 		}
 	}
 }
@@ -1293,7 +907,7 @@ func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
 		return fmt.Errorf("[%s] allocationIds can not be empty", p.GetProviderName())
 	}
 
-	p.logger.Infof("[%s] waiting eip(s) to be in `%s` status...", p.GetProviderName(), aimStatus)
+	p.Logger.Infof("[%s] waiting eip(s) to be in `%s` status...", p.GetProviderName(), aimStatus)
 
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		eipList, err := p.describeEipAddresses(allocationIds)
@@ -1302,7 +916,7 @@ func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
 		}
 
 		for _, eip := range eipList {
-			p.logger.Infof("[%s] eip(s) [%s: %s] is in `%s` status", p.GetProviderName(), eip.AllocationId, eip.IpAddress, eip.Status)
+			p.Logger.Infof("[%s] eip(s) [%s: %s] is in `%s` status", p.GetProviderName(), eip.AllocationId, eip.IpAddress, eip.Status)
 
 			if eip.Status != aimStatus {
 				return false, nil
@@ -1314,7 +928,7 @@ func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
 		return fmt.Errorf("[%s] error in querying eip(s) %s status of [%s], msg: [%v]", p.GetProviderName(), aimStatus, allocationIds, err)
 	}
 
-	p.logger.Infof("[%s] eip(s) are in `%s` status", p.GetProviderName(), aimStatus)
+	p.Logger.Infof("[%s] eip(s) are in `%s` status", p.GetProviderName(), aimStatus)
 
 	return nil
 }
@@ -1358,16 +972,8 @@ func (p *Alibaba) tagVpcResources(resourceType string, resourceIds []string, tag
 	return nil
 }
 
-func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, error) {
-	var (
-		err error
-	)
-
-	if err = p.generateClientSDK(); err != nil {
-		return nil, err
-	}
-
-	if err = fn(); err != nil {
+func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
+	if err := p.generateClientSDK(); err != nil {
 		return nil, err
 	}
 
@@ -1380,7 +986,7 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 
-	p.logger.Infof("[%s] %d masters and %d workers will be added in region %s", p.GetProviderName(), masterNum, workerNum, p.Region)
+	p.Logger.Infof("[%s] %d masters and %d workers will be added in region %s", p.GetProviderName(), masterNum, workerNum, p.Region)
 
 	if p.VSwitch == "" {
 		// get default vpc and vswitch
@@ -1399,10 +1005,10 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 	}
 
 	needUploadKeyPair := false
-	if ssh.Password == "" && p.KeyPair == "" {
+	if ssh.SSHPassword == "" && p.KeyPair == "" {
 		needUploadKeyPair = true
-		ssh.Password = putil.RandomPassword()
-		p.logger.Infof("[%s] launching instance with auto-generated password...", p.GetProviderName())
+		ssh.SSHPassword = putil.RandomPassword()
+		p.Logger.Debugf("[%s] launching instance with auto-generated password...", p.GetProviderName())
 	}
 
 	if p.Terway.Mode != "none" {
@@ -1417,20 +1023,20 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 
 	// run ecs master instances.
 	if masterNum > 0 {
-		p.logger.Infof("[%s] prepare for %d of master instances", p.GetProviderName(), masterNum)
-		if err := p.runInstances(masterNum, true, ssh.Password); err != nil {
+		p.Logger.Infof("[%s] prepare for %d of master instances", p.GetProviderName(), masterNum)
+		if err := p.runInstances(masterNum, true, ssh.SSHPassword); err != nil {
 			return nil, err
 		}
-		p.logger.Infof("[%s] %d of master instances created successfully", p.GetProviderName(), masterNum)
+		p.Logger.Infof("[%s] %d of master instances created successfully", p.GetProviderName(), masterNum)
 	}
 
 	// run ecs worker instances.
 	if workerNum > 0 {
-		p.logger.Infof("[%s] prepare for %d of worker instances", p.GetProviderName(), workerNum)
-		if err := p.runInstances(workerNum, false, ssh.Password); err != nil {
+		p.Logger.Infof("[%s] prepare for %d of worker instances", p.GetProviderName(), workerNum)
+		if err := p.runInstances(workerNum, false, ssh.SSHPassword); err != nil {
 			return nil, err
 		}
-		p.logger.Infof("[%s] %d of worker instances created successfully", p.GetProviderName(), workerNum)
+		p.Logger.Infof("[%s] %d of worker instances created successfully", p.GetProviderName(), workerNum)
 	}
 
 	// wait ecs instances to be running status.
@@ -1470,23 +1076,26 @@ func (p *Alibaba) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 		}
 	}
 
-	// assemble instance status.
-	var c *types.Cluster
-	if c, err = p.assembleInstanceStatus(ssh, needUploadKeyPair, pk); err != nil {
+	if err = p.assembleInstanceStatus(ssh, needUploadKeyPair, pk); err != nil {
 		return nil, err
 	}
-
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}
+	c.ContextName = p.ContextName
 	c.Mirror = k3sMirror
-	c.DockerMirror = dockerMirror
 
 	if option, ok := c.Options.(alibaba.Options); ok {
 		if strings.EqualFold(option.Terway.Mode, "eni") {
 			c.Network = "none"
 		}
-		if c.CloudControllerManager {
+		if p.CloudControllerManager {
 			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik"
 		}
 	}
+	c.SSH = *ssh
 
 	return c, nil
 }
@@ -1500,9 +1109,9 @@ func (p *Alibaba) assignEIPToInstance(num int, master bool) ([]string, error) {
 	}
 	// associate eip with instance
 	if eips != nil {
-		p.logger.Infof("[%s] prepare for associating %d eip(s) for instance(s)", p.GetProviderName(), num)
+		p.Logger.Infof("[%s] prepare for associating %d eip(s) for instance(s)", p.GetProviderName(), num)
 
-		p.m.Range(func(key, value interface{}) bool {
+		p.M.Range(func(key, value interface{}) bool {
 			v := value.(types.Node)
 			if v.Master == master && v.PublicIPAddress == nil {
 				eipIds = append(eipIds, eips[0].AllocationId)
@@ -1513,23 +1122,26 @@ func (p *Alibaba) assignEIPToInstance(num int, master bool) ([]string, error) {
 					return false
 				}
 				eips = eips[1:]
-				p.m.Store(v.InstanceID, v)
+				p.M.Store(v.InstanceID, v)
 			}
 			return true
 		})
-		p.logger.Infof("[%s] associated %d eip(s) for instance(s) successfully", p.GetProviderName(), num)
+		p.Logger.Infof("[%s] associated %d eip(s) for instance(s) successfully", p.GetProviderName(), num)
 	}
 
 	return eipIds, nil
 }
 
-func (p *Alibaba) syncClusterInstance(ssh *types.SSH) ([]ecs.Instance, error) {
-	instanceList, err := p.describeInstances()
-	if err != nil {
+func (p *Alibaba) getInstanceNodes() ([]types.Node, error) {
+	if err := p.generateClientSDK(); err != nil {
 		return nil, err
 	}
-
-	for _, instance := range instanceList {
+	output, err := p.describeInstances()
+	if err != nil || len(output) == 0 {
+		return nil, fmt.Errorf("[%s] there's no instance for cluster %s: %v", p.GetProviderName(), p.ContextName, err)
+	}
+	nodes := []types.Node{}
+	for _, instance := range output {
 		// sync all instance that belongs to current clusters
 		master := false
 		for _, tag := range instance.Tags.Tag {
@@ -1539,32 +1151,32 @@ func (p *Alibaba) syncClusterInstance(ssh *types.SSH) ([]ecs.Instance, error) {
 			}
 		}
 
-		p.m.Store(instance.InstanceId, types.Node{
+		node := types.Node{
 			Master:            master,
 			InstanceID:        instance.InstanceId,
 			InstanceStatus:    instance.Status,
 			InternalIPAddress: instance.VpcAttributes.PrivateIpAddress.IpAddress,
-			PublicIPAddress:   []string{instance.EipAddress.IpAddress},
-			EipAllocationIds:  []string{instance.EipAddress.AllocationId},
-			SSH:               *ssh,
-		})
+			PublicIPAddress:   instance.PublicIpAddress.IpAddress,
+		}
+		if p.EIP {
+			node.PublicIPAddress = []string{instance.EipAddress.IpAddress}
+			node.EipAllocationIds = []string{instance.EipAddress.AllocationId}
+		}
+		nodes = append(nodes, node)
 	}
-
-	p.syncNodeStatusWithInstance(ssh)
-
-	return instanceList, nil
+	return nodes, nil
 }
 
 func (p *Alibaba) createKeyPair(ssh *types.SSH) (string, error) {
 	if p.KeyPair != "" && ssh.SSHKeyPath == "" {
 		return "", fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeyPair)
 	}
-	pk, err := putil.CreateKeyPair(ssh, p.GetProviderName(), p.Name, p.KeyPair)
+	pk, err := putil.CreateKeyPair(ssh, p.GetProviderName(), p.ContextName, p.KeyPair)
 	return string(pk), err
 }
 
 func (p *Alibaba) generateDefaultVPC() error {
-	p.logger.Infof("[%s] generate default vpc %s in region %s", p.GetProviderName(), vpcName, p.Region)
+	p.Logger.Infof("[%s] generate default vpc %s in region %s", p.GetProviderName(), vpcName, p.Region)
 	request := vpc.CreateCreateVpcRequest()
 	request.Scheme = "https"
 	request.RegionId = p.Region
@@ -1595,7 +1207,7 @@ func (p *Alibaba) generateDefaultVPC() error {
 		return fmt.Errorf("[%s] error tag default vpc %s, got error: %v", p.GetProviderName(), response.VpcId, err)
 	}
 
-	p.logger.Infof("[%s] waiting for vpc %s available", p.GetProviderName(), p.Vpc)
+	p.Logger.Infof("[%s] waiting for vpc %s available", p.GetProviderName(), p.Vpc)
 	// wait for vpc available
 	err = utils.WaitFor(p.isVPCAvailable)
 
@@ -1633,7 +1245,7 @@ func (p *Alibaba) isVSwitchAvailable() (bool, error) {
 }
 
 func (p *Alibaba) generateDefaultVSwitch() error {
-	p.logger.Infof("[%s] generate default vswitch %s for vpc %s in region %s, zone %s", p.GetProviderName(), vSwitchName, vpcName, p.Region, p.Zone)
+	p.Logger.Infof("[%s] generate default vswitch %s for vpc %s in region %s, zone %s", p.GetProviderName(), vSwitchName, vpcName, p.Region, p.Zone)
 	request := vpc.CreateCreateVSwitchRequest()
 	request.Scheme = "https"
 
@@ -1667,7 +1279,7 @@ func (p *Alibaba) generateDefaultVSwitch() error {
 		return fmt.Errorf("[%s] error tag default vswitch %s, got error: %v", p.GetProviderName(), p.VSwitch, err)
 	}
 
-	p.logger.Infof("[%s] waiting for vswitch %s available", p.GetProviderName(), p.VSwitch)
+	p.Logger.Infof("[%s] waiting for vswitch %s available", p.GetProviderName(), p.VSwitch)
 	// wait for vswitch available
 	err = utils.WaitFor(p.isVSwitchAvailable)
 
@@ -1737,7 +1349,7 @@ func (p *Alibaba) configNetwork() error {
 }
 
 func (p *Alibaba) configSecurityGroup() error {
-	p.logger.Infof("[%s] config default security group for %s in region %s", p.GetProviderName(), p.Vpc, p.Region)
+	p.Logger.Infof("[%s] config default security group for %s in region %s", p.GetProviderName(), p.Vpc, p.Region)
 
 	if p.Vpc == "" {
 		// if user didn't set security group, get vpc from vswitch to config default security group
@@ -1771,7 +1383,7 @@ func (p *Alibaba) configSecurityGroup() error {
 
 	if securityGroup == nil {
 		// create default security group
-		p.logger.Infof("[%s] create default security group %s for %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Vpc, p.Region)
+		p.Logger.Infof("[%s] create default security group %s for %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Vpc, p.Region)
 		req := ecs.CreateCreateSecurityGroupRequest()
 		req.Scheme = "https"
 		req.RegionId = p.Region
@@ -1789,7 +1401,7 @@ func (p *Alibaba) configSecurityGroup() error {
 			return fmt.Errorf("[%s] create default security group %s for %s in region %s error: %v", p.GetProviderName(), defaultSecurityGroupName, p.Vpc, p.Region, err)
 		}
 		securityGroupID := resp.SecurityGroupId
-		p.logger.Infof("[%s] waiting for security group %s available", p.GetProviderName(), securityGroupID)
+		p.Logger.Infof("[%s] waiting for security group %s available", p.GetProviderName(), securityGroupID)
 		err = utils.WaitFor(func() (bool, error) {
 			s, err := p.getSecurityGroup(securityGroupID)
 			if s != nil && err == nil {
@@ -1817,9 +1429,9 @@ func (p *Alibaba) configSecurityGroup() error {
 		args.PortRange = perm.PortRange
 		args.SourceCidrIp = ipRange
 		args.Description = perm.Description
-		_, err := p.c.AuthorizeSecurityGroup(args)
+		_, err = p.c.AuthorizeSecurityGroup(args)
 		if err != nil {
-			p.logger.Errorf("[%s] Add permission %v to securityGroup %s error: %v", p.GetProviderName(), perm, securityGroup.SecurityGroupId, err)
+			p.Logger.Errorf("[%s] Add permission %v to securityGroup %s error: %v", p.GetProviderName(), perm, securityGroup.SecurityGroupId, err)
 			continue
 		}
 	}
@@ -1834,7 +1446,7 @@ func (p *Alibaba) configDefaultSecurityPermissions(sg *ecs.DescribeSecurityGroup
 	for _, perm := range sg.Permissions.Permission {
 		portRange := strings.Split(perm.PortRange, "/")
 
-		p.logger.Infof("[%s] get portRange %v for security group %s", p.GetProviderName(), portRange, sg.SecurityGroupId)
+		p.Logger.Infof("[%s] get portRange %v for security group %s", p.GetProviderName(), portRange, sg.SecurityGroupId)
 		fromPort, _ := strconv.Atoi(portRange[0])
 		switch fromPort {
 		case 22:
@@ -1920,42 +1532,13 @@ func (p *Alibaba) uploadKeyPair(node types.Node, publicKey string) error {
 	)
 	command := fmt.Sprintf("mkdir -p ~/.ssh; echo '%s' > ~/.ssh/authorized_keys", strings.Trim(publicKey, "\n"))
 
-	p.logger.Infof("[%s] upload the public key with command: %s", p.GetProviderName(), command)
+	p.Logger.Debugf("[%s] upload the public key with command: %s", p.GetProviderName(), command)
 
 	tunnel.Cmd(command)
 
 	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil || stderr.String() != "" {
 		return fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	p.logger.Infof("[%s] upload keypair with output: %s", p.GetProviderName(), stdout.String())
+	p.Logger.Debugf("[%s] upload keypair with output: %s", p.GetProviderName(), stdout.String())
 	return nil
-}
-
-func (p *Alibaba) syncNodeStatusWithInstance(ssh *types.SSH) {
-	p.m.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		nodes := p.Status.WorkerNodes
-		if v.Master {
-			nodes = p.Status.MasterNodes
-		}
-		index, b := putil.IsExistedNodes(nodes, v.InstanceID)
-		if !b {
-			nodes = append(nodes, v)
-		} else {
-			node := nodes[index]
-			if ssh != nil {
-				if node.SSH.User == "" || node.SSH.Port == "" || (node.SSH.Password == "" && node.SSH.SSHKeyPath == "") {
-					node.SSH = *ssh
-				}
-			}
-			node.InstanceStatus = v.InstanceStatus
-			nodes[index] = node
-		}
-		if v.Master {
-			p.Status.MasterNodes = nodes
-		} else {
-			p.Status.WorkerNodes = nodes
-		}
-		return true
-	})
 }

@@ -41,9 +41,7 @@ require (
 	github.com/briandowns/spinner v1.11.1
 	github.com/creack/pty v1.1.11
 	github.com/docker/docker v20.10.0-beta1.0.20201108103107-c7109494fe65+incompatible
-	github.com/fsnotify/fsnotify v1.4.9
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hpcloud/tail v1.0.0
@@ -62,6 +60,8 @@ require (
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.20.12
 	k8s.io/api v0.19.0
 	k8s.io/apimachinery v0.19.0
 	k8s.io/cli-runtime v0.0.0

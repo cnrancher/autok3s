@@ -1,16 +1,12 @@
 package tencent
 
 import (
-	"encoding/json"
-	"fmt"
 	"reflect"
 
-	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -59,38 +55,25 @@ func (p *Tencent) GetUsageExample(action string) string {
 	}
 }
 
-func (p *Tencent) GetOptionFlags() []types.Flag {
-	fs := p.sharedFlags()
-	fs = append(fs, []types.Flag{
-		{
-			Name:  "ui",
-			P:     &p.UI,
-			V:     p.UI,
-			Usage: "Enable in-cluster kubernetes/dashboard",
-		},
-		{
-			Name:  "eip",
-			P:     &p.PublicIPAssignedEIP,
-			V:     p.PublicIPAssignedEIP,
-			Usage: "Enable eip",
-		},
-		{
-			Name:  "cluster",
-			P:     &p.Cluster,
-			V:     p.Cluster,
-			Usage: "Form k3s cluster using embedded etcd (Kubernetes version must be v1.19.x or higher)",
-		},
-	}...)
-
+func (p *Tencent) GetCreateFlags() []types.Flag {
+	cSSH := p.GetSSHConfig()
+	p.SSH = *cSSH
+	fs := p.GetClusterOptions()
+	fs = append(fs, p.GetCreateOptions()...)
 	return fs
 }
 
-func (p *Tencent) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := p.sharedFlags()
-	return utils.ConvertFlags(cmd, fs)
+func (p *Tencent) GetOptionFlags() []types.Flag {
+	return p.sharedFlags()
 }
 
-func (p *Tencent) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
+func (p *Tencent) GetJoinFlags() []types.Flag {
+	fs := p.sharedFlags()
+	fs = append(fs, p.GetClusterOptions()...)
+	return fs
+}
+
+func (p *Tencent) GetSSHFlags() []types.Flag {
 	fs := []types.Flag{
 		{
 			Name:      "name",
@@ -109,12 +92,13 @@ func (p *Tencent) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
 			EnvVar:   "CVM_REGION",
 		},
 	}
+	fs = append(fs, p.GetSSHOptions()...)
 
-	return utils.ConvertFlags(cmd, fs)
+	return fs
 }
 
-func (p *Tencent) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := []types.Flag{
+func (p *Tencent) GetDeleteFlags() []types.Flag {
+	return []types.Flag{
 		{
 			Name:      "name",
 			P:         &p.Name,
@@ -131,43 +115,24 @@ func (p *Tencent) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
 			EnvVar: "CVM_REGION",
 		},
 	}
-
-	return utils.ConvertFlags(cmd, fs)
 }
 
 func (p *Tencent) MergeClusterOptions() error {
-	clusters, err := cluster.ReadFromState(&types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-	})
+	opt, err := p.MergeConfig()
 	if err != nil {
 		return err
 	}
-
-	var matched *types.Cluster
-	for _, c := range clusters {
-		if c.Provider == p.Provider && c.Name == fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.Provider) {
-			matched = &c
-		}
+	stateOption, err := p.GetProviderOptions(opt)
+	if err != nil {
+		return err
 	}
+	option := stateOption.(*tencent.Options)
+	p.CloudControllerManager = option.CloudControllerManager
 
-	if matched != nil {
-		p.overwriteMetadata(matched)
-		// delete command need merge status value.
-		source := reflect.ValueOf(&p.Options).Elem()
-		b, err := json.Marshal(matched.Options)
-		if err != nil {
-			return err
-		}
-		opt := &tencent.Options{}
-		err = json.Unmarshal(b, opt)
-		if err != nil {
-			return err
-		}
-		target := reflect.ValueOf(opt).Elem()
-		utils.MergeConfig(source, target)
-	}
-
+	// merge options
+	source := reflect.ValueOf(&p.Options).Elem()
+	target := reflect.ValueOf(option).Elem()
+	utils.MergeConfig(source, target)
 	return nil
 }
 
@@ -196,8 +161,8 @@ func (p *Tencent) GetCredentialFlags() []types.Flag {
 
 func (p *Tencent) GetSSHConfig() *types.SSH {
 	ssh := &types.SSH{
-		User: defaultUser,
-		Port: "22",
+		SSHUser: defaultUser,
+		SSHPort: "22",
 	}
 	return ssh
 }
@@ -209,50 +174,8 @@ func (p *Tencent) BindCredentialFlags() *pflag.FlagSet {
 	return nfs
 }
 
-func (p *Tencent) overwriteMetadata(matched *types.Cluster) {
-	// doesn't need to be overwrite.
-	p.Status = matched.Status
-	p.Token = matched.Token
-	p.IP = matched.IP
-	p.UI = matched.UI
-	p.CloudControllerManager = matched.CloudControllerManager
-	p.ClusterCIDR = matched.ClusterCIDR
-	p.DataStore = matched.DataStore
-	p.Mirror = matched.Mirror
-	p.DockerMirror = matched.DockerMirror
-	p.InstallScript = matched.InstallScript
-	p.Network = matched.Network
-	// needed to be overwrite.
-	if p.K3sChannel == "" {
-		p.K3sChannel = matched.K3sChannel
-	}
-	if p.K3sVersion == "" {
-		p.K3sVersion = matched.K3sVersion
-	}
-	if p.InstallScript == "" {
-		p.InstallScript = matched.InstallScript
-	}
-	if p.Registry == "" {
-		p.Registry = matched.Registry
-	}
-	if p.MasterExtraArgs == "" {
-		p.MasterExtraArgs = matched.MasterExtraArgs
-	}
-	if p.WorkerExtraArgs == "" {
-		p.WorkerExtraArgs = matched.WorkerExtraArgs
-	}
-}
-
 func (p *Tencent) sharedFlags() []types.Flag {
 	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			Usage:     "Set the name of the kubeconfig context",
-			ShortHand: "n",
-			Required:  true,
-		},
 		{
 			Name:   "region",
 			P:      &p.Region,
@@ -282,9 +205,9 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			EnvVar: "CVM_SUBNET_ID",
 		},
 		{
-			Name:   "key-pair",
-			P:      &p.KeyIds,
-			V:      p.KeyIds,
+			Name:   "keypair-id",
+			P:      &p.KeypairID,
+			V:      p.KeypairID,
 			Usage:  "Used to connect to an instance",
 			EnvVar: "CVM_SSH_KEYPAIR",
 		},
@@ -335,82 +258,22 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Usage: "Set instance additional tags, i.e.(--tags a=b,b=c)",
 		},
 		{
-			Name:  "ip",
-			P:     &p.IP,
-			V:     p.IP,
-			Usage: "Public IP of an existing k3s server",
+			Name:  "router",
+			P:     &p.NetworkRouteTableName,
+			V:     p.NetworkRouteTableName,
+			Usage: "Network route table name for tencent cloud manager, must set with --cloud-controller-manager",
 		},
 		{
-			Name:  "k3s-version",
-			P:     &p.K3sVersion,
-			V:     p.K3sVersion,
-			Usage: "Specify the version of k3s cluster, overrides k3s-channel",
-		},
-		{
-			Name:  "k3s-channel",
-			P:     &p.K3sChannel,
-			V:     p.K3sChannel,
-			Usage: "Specify the release channel of k3s. i.e.(stable, latest, or i.e. v1.18)",
-		},
-		{
-			Name:  "k3s-install-script",
-			P:     &p.InstallScript,
-			V:     p.InstallScript,
-			Usage: "Change the default upstream k3s install script address",
+			Name:  "eip",
+			P:     &p.PublicIPAssignedEIP,
+			V:     p.PublicIPAssignedEIP,
+			Usage: "Enable eip",
 		},
 		{
 			Name:  "cloud-controller-manager",
 			P:     &p.CloudControllerManager,
 			V:     p.CloudControllerManager,
 			Usage: "Enable cloud-controller-manager component",
-		},
-		{
-			Name:  "master-extra-args",
-			P:     &p.MasterExtraArgs,
-			V:     p.MasterExtraArgs,
-			Usage: "Master extra arguments for k3s installer, wrapped in quotes. i.e.(--master-extra-args '--no-deploy metrics-server')",
-		},
-		{
-			Name:  "worker-extra-args",
-			P:     &p.WorkerExtraArgs,
-			V:     p.WorkerExtraArgs,
-			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. i.e.(--worker-extra-args '--node-taint key=value:NoExecute')",
-		},
-		{
-			Name:  "registry",
-			P:     &p.Registry,
-			V:     p.Registry,
-			Usage: "K3s registry file, see: https://rancher.com/docs/k3s/latest/en/installation/private-registry",
-		},
-		{
-			Name:  "datastore",
-			P:     &p.DataStore,
-			V:     p.DataStore,
-			Usage: "K3s datastore connection string to enable HA, i.e. \"mysql://username:password@tcp(hostname:3306)/database-name\"",
-		},
-		{
-			Name:  "token",
-			P:     &p.Token,
-			V:     p.Token,
-			Usage: "K3s master token, if empty will automatically generated",
-		},
-		{
-			Name:  "master",
-			P:     &p.Master,
-			V:     p.Master,
-			Usage: "Number of master node",
-		},
-		{
-			Name:  "worker",
-			P:     &p.Worker,
-			V:     p.Worker,
-			Usage: "Number of worker node",
-		},
-		{
-			Name:  "router",
-			P:     &p.NetworkRouteTableName,
-			V:     p.NetworkRouteTableName,
-			Usage: "Network route table name for tencent cloud manager, must set with --cloud-controller-manager",
 		},
 	}
 

@@ -7,11 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -28,27 +26,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/rancher/wrangler/pkg/schemas"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/syncmap"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
 	providerName = "aws"
 
 	defaultUser              = "ubuntu"
-	k3sVersion               = ""
-	k3sChannel               = "stable"
-	k3sInstallScript         = "https://get.k3s.io"
 	ami                      = "ami-00ddb0e5626798373" // Ubuntu Server 18.04 LTS (HVM) x86 64
 	instanceType             = "t2.micro"              // 1 vCPU, 1 GiB
 	volumeType               = "gp2"
 	diskSize                 = "16"
-	master                   = "0"
-	worker                   = "0"
-	ui                       = false
-	cloudControllerManager   = false
 	defaultRegion            = "us-east-1"
 	ipRange                  = "0.0.0.0/0"
 	defaultZoneID            = "us-east-1a"
@@ -56,7 +43,6 @@ const (
 	defaultDeviceName        = "/dev/sda1"
 	requestSpotInstance      = false
 	defaultSpotPrice         = "0.50"
-	dockerScript             = "curl -sSL https://get.docker.com | sh - %s"
 )
 
 const (
@@ -64,13 +50,9 @@ const (
 )
 
 type Amazon struct {
-	types.Metadata   `json:",inline"`
-	typesaws.Options `json:",inline"`
-	types.Status     `json:"status"`
-
-	client *ec2.EC2
-	m      *sync.Map
-	logger *logrus.Logger
+	*cluster.ProviderBase `json:",inline"`
+	typesaws.Options      `json:",inline"`
+	client                *ec2.EC2
 }
 
 func init() {
@@ -80,292 +62,69 @@ func init() {
 }
 
 func newProvider() *Amazon {
+	base := cluster.NewBaseProvider()
+	base.Provider = providerName
 	return &Amazon{
-		Metadata: types.Metadata{
-			Provider:               providerName,
-			Master:                 master,
-			Worker:                 worker,
-			UI:                     ui,
-			CloudControllerManager: cloudControllerManager,
-			K3sVersion:             k3sVersion,
-			K3sChannel:             k3sChannel,
-			InstallScript:          k3sInstallScript,
-			Cluster:                false,
-			DockerScript:           dockerScript,
-		},
+		ProviderBase: base,
 		Options: typesaws.Options{
-			Region:              defaultRegion,
-			Zone:                defaultZoneID,
-			VolumeType:          volumeType,
-			RootSize:            diskSize,
-			InstanceType:        instanceType,
-			AMI:                 ami,
-			RequestSpotInstance: requestSpotInstance,
+			Region:                 defaultRegion,
+			Zone:                   defaultZoneID,
+			VolumeType:             volumeType,
+			RootSize:               diskSize,
+			InstanceType:           instanceType,
+			AMI:                    ami,
+			RequestSpotInstance:    requestSpotInstance,
+			CloudControllerManager: false,
 		},
-		Status: types.Status{
-			MasterNodes: make([]types.Node, 0),
-			WorkerNodes: make([]types.Node, 0),
-		},
-		m: new(syncmap.Map),
 	}
 }
-
-type checkFun func() error
 
 func (p *Amazon) GetProviderName() string {
 	return p.Provider
 }
 
-func (p *Amazon) GenerateClusterName() {
-	p.Name = fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.GetProviderName())
+func (p *Amazon) GenerateClusterName() string {
+	p.ContextName = fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.GetProviderName())
+	return p.ContextName
 }
 
-func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
-	logFile, err := common.GetLogFile(p.Name)
-	if err != nil {
-		return err
-	}
-	c := &types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-		SSH:      *ssh,
-		Status:   p.Status,
-	}
-	defer func() {
-		if err != nil {
-			p.logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
-			if c == nil {
-				c = &types.Cluster{
-					Metadata: p.Metadata,
-					Options:  p.Options,
-					SSH:      *ssh,
-					Status:   p.Status,
-				}
-			}
-			c.Status.Status = common.StatusFailed
-			cluster.SaveClusterState(c, common.StatusFailed)
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
-		}
-		if err == nil && len(p.Status.MasterNodes) > 0 {
-			p.logger.Info(common.UsageInfoTitle)
-			p.logger.Infof(common.UsageContext, p.Name)
-			p.logger.Info(common.UsagePods)
-			if p.UI {
-				if p.CloudControllerManager {
-					p.logger.Infof("K3s UI URL: https://<using `kubectl get svc -A` get UI address>:8999")
-				} else {
-					p.logger.Infof("K3s UI URL: https://%s:8999", p.Status.MasterNodes[0].PublicIPAddress[0])
-				}
-			}
-			cluster.SaveClusterState(c, common.StatusRunning)
-			// remove creating/failed state file and save running state
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
-		}
-		logFile.Close()
-	}()
-	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
-
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing create logic...", p.GetProviderName())
-	if ssh.User == "" {
-		ssh.User = defaultUser
-	}
-	if ssh.Port == "" {
-		ssh.Port = "22"
-	}
-
-	c.Status.Status = common.StatusCreating
-	err = cluster.SaveClusterState(c, common.StatusCreating)
-	if err != nil {
-		return err
-	}
-
-	c, err = p.generateInstance(func() error {
-		return nil
-	}, ssh)
-	if err != nil {
-		return err
-	}
-	c.Logger = p.logger
-	if err = cluster.InitK3sCluster(c); err != nil {
-		return err
-	}
-	p.logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
-
-	if c.CloudControllerManager {
-		extraManifests := []string{fmt.Sprintf(deployCCMCommand,
+func (p *Amazon) GenerateManifest() []string {
+	if p.CloudControllerManager {
+		return []string{fmt.Sprintf(deployCCMCommand,
 			base64.StdEncoding.EncodeToString([]byte(amazonCCMTmpl)), common.K3sManifestsDir)}
-		p.logger.Infof("[%s] start deploy aws additional manifests", p.GetProviderName())
-		if err := cluster.DeployExtraManifest(c, extraManifests); err != nil {
-			return err
-		}
-		p.logger.Infof("[%s] successfully deploy aws additional manifests", p.GetProviderName())
 	}
 	return nil
 }
 
-func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
-	if p.m == nil {
-		p.m = new(syncmap.Map)
+func (p *Amazon) CreateK3sCluster() (err error) {
+	if p.SSHUser == "" {
+		p.SSHUser = defaultUser
 	}
-	logFile, err := common.GetLogFile(p.Name)
-	if err != nil {
-		return err
-	}
-	c := &types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-		Status:   p.Status,
-	}
-	defer func() {
-		if err == nil {
-			cluster.SaveClusterState(c, common.StatusRunning)
-		}
-		// remove join state file and save running state
-		os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
-		logFile.Close()
-	}()
+	return p.InitCluster(p.Options, p.GenerateManifest, p.generateInstance)
+}
 
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing join logic...", p.GetProviderName())
-	if ssh.User == "" {
-		ssh.User = defaultUser
+func (p *Amazon) JoinK3sNode() (err error) {
+	if p.SSHUser == "" {
+		p.SSHUser = defaultUser
 	}
-
-	c.Status.Status = "upgrading"
-	err = cluster.SaveClusterState(c, common.StatusJoin)
-	if err != nil {
-		return err
-	}
-
-	c, err = p.generateInstance(p.joinCheck, ssh)
-	if err != nil {
-		p.logger.Errorf("%v", err)
-		return err
-	}
-
-	added := &types.Cluster{
-		Metadata: c.Metadata,
-		Options:  c.Options,
-		Status:   types.Status{},
-	}
-
-	p.m.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		// filter the number of nodes that are not generated by current command.
-		if v.Current {
-			if v.Master {
-				added.Status.MasterNodes = append(added.Status.MasterNodes, v)
-			} else {
-				added.Status.WorkerNodes = append(added.Status.WorkerNodes, v)
-			}
-		}
-		return true
-	})
-
-	c.Logger = p.logger
-	added.Logger = p.logger
-	// join K3s node.
-	if err := cluster.JoinK3sNode(c, added); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
-	return nil
+	return p.JoinNodes(p.generateInstance, p.syncInstances)
 }
 
 func (p *Amazon) DeleteK3sCluster(f bool) (err error) {
-	isConfirmed := true
-
-	if !f {
-		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.GetProviderName(), p.Name))
-	}
-	if isConfirmed {
-		logFile, err := common.GetLogFile(p.Name)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			logFile.Close()
-			// remove log file
-			os.Remove(filepath.Join(common.GetLogPath(), p.Name))
-			// remove state file
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusRunning)))
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
-		}()
-		p.logger = common.NewLogger(common.Debug, logFile)
-		p.logger.Infof("[%s] executing delete cluster logic...", p.GetProviderName())
-		p.newClient()
-		err = p.deleteCluster(f)
-		if err != nil {
-			return err
-		}
-		p.logger.Infof("[%s] successfully excuted delete cluster logic", p.GetProviderName())
-	}
-	return nil
+	return p.DeleteCluster(f, p.deleteInstance)
 }
 
-func (p *Amazon) SSHK3sNode(ssh *types.SSH, ip string) error {
-	p.logger = common.NewLogger(common.Debug, nil)
-	p.logger.Infof("[%s] executing ssh logic...", p.GetProviderName())
-	p.newClient()
-	instanceList, err := p.syncClusterInstance(ssh)
-	if err != nil {
-		return err
-	}
-	ids := make(map[string]string, len(instanceList))
-	if ip == "" {
-		// generate node name
-		for _, instance := range instanceList {
-			instanceInfo := ""
-			instanceInfo = *instance.PublicIpAddress
-			if instanceInfo != "" {
-				for _, t := range instance.Tags {
-					if aws.StringValue(t.Key) != "master" && aws.StringValue(t.Key) != "worker" {
-						continue
-					}
-					if aws.StringValue(t.Value) == "true" {
-						instanceInfo = fmt.Sprintf("%s (%s)", instanceInfo, aws.StringValue(t.Key))
-						break
-					}
-				}
-				if aws.StringValue(instance.State.Name) != ec2.InstanceStateNameRunning {
-					instanceInfo = fmt.Sprintf("%s - Unhealthy(instance is %s)", instanceInfo, *instance.State.Name)
-				}
-				ids[aws.StringValue(instance.InstanceId)] = instanceInfo
-			}
-		}
-	}
-
-	// sync master/worker count
-	p.Metadata.Master = strconv.Itoa(len(p.Status.MasterNodes))
-	p.Metadata.Worker = strconv.Itoa(len(p.Status.WorkerNodes))
+func (p *Amazon) SSHK3sNode(ip string) error {
 	c := &types.Cluster{
 		Metadata: p.Metadata,
 		Options:  p.Options,
 		Status:   p.Status,
 	}
-	err = cluster.SaveState(c)
+	return p.Connect(ip, &p.SSH, c, p.getInstanceNodes, p.isInstanceRunning)
+}
 
-	if err != nil {
-		return fmt.Errorf("[%s] synchronizing .state file error, msg: [%v]", p.GetProviderName(), err)
-	}
-	if ip == "" {
-		ip = strings.Split(utils.AskForSelectItem(fmt.Sprintf("[%s] choose ssh node to connect", p.GetProviderName()), ids), " (")[0]
-	}
-
-	if ip == "" {
-		return fmt.Errorf("[%s] choose incorrect ssh node", p.GetProviderName())
-	}
-
-	// ssh K3s node.
-	if err := cluster.SSHK3sNode(ip, c, ssh); err != nil {
-		return err
-	}
-
-	p.logger.Infof("[%s] successfully executed ssh logic", p.GetProviderName())
-
-	return nil
+func (p *Amazon) isInstanceRunning(state string) bool {
+	return state == ec2.InstanceStateNameRunning
 }
 
 func (p *Amazon) IsClusterExist() (bool, []string, error) {
@@ -392,7 +151,7 @@ func (p *Amazon) IsClusterExist() (bool, []string, error) {
 
 func (p *Amazon) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(typesaws.Options); ok {
-		if cluster.CloudControllerManager {
+		if option.CloudControllerManager {
 			return fmt.Sprintf(" --kubelet-arg=cloud-provider=external --kubelet-arg=provider-id=aws:///%s/%s --node-name='$(hostname -f)'", option.Zone, master.InstanceID)
 		}
 	}
@@ -403,166 +162,53 @@ func (p *Amazon) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.No
 	return p.GenerateMasterExtraArgs(cluster, worker)
 }
 
+func (p *Amazon) SetOptions(opt []byte) error {
+	sourceOption := reflect.ValueOf(&p.Options).Elem()
+	option := &typesaws.Options{}
+	err := json.Unmarshal(opt, option)
+	if err != nil {
+		return err
+	}
+	targetOption := reflect.ValueOf(option).Elem()
+	utils.MergeConfig(sourceOption, targetOption)
+	return nil
+}
+
 func (p *Amazon) GetCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug, nil)
+	c := &types.ClusterInfo{
+		ID:       p.ContextName,
+		Name:     p.Name,
+		Provider: p.GetProviderName(),
+		Region:   p.Region,
+	}
+	if kubecfg == "" {
+		return c
+	}
+
+	return p.GetClusterStatus(kubecfg, c, p.getInstanceNodes)
+}
+
+func (p *Amazon) DescribeCluster(kubecfg string) *types.ClusterInfo {
 	c := &types.ClusterInfo{
 		Name:     p.Name,
 		Region:   p.Region,
 		Zone:     p.Zone,
 		Provider: p.GetProviderName(),
 	}
-	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
-	if err != nil {
-		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Status = types.ClusterStatusUnknown
-		c.Version = types.ClusterStatusUnknown
-		return c
-	}
-	c.Status = cluster.GetClusterStatus(client)
-	if c.Status == types.ClusterStatusRunning {
-		c.Version = cluster.GetClusterVersion(client)
-	} else {
-		c.Version = types.ClusterStatusUnknown
-	}
-	if p.client == nil {
-		p.newClient()
-	}
-
-	output, err := p.describeInstances()
-	if err != nil || len(output) == 0 {
-		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Master = "0"
-		c.Worker = "0"
-		return c
-	}
-	masterCount := 0
-	workerCount := 0
-	for _, ins := range output {
-		if aws.StringValue(ins.State.Name) == ec2.InstanceStateNameTerminated {
-			continue
-		}
-		isMaster := false
-		for _, tag := range ins.Tags {
-			if strings.EqualFold(*tag.Key, "master") && strings.EqualFold(*tag.Value, "true") {
-				isMaster = true
-				masterCount++
-				break
-			}
-		}
-		if !isMaster {
-			workerCount++
-		}
-	}
-
-	c.Master = strconv.Itoa(masterCount)
-	c.Worker = strconv.Itoa(workerCount)
-
-	return c
+	return p.Describe(kubecfg, c, p.getInstanceNodes)
 }
 
-func (p *Amazon) GetClusterConfig() (map[string]schemas.Field, error) {
-	config := p.GetSSHConfig()
-	sshConfig, err := utils.ConvertToFields(*config)
-	if err != nil {
-		return nil, err
-	}
-	metaConfig, err := utils.ConvertToFields(p.Metadata)
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range sshConfig {
-		metaConfig[k] = v
-	}
-	return metaConfig, nil
-}
-
-func (p *Amazon) DescribeCluster(kubecfg string) *types.ClusterInfo {
-	p.logger = common.NewLogger(common.Debug, nil)
-	c := &types.ClusterInfo{
-		Name:     strings.Split(p.Name, ".")[0],
-		Region:   p.Region,
-		Zone:     p.Zone,
-		Provider: p.GetProviderName(),
-	}
-	client, err := cluster.GetClusterConfig(p.Name, kubecfg)
-	if err != nil {
-		p.logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Status = types.ClusterStatusUnknown
-		c.Version = types.ClusterStatusUnknown
-		return c
-	}
-	c.Status = cluster.GetClusterStatus(client)
-	if p.client == nil {
-		p.newClient()
-	}
-
-	output, err := p.describeInstances()
-	if err != nil || len(output) == 0 {
-		p.logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
-		c.Master = "0"
-		c.Worker = "0"
-		return c
-	}
-	instanceNodes := make([]types.ClusterNode, 0)
-	masterCount := 0
-	workerCount := 0
-	for _, instance := range output {
-		if aws.StringValue(instance.State.Name) == ec2.InstanceStateNameTerminated {
-			continue
-		}
-		n := types.ClusterNode{
-			InstanceID:              aws.StringValue(instance.InstanceId),
-			InstanceStatus:          aws.StringValue(instance.State.Name),
-			InternalIP:              []string{aws.StringValue(instance.PrivateIpAddress)},
-			ExternalIP:              []string{aws.StringValue(instance.PublicIpAddress)},
-			Status:                  types.ClusterStatusUnknown,
-			ContainerRuntimeVersion: types.ClusterStatusUnknown,
-			Version:                 types.ClusterStatusUnknown,
-		}
-		isMaster := false
-		for _, tag := range instance.Tags {
-			if strings.EqualFold(*tag.Key, "master") && strings.EqualFold(*tag.Value, "true") {
-				isMaster = true
-				masterCount++
-				break
-			}
-		}
-		if !isMaster {
-			workerCount++
-		}
-		instanceNodes = append(instanceNodes, n)
-	}
-
-	c.Master = strconv.Itoa(masterCount)
-	c.Worker = strconv.Itoa(workerCount)
-	c.Nodes = instanceNodes
-	if c.Status == types.ClusterStatusRunning {
-		c.Version = cluster.GetClusterVersion(client)
-		nodes, err := cluster.DescribeClusterNodes(client, instanceNodes)
-		if err != nil {
-			p.logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.GetProviderName(), p.Name, err)
-			return c
-		}
-		c.Nodes = nodes
-	} else {
-		c.Version = types.ClusterStatusUnknown
-	}
-	return c
-}
-
-func (p *Amazon) GetProviderOption() (map[string]schemas.Field, error) {
-	return utils.ConvertToFields(p.Options)
+func (p *Amazon) GetProviderOptions(opt []byte) (interface{}, error) {
+	options := &typesaws.Options{}
+	err := json.Unmarshal(opt, options)
+	return options, err
 }
 
 func (p *Amazon) SetConfig(config []byte) error {
-	c := types.Cluster{}
-	err := json.Unmarshal(config, &c)
+	c, err := p.SetClusterConfig(config)
 	if err != nil {
 		return err
 	}
-	sourceMeta := reflect.ValueOf(&p.Metadata).Elem()
-	targetMeta := reflect.ValueOf(&c.Metadata).Elem()
-	utils.MergeConfig(sourceMeta, targetMeta)
 	sourceOption := reflect.ValueOf(&p.Options).Elem()
 	b, err := json.Marshal(c.Options)
 	if err != nil {
@@ -580,14 +226,17 @@ func (p *Amazon) SetConfig(config []byte) error {
 }
 
 func (p *Amazon) Rollback() error {
-	logFile, err := common.GetLogFile(p.Name)
+	logFile, err := common.GetLogFile(p.ContextName)
 	if err != nil {
 		return err
 	}
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
+	defer func() {
+		logFile.Close()
+	}()
+	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 	ids := make([]string, 0)
-	p.m.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		if v.RollBack {
 			ids = append(ids, key.(string))
@@ -595,54 +244,21 @@ func (p *Amazon) Rollback() error {
 		return true
 	})
 
-	p.logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
+	p.Logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
 
-	if len(ids) > 0 {
-		tags := []*ec2.Tag{
-			{
-				Key:   aws.String("autok3s"),
-				Value: aws.String("true"),
-			},
-			{
-				Key:   aws.String("cluster"),
-				Value: aws.String(common.TagClusterPrefix + p.Name),
-			},
-		}
-		tagInput := &ec2.DeleteTagsInput{}
-		tagInput.SetTags(tags)
-		tagInput.SetResources(aws.StringSlice(ids))
-		_, err = p.client.DeleteTags(tagInput)
-		if err != nil {
-			return err
-		}
-		input := &ec2.TerminateInstancesInput{}
-		input.SetInstanceIds(aws.StringSlice(ids))
-		_, err = p.client.TerminateInstances(input)
-		if err != nil {
-			return err
-		}
-		if p.CloudControllerManager {
-			err = p.removeTagsForCCMResource()
-			if err != nil {
-				return err
-			}
-		}
+	if err = p.terminateInstance(ids); err != nil {
+		return err
 	}
-
-	p.logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
-
-	return logFile.Close()
+	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
+	return nil
 }
 
-func (p *Amazon) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, error) {
+func (p *Amazon) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	p.newClient()
-	if err := fn(); err != nil {
-		return nil, err
-	}
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 
-	p.logger.Infof("[%s] %d masters and %d workers will be added in region %s", p.GetProviderName(), masterNum, workerNum, p.Region)
+	p.Logger.Infof("[%s] %d masters and %d workers will be added in region %s", p.GetProviderName(), masterNum, workerNum, p.Region)
 
 	if err := p.createKeyPair(ssh); err != nil {
 		return nil, err
@@ -656,32 +272,37 @@ func (p *Amazon) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, 
 
 	// run ecs master instances.
 	if masterNum > 0 {
-		p.logger.Infof("[%s] prepare for %d of master instances", p.GetProviderName(), masterNum)
-		if err := p.runInstances(masterNum, true); err != nil {
+		p.Logger.Infof("[%s] prepare for %d of master instances", p.GetProviderName(), masterNum)
+		if err := p.runInstances(masterNum, true, ssh); err != nil {
 			return nil, err
 		}
-		p.logger.Infof("[%s] %d of master instances created successfully", p.GetProviderName(), masterNum)
+		p.Logger.Infof("[%s] %d of master instances created successfully", p.GetProviderName(), masterNum)
 	}
 
 	// run ecs worker instances.
 	if workerNum > 0 {
-		p.logger.Infof("[%s] prepare for %d of worker instances", p.GetProviderName(), workerNum)
-		if err := p.runInstances(workerNum, false); err != nil {
+		p.Logger.Infof("[%s] prepare for %d of worker instances", p.GetProviderName(), workerNum)
+		if err := p.runInstances(workerNum, false, ssh); err != nil {
 			return nil, err
 		}
-		p.logger.Infof("[%s] %d of worker instances created successfully", p.GetProviderName(), workerNum)
+		p.Logger.Infof("[%s] %d of worker instances created successfully", p.GetProviderName(), workerNum)
 	}
 
 	if err := p.getInstanceStatus(ec2.InstanceStateNameRunning); err != nil {
 		return nil, err
 	}
 
-	c, err := p.assembleInstanceStatus(ssh)
+	c := &types.Cluster{
+		Metadata: p.Metadata,
+		Options:  p.Options,
+		Status:   p.Status,
+	}
+	c.ContextName = p.ContextName
 
-	if c.CloudControllerManager {
+	if p.CloudControllerManager {
 		// generate tags for security group and subnet
 		// https://rancher.com/docs/rancher/v2.x/en/cluster-provisioning/rke-clusters/cloud-providers/amazon/#2-configure-the-clusterid
-		err = p.addTagsForCCMResource()
+		err := p.addTagsForCCMResource()
 		if err != nil {
 			return nil, err
 		}
@@ -689,7 +310,7 @@ func (p *Amazon) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, 
 	}
 	c.SSH = *ssh
 
-	return c, err
+	return c, nil
 }
 
 func (p *Amazon) newClient() {
@@ -707,7 +328,7 @@ func (p *Amazon) newClient() {
 	p.client = ec2.New(sess)
 }
 
-func (p *Amazon) runInstances(num int, master bool) error {
+func (p *Amazon) runInstances(num int, master bool, ssh *types.SSH) error {
 	rootSize, err := strconv.ParseInt(p.RootSize, 10, 64)
 	if err != nil {
 		return fmt.Errorf("[%s] --root-size is invalid %v, must be integer: %v", p.GetProviderName(), p.RootSize, err)
@@ -765,50 +386,36 @@ func (p *Amazon) runInstances(num int, master bool) error {
 		}
 		for _, spotRequest := range spotInstanceRequest.SpotInstanceRequests {
 			requestID := spotRequest.SpotInstanceRequestId
-			p.logger.Infof("[%s] waiting for spot instance full filled", p.GetProviderName())
-			err = utils.WaitFor(func() (bool, error) {
-				err := p.client.WaitUntilSpotInstanceRequestFulfilled(&ec2.DescribeSpotInstanceRequestsInput{
-					SpotInstanceRequestIds: []*string{requestID},
-				})
-				if err != nil {
-					if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "InvalidSpotInstanceRequestID.NotFound" {
-						return false, nil
-					}
-					return false, err
-				}
-				return true, nil
+			p.Logger.Infof("[%s] waiting for spot instance full filled", p.GetProviderName())
+			err = p.client.WaitUntilSpotInstanceRequestFulfilled(&ec2.DescribeSpotInstanceRequestsInput{
+				SpotInstanceRequestIds: []*string{requestID},
 			})
 			if err != nil {
-				return fmt.Errorf("[%s] wait for fulfilling spot request error: %v", p.GetProviderName(), err)
+				return err
 			}
-			p.logger.Infof("[%s] resolve instance information by spot request id %s", p.GetProviderName(), *requestID)
-			err = utils.WaitFor(func() (bool, error) {
-				spotInstance, err := p.client.DescribeSpotInstanceRequests(&ec2.DescribeSpotInstanceRequestsInput{
-					SpotInstanceRequestIds: []*string{requestID},
-				})
-				if err != nil {
-					return false, err
-				}
-				if spotInstance != nil && spotInstance.SpotInstanceRequests != nil {
-					instanceIDs := []*string{}
-					for _, spotIns := range spotInstance.SpotInstanceRequests {
-						instanceIDs = append(instanceIDs, spotIns.InstanceId)
-					}
-					output, err := p.client.DescribeInstances(&ec2.DescribeInstancesInput{
-						InstanceIds: instanceIDs,
-					})
-					if err != nil {
-						return false, err
-					}
-					for _, ins := range output.Reservations {
-						instanceList = append(instanceList, ins.Instances[0])
-					}
-					return true, nil
-				}
-				return false, nil
+
+			p.Logger.Infof("[%s] resolve instance information by spot request id %s", p.GetProviderName(), *requestID)
+
+			spotInstance, err := p.client.DescribeSpotInstanceRequests(&ec2.DescribeSpotInstanceRequestsInput{
+				SpotInstanceRequestIds: []*string{requestID},
 			})
 			if err != nil {
-				return fmt.Errorf("[%s] failed to get instance by spot instance: %v", p.GetProviderName(), err)
+				return err
+			}
+			if spotInstance != nil && spotInstance.SpotInstanceRequests != nil {
+				instanceIDs := []*string{}
+				for _, spotIns := range spotInstance.SpotInstanceRequests {
+					instanceIDs = append(instanceIDs, spotIns.InstanceId)
+				}
+				output, err := p.client.DescribeInstances(&ec2.DescribeInstancesInput{
+					InstanceIds: instanceIDs,
+				})
+				if err != nil {
+					return err
+				}
+				for _, ins := range output.Reservations {
+					instanceList = append(instanceList, ins.Instances[0])
+				}
 			}
 		}
 	} else {
@@ -838,7 +445,13 @@ func (p *Amazon) runInstances(num int, master bool) error {
 	ids := []*string{}
 	for _, ins := range instanceList {
 		ids = append(ids, ins.InstanceId)
-		p.m.Store(aws.StringValue(ins.InstanceId), types.Node{Master: master, RollBack: true, InstanceID: aws.StringValue(ins.InstanceId), InstanceStatus: aws.StringValue(ins.State.Name)})
+		p.M.Store(aws.StringValue(ins.InstanceId),
+			types.Node{Master: master,
+				Current:        true,
+				RollBack:       true,
+				InstanceID:     aws.StringValue(ins.InstanceId),
+				InstanceStatus: aws.StringValue(ins.State.Name),
+				SSH:            *ssh})
 	}
 
 	return p.setInstanceTags(master, ids, p.Tags)
@@ -852,7 +465,7 @@ func (p *Amazon) setInstanceTags(master bool, instanceIDs []*string, additionalT
 		},
 		{
 			Key:   aws.String("cluster"),
-			Value: aws.String(common.TagClusterPrefix + p.Name),
+			Value: aws.String(common.TagClusterPrefix + p.ContextName),
 		},
 		{
 			Key:   aws.String("master"),
@@ -870,18 +483,18 @@ func (p *Amazon) setInstanceTags(master bool, instanceIDs []*string, additionalT
 	if master {
 		tags = append(tags, &ec2.Tag{
 			Key:   aws.String("Name"),
-			Value: aws.String(fmt.Sprintf(common.MasterInstanceName, p.Name)),
+			Value: aws.String(fmt.Sprintf(common.MasterInstanceName, p.ContextName)),
 		})
 	} else {
 		tags = append(tags, &ec2.Tag{
 			Key:   aws.String("Name"),
-			Value: aws.String(fmt.Sprintf(common.WorkerInstanceName, p.Name)),
+			Value: aws.String(fmt.Sprintf(common.WorkerInstanceName, p.ContextName)),
 		})
 	}
 
 	if p.CloudControllerManager {
 		tags = append(tags, &ec2.Tag{
-			Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.Name)),
+			Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.ContextName)),
 			Value: aws.String("owned"),
 		})
 	}
@@ -895,64 +508,58 @@ func (p *Amazon) setInstanceTags(master bool, instanceIDs []*string, additionalT
 
 func (p *Amazon) getInstanceStatus(aimStatus string) error {
 	ids := make([]string, 0)
-	p.m.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, value interface{}) bool {
 		ids = append(ids, key.(string))
 		return true
 	})
 
 	if len(ids) > 0 {
-		p.logger.Infof("[%s] waiting for the instances %s to be in `%s` status...", p.GetProviderName(), ids, aimStatus)
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not `%s` status",
-			p.GetProviderName(), p.Region, p.Zone, ids, aimStatus)
+		p.Logger.Infof("[%s] waiting for the instances %s to be in `%s` status...", p.GetProviderName(), ids, aimStatus)
+		err := p.client.WaitUntilInstanceRunning(&ec2.DescribeInstancesInput{
+			InstanceIds: aws.StringSlice(ids),
+		})
+		if err != nil {
+			return err
+		}
 
-		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
-			instances, err := p.client.DescribeInstances(&ec2.DescribeInstancesInput{
-				InstanceIds: aws.StringSlice(ids),
-			})
-			if err != nil {
-				return false, err
-			}
-
-			for _, status := range instances.Reservations[0].Instances {
+		instances, err := p.client.DescribeInstances(&ec2.DescribeInstancesInput{
+			InstanceIds: aws.StringSlice(ids),
+		})
+		if err != nil {
+			return err
+		}
+		for _, reservation := range instances.Reservations {
+			for _, status := range reservation.Instances {
 				if aws.StringValue(status.State.Name) == aimStatus {
-					if value, ok := p.m.Load(aws.StringValue(status.InstanceId)); ok {
+					if value, ok := p.M.Load(aws.StringValue(status.InstanceId)); ok {
 						v := value.(types.Node)
 						v.InstanceStatus = aimStatus
-						p.m.Store(aws.StringValue(status.InstanceId), v)
+						v.InternalIPAddress = []string{aws.StringValue(status.PrivateIpAddress)}
+						v.PublicIPAddress = []string{aws.StringValue(status.PublicIpAddress)}
+						p.M.Store(aws.StringValue(status.InstanceId), v)
 					}
 					continue
 				}
-				return false, nil
 			}
-			return true, nil
-		}); err != nil {
-			return err
 		}
 	}
 
-	p.logger.Infof("[%s] instances %s are in `%s` status", p.GetProviderName(), ids, aimStatus)
+	p.Logger.Infof("[%s] instances %s are in `%s` status", p.GetProviderName(), ids, aimStatus)
 
 	return nil
 }
 
-func (p *Amazon) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error) {
+func (p *Amazon) getInstanceNodes() ([]types.Node, error) {
+	if p.client == nil {
+		p.newClient()
+	}
 	output, err := p.describeInstances()
 	if err != nil || len(output) == 0 {
-		return nil, fmt.Errorf("[%s] there's no instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+		return nil, fmt.Errorf("[%s] there's no instance for cluster %s: %v", p.GetProviderName(), p.ContextName, err)
 	}
-
+	nodes := []types.Node{}
 	for _, instance := range output {
 		if aws.StringValue(instance.State.Name) == ec2.InstanceStateNameTerminated {
-			continue
-		}
-		if value, ok := p.m.Load(aws.StringValue(instance.InstanceId)); ok {
-			v := value.(types.Node)
-			// add only nodes that run the current command.
-			v.Current = true
-			v.InternalIPAddress = []string{aws.StringValue(instance.PrivateIpAddress)}
-			v.PublicIPAddress = []string{aws.StringValue(instance.PublicIpAddress)}
-			v.SSH = *ssh
-			p.m.Store(aws.StringValue(instance.InstanceId), v)
 			continue
 		}
 		master := false
@@ -962,7 +569,7 @@ func (p *Amazon) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error) 
 				break
 			}
 		}
-		p.m.Store(aws.StringValue(instance.InstanceId), types.Node{
+		nodes = append(nodes, types.Node{
 			Master:            master,
 			RollBack:          false,
 			InstanceID:        aws.StringValue(instance.InstanceId),
@@ -970,44 +577,42 @@ func (p *Amazon) assembleInstanceStatus(ssh *types.SSH) (*types.Cluster, error) 
 			InternalIPAddress: []string{aws.StringValue(instance.PrivateIpAddress)},
 			PublicIPAddress:   []string{aws.StringValue(instance.PublicIpAddress)}})
 	}
-
-	p.syncNodeStatusWithInstance(ssh)
-
-	return &types.Cluster{
-		Metadata: p.Metadata,
-		Options:  p.Options,
-		Status:   p.Status,
-	}, nil
-
+	return nodes, nil
 }
 
-func (p *Amazon) syncNodeStatusWithInstance(ssh *types.SSH) {
-	p.m.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		nodes := p.Status.WorkerNodes
-		if v.Master {
-			nodes = p.Status.MasterNodes
+func (p *Amazon) syncInstances() error {
+	output, err := p.describeInstances()
+	if err != nil || len(output) == 0 {
+		return fmt.Errorf("[%s] there's no instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+	}
+	for _, instance := range output {
+		if aws.StringValue(instance.State.Name) == ec2.InstanceStateNameTerminated {
+			continue
 		}
-		index, b := putil.IsExistedNodes(nodes, v.InstanceID)
-		if !b {
-			nodes = append(nodes, v)
-		} else {
-			node := nodes[index]
-			if ssh != nil {
-				if node.SSH.User == "" || node.SSH.Port == "" || (node.SSH.Password == "" && node.SSH.SSHKeyPath == "") {
-					node.SSH = *ssh
-				}
+		if value, ok := p.M.Load(aws.StringValue(instance.InstanceId)); ok {
+			v := value.(types.Node)
+			v.InternalIPAddress = []string{aws.StringValue(instance.PrivateIpAddress)}
+			v.PublicIPAddress = []string{aws.StringValue(instance.PublicIpAddress)}
+			p.M.Store(aws.StringValue(instance.InstanceId), v)
+			continue
+		}
+		master := false
+		for _, tag := range instance.Tags {
+			if strings.EqualFold(*tag.Key, "master") && strings.EqualFold(*tag.Value, "true") {
+				master = true
+				break
 			}
-			node.InstanceStatus = v.InstanceStatus
-			nodes[index] = node
 		}
-		if v.Master {
-			p.Status.MasterNodes = nodes
-		} else {
-			p.Status.WorkerNodes = nodes
-		}
-		return true
-	})
+		p.M.Store(aws.StringValue(instance.InstanceId), types.Node{
+			Master:            master,
+			RollBack:          false,
+			Current:           false,
+			InstanceID:        aws.StringValue(instance.InstanceId),
+			InstanceStatus:    aws.StringValue(instance.State.Name),
+			InternalIPAddress: []string{aws.StringValue(instance.PrivateIpAddress)},
+			PublicIPAddress:   []string{aws.StringValue(instance.PublicIpAddress)}})
+	}
+	return nil
 }
 
 func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
@@ -1019,7 +624,7 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 			},
 			{
 				Name:   aws.String("tag:cluster"),
-				Values: aws.StringSlice([]string{common.TagClusterPrefix + p.Name}),
+				Values: aws.StringSlice([]string{common.TagClusterPrefix + p.ContextName}),
 			},
 		},
 		MaxResults: aws.Int64(int64(50)),
@@ -1029,7 +634,12 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 	for {
 		output, err := p.client.DescribeInstances(describeInput)
 		if output == nil || err != nil {
-			return nil, fmt.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
+			if ae, ok := err.(awserr.Error); ok {
+				if ae.Code() == "AuthFailure" {
+					return nil, fmt.Errorf("[%s] invalid credential: %s", p.GetProviderName(), ae.Message())
+				}
+			}
+			return nil, fmt.Errorf("[%s] failed to get instance for cluster %s: %v", p.GetProviderName(), p.ContextName, err)
 		}
 
 		if len(output.Reservations) > 0 {
@@ -1047,8 +657,8 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 	return instanceList, nil
 }
 
-func (p *Amazon) CreateCheck(ssh *types.SSH) error {
-	if p.KeypairName != "" && ssh.SSHKeyPath == "" {
+func (p *Amazon) CreateCheck() error {
+	if p.KeypairName != "" && p.SSHKeyPath == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --keypair-name %s", p.GetProviderName(), p.KeypairName)
 	}
 	masterNum, err := strconv.Atoi(p.Master)
@@ -1079,15 +689,24 @@ func (p *Amazon) CreateCheck(ssh *types.SSH) error {
 		return fmt.Errorf("[%s] calling preflight error: need to set `--iam-instance-profile-worker` if enabled Amazon Cloud Controller Manager", p.GetProviderName())
 	}
 
+	// check name exist
+	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+	if err != nil {
+		return err
+	}
+
+	if state != nil && state.Status != common.StatusFailed {
+		return fmt.Errorf("[%s] cluster %s is already exist", p.GetProviderName(), p.Name)
+	}
+
 	exist, _, err := p.IsClusterExist()
 	if err != nil {
 		return err
 	}
 
 	if exist {
-		context := strings.Split(p.Name, ".")
-		return fmt.Errorf("[%s] calling preflight error: cluster `%s` at region %s is already exist",
-			p.GetProviderName(), context[0], p.Region)
+		return fmt.Errorf("[%s] calling preflight error: cluster `%s` is already exist",
+			p.GetProviderName(), p.Name)
 	}
 
 	// check key pair
@@ -1096,6 +715,11 @@ func (p *Amazon) CreateCheck(ssh *types.SSH) error {
 			KeyNames: []*string{&p.KeypairName},
 		})
 		if err != nil {
+			if ae, ok := err.(awserr.Error); ok {
+				if ae.Code() == "AuthFailure" {
+					return fmt.Errorf("[%s] invalid credential: %s", p.GetProviderName(), ae.Message())
+				}
+			}
 			return fmt.Errorf("[%s] failed to get keypair by name %s, got error: %v", p.GetProviderName(), p.KeypairName, err)
 		}
 	}
@@ -1177,7 +801,20 @@ func (p *Amazon) CreateCheck(ssh *types.SSH) error {
 	return nil
 }
 
-func (p *Amazon) joinCheck() error {
+func (p *Amazon) JoinCheck() error {
+	// check cluster exist
+	exist, _, err := p.IsClusterExist()
+
+	if err != nil {
+		return err
+	}
+
+	if !exist {
+		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
+			p.GetProviderName(), p.ContextName)
+	}
+
+	// check flags
 	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
 		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
 			p.GetProviderName())
@@ -1204,62 +841,28 @@ func (p *Amazon) joinCheck() error {
 	if workerNum > 0 && p.CloudControllerManager && p.IamInstanceProfileForWorker == "" {
 		return fmt.Errorf("[%s] calling preflight error: need to set `--iam-instance-profile-worker` if enabled Amazon Cloud Controller Manager", p.GetProviderName())
 	}
-
-	exist, ids, err := p.IsClusterExist()
-
-	if err != nil {
-		return err
-	}
-
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
-	}
-
-	// remove invalid worker nodes from .state file.
-	workers := make([]types.Node, 0)
-	for _, w := range p.WorkerNodes {
-		for _, e := range ids {
-			if e == w.InstanceID {
-				workers = append(workers, w)
-				break
-			}
-		}
-	}
-	masters := make([]types.Node, 0)
-	for _, m := range p.MasterNodes {
-		for _, e := range ids {
-			if e == m.InstanceID {
-				masters = append(masters, m)
-				break
-			}
-		}
-	}
-	p.WorkerNodes = workers
-	p.MasterNodes = masters
-
 	return nil
 }
 
 func (p *Amazon) createKeyPair(ssh *types.SSH) error {
-	if p.KeypairName != "" && ssh.SSHKeyPath == "" && p.KeypairName != p.Name {
+	if p.KeypairName != "" && ssh.SSHKeyPath == "" && p.KeypairName != p.ContextName {
 		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeypairName)
 	}
 
 	// check upload keypair
 	if ssh.SSHKeyPath == "" {
-		if _, err := os.Stat(common.GetDefaultSSHKeyPath(p.Name, p.GetProviderName())); err != nil {
+		if _, err := os.Stat(common.GetDefaultSSHKeyPath(p.ContextName, p.GetProviderName())); err != nil {
 			if !os.IsNotExist(err) {
 				return err
 			}
-			pk, err := putil.CreateKeyPair(ssh, p.GetProviderName(), p.Name, p.KeypairName)
+			pk, err := putil.CreateKeyPair(ssh, p.GetProviderName(), p.ContextName, p.KeypairName)
 			if err != nil {
 				return err
 			}
 
 			if pk != nil {
-				keyName := p.Name
-				p.logger.Infof("creating key pair: %s", keyName)
+				keyName := p.ContextName
+				p.Logger.Infof("creating key pair: %s", keyName)
 				_, err = p.client.ImportKeyPair(&ec2.ImportKeyPairInput{
 					KeyName:           &keyName,
 					PublicKeyMaterial: pk,
@@ -1270,8 +873,8 @@ func (p *Amazon) createKeyPair(ssh *types.SSH) error {
 				p.KeypairName = keyName
 			}
 		}
-		p.KeypairName = p.Name
-		ssh.SSHKeyPath = common.GetDefaultSSHKeyPath(p.Name, p.GetProviderName())
+		p.KeypairName = p.ContextName
+		ssh.SSHKeyPath = common.GetDefaultSSHKeyPath(p.ContextName, p.GetProviderName())
 	}
 
 	return nil
@@ -1280,6 +883,11 @@ func (p *Amazon) createKeyPair(ssh *types.SSH) error {
 func (p *Amazon) getDefaultVPCId() (string, error) {
 	output, err := p.client.DescribeAccountAttributes(&ec2.DescribeAccountAttributesInput{})
 	if err != nil {
+		if ae, ok := err.(awserr.Error); ok {
+			if ae.Code() == "AuthFailure" {
+				return "", fmt.Errorf("[%s] invalid credential: %s", p.GetProviderName(), ae.Message())
+			}
+		}
 		return "", err
 	}
 
@@ -1297,7 +905,7 @@ func (p *Amazon) getDefaultVPCId() (string, error) {
 }
 
 func (p *Amazon) configSecurityGroup() error {
-	p.logger.Infof("[%s] config default security group for %s in region %s", p.GetProviderName(), p.VpcID, p.Region)
+	p.Logger.Infof("[%s] config default security group for %s in region %s", p.GetProviderName(), p.VpcID, p.Region)
 
 	filters := []*ec2.Filter{
 		{
@@ -1313,6 +921,11 @@ func (p *Amazon) configSecurityGroup() error {
 		Filters: filters,
 	})
 	if err != nil {
+		if ae, ok := err.(awserr.Error); ok {
+			if ae.Code() == "AuthFailure" {
+				return fmt.Errorf("[%s] invalid credential: %s", p.GetProviderName(), ae.Message())
+			}
+		}
 		return err
 	}
 
@@ -1323,7 +936,7 @@ func (p *Amazon) configSecurityGroup() error {
 	}
 
 	if securityGroup == nil {
-		p.logger.Infof("creating security group (%s) in %s", defaultSecurityGroupName, p.VpcID)
+		p.Logger.Infof("creating security group (%s) in %s", defaultSecurityGroupName, p.VpcID)
 		groupResp, err := p.client.CreateSecurityGroup(&ec2.CreateSecurityGroupInput{
 			GroupName:   aws.String(defaultSecurityGroupName),
 			Description: aws.String("default security group generated by autok3s"),
@@ -1339,7 +952,7 @@ func (p *Amazon) configSecurityGroup() error {
 			GroupName: aws.String(defaultSecurityGroupName),
 		}
 		// wait until created (dat eventual consistency)
-		p.logger.Infof("waiting for group (%s) to become available", *securityGroup.GroupId)
+		p.Logger.Infof("waiting for group (%s) to become available", *securityGroup.GroupId)
 		err = utils.WaitFor(func() (bool, error) {
 			s, err := p.getSecurityGroup(groupResp.GroupId)
 			if s != nil && err == nil {
@@ -1354,7 +967,7 @@ func (p *Amazon) configSecurityGroup() error {
 	p.SecurityGroup = aws.StringValue(securityGroup.GroupId)
 	permissionList := p.configPermission(securityGroup)
 	if len(permissionList) != 0 {
-		p.logger.Infof("authorizing group %s with permissions: %v", defaultSecurityGroupName, permissionList)
+		p.Logger.Infof("authorizing group %s with permissions: %v", defaultSecurityGroupName, permissionList)
 		_, err := p.client.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId:       securityGroup.GroupId,
 			IpPermissions: permissionList,
@@ -1427,7 +1040,7 @@ func (p *Amazon) configPermission(group *ec2.SecurityGroup) []*ec2.IpPermission 
 	if p.Cluster && (!hasPorts["2379/tcp"] || !hasPorts["2380/tcp"]) {
 		cidr, err := p.getSubnetCIDR()
 		if err != nil || cidr == "" {
-			p.logger.Errorf("[%s] failed to get subnet cidr with id %s, error: %v", p.GetProviderName(), p.SubnetID, err)
+			p.Logger.Errorf("[%s] failed to get subnet cidr with id %s, error: %v", p.GetProviderName(), p.SubnetID, err)
 			cidr = ipRange
 		}
 		perms = append(perms, &ec2.IpPermission{
@@ -1456,51 +1069,19 @@ func (p *Amazon) configPermission(group *ec2.SecurityGroup) []*ec2.IpPermission 
 	return perms
 }
 
-func (p *Amazon) syncClusterInstance(ssh *types.SSH) ([]*ec2.Instance, error) {
-	output, err := p.describeInstances()
-	if err != nil || len(output) == 0 {
-		return nil, fmt.Errorf("[%s] there's no exist instance for cluster %s: %v", p.GetProviderName(), p.Name, err)
-	}
-
-	for _, instance := range output {
-		if aws.StringValue(instance.State.Name) == ec2.InstanceStateNameTerminated {
-			continue
-		}
-		// sync all instance that belongs to current clusters
-		master := false
-		for _, tag := range instance.Tags {
-			if strings.EqualFold(aws.StringValue(tag.Key), "master") && strings.EqualFold(aws.StringValue(tag.Value), "true") {
-				master = true
-				break
-			}
-		}
-
-		p.m.Store(aws.StringValue(instance.InstanceId), types.Node{
-			Master:            master,
-			InstanceID:        aws.StringValue(instance.InstanceId),
-			InstanceStatus:    aws.StringValue(instance.State.Name),
-			InternalIPAddress: []string{aws.StringValue(instance.PrivateIpAddress)},
-			PublicIPAddress:   []string{aws.StringValue(instance.PublicIpAddress)},
-			SSH:               *ssh,
-		})
-	}
-
-	p.syncNodeStatusWithInstance(ssh)
-
-	return output, nil
-}
-
-func (p *Amazon) deleteCluster(f bool) error {
+func (p *Amazon) deleteInstance(f bool) (string, error) {
+	p.newClient()
+	p.GenerateClusterName()
 	exist, ids, err := p.IsClusterExist()
-	if err != nil && !f {
-		return fmt.Errorf("[%s] calling deleteCluster error, msg: %v", p.GetProviderName(), err)
+	if err != nil {
+		return "", fmt.Errorf("[%s] calling describe instance error, msg: %v", p.GetProviderName(), err)
 	}
 	if !exist {
-		p.logger.Errorf("[%s] cluster %s is not exist", p.GetProviderName(), p.Name)
+		p.Logger.Errorf("[%s] cluster %s is not exist", p.GetProviderName(), p.Name)
 		if !f {
-			return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
+			return "", fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
 		}
-		return nil
+		return p.ContextName, nil
 	}
 	if p.UI && p.CloudControllerManager {
 		// remove ui manifest to release ELB
@@ -1509,17 +1090,17 @@ func (p *Amazon) deleteCluster(f bool) error {
 			if n.InternalIPAddress[0] == masterIP {
 				dialer, err := hosts.SSHDialer(&hosts.Host{Node: n})
 				if err != nil {
-					return err
+					return "", err
 				}
 				tunnel, err := dialer.OpenTunnel(true)
 				if err != nil {
-					return err
+					return "", err
 				}
 				var (
 					stdout bytes.Buffer
 					stderr bytes.Buffer
 				)
-				tunnel.Writer = p.logger.Out
+				tunnel.Writer = p.Logger.Out
 				tunnel.Cmd(fmt.Sprintf("sudo kubectl delete -f %s/ui.yaml", common.K3sManifestsDir))
 				tunnel.Cmd(fmt.Sprintf("sudo rm %s/ui.yaml", common.K3sManifestsDir))
 				tunnel.SetStdio(&stdout, &stderr).Run()
@@ -1528,52 +1109,11 @@ func (p *Amazon) deleteCluster(f bool) error {
 			}
 		}
 	}
-	if len(ids) > 0 {
-		tags := []*ec2.Tag{
-			{
-				Key:   aws.String("autok3s"),
-				Value: aws.String("true"),
-			},
-			{
-				Key:   aws.String("cluster"),
-				Value: aws.String(common.TagClusterPrefix + p.Name),
-			},
-		}
-		tagInput := &ec2.DeleteTagsInput{}
-		tagInput.SetTags(tags)
-		tagInput.SetResources(aws.StringSlice(ids))
-		_, err := p.client.DeleteTags(tagInput)
-		if err != nil {
-			return err
-		}
-		p.logger.Infof("[%s] terminate instance %v", p.GetProviderName(), ids)
-		input := &ec2.TerminateInstancesInput{}
-		input.SetInstanceIds(aws.StringSlice(ids))
-		_, err = p.client.TerminateInstances(input)
-		if err != nil {
-			return err
-		}
-		if p.CloudControllerManager {
-			err = p.removeTagsForCCMResource()
-			if err != nil {
-				return err
-			}
-		}
+	if err = p.terminateInstance(ids); err != nil {
+		return "", err
 	}
-	err = cluster.OverwriteCfg(p.Name)
-
-	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .cfg file error, msg: %v", p.GetProviderName(), err)
-	}
-
-	err = cluster.DeleteState(p.Name, p.Provider)
-
-	if err != nil && !f {
-		return fmt.Errorf("[%s] synchronizing .state file error, msg: %v", p.GetProviderName(), err)
-	}
-
-	p.logger.Infof("[%s] successfully deleted cluster %s", p.GetProviderName(), p.Name)
-	return nil
+	p.Logger.Infof("[%s] successfully terminate instances for cluster %s", p.GetProviderName(), p.Name)
+	return p.ContextName, nil
 }
 
 func (p *Amazon) getSubnetCIDR() (string, error) {
@@ -1608,7 +1148,7 @@ func (p *Amazon) addTagsForCCMResource() error {
 	}
 	tags := result.SecurityGroups[0].Tags
 	tags = append(tags, &ec2.Tag{
-		Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.Name)),
+		Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.ContextName)),
 		Value: aws.String("shared"),
 	})
 	_, err = p.client.CreateTags(&ec2.CreateTagsInput{
@@ -1634,7 +1174,7 @@ func (p *Amazon) addTagsForCCMResource() error {
 	}
 	subnetTags := subnets.Subnets[0].Tags
 	subnetTags = append(subnetTags, &ec2.Tag{
-		Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.Name)),
+		Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.ContextName)),
 		Value: aws.String("shared"),
 	})
 	_, err = p.client.CreateTags(&ec2.CreateTagsInput{
@@ -1648,7 +1188,7 @@ func (p *Amazon) addTagsForCCMResource() error {
 func (p *Amazon) removeTagsForCCMResource() error {
 	deletedTags := []*ec2.Tag{
 		{
-			Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.Name)),
+			Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", p.ContextName)),
 			Value: aws.String("shared"),
 		},
 	}
@@ -1664,4 +1204,40 @@ func (p *Amazon) removeTagsForCCMResource() error {
 		Tags:      deletedTags,
 	})
 	return err
+}
+
+func (p *Amazon) terminateInstance(ids []string) error {
+	if len(ids) > 0 {
+		tags := []*ec2.Tag{
+			{
+				Key:   aws.String("autok3s"),
+				Value: aws.String("true"),
+			},
+			{
+				Key:   aws.String("cluster"),
+				Value: aws.String(common.TagClusterPrefix + p.ContextName),
+			},
+		}
+		tagInput := &ec2.DeleteTagsInput{}
+		tagInput.SetTags(tags)
+		tagInput.SetResources(aws.StringSlice(ids))
+		_, err := p.client.DeleteTags(tagInput)
+		if err != nil {
+			return err
+		}
+		p.Logger.Infof("[%s] terminate instance %v", p.GetProviderName(), ids)
+		input := &ec2.TerminateInstancesInput{}
+		input.SetInstanceIds(aws.StringSlice(ids))
+		_, err = p.client.TerminateInstances(input)
+		if err != nil {
+			return err
+		}
+		if p.CloudControllerManager {
+			err = p.removeTagsForCCMResource()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

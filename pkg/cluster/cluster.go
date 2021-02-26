@@ -18,12 +18,8 @@ import (
 	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
-	"github.com/cnrancher/autok3s/pkg/types/alibaba"
-	"github.com/cnrancher/autok3s/pkg/types/aws"
-	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/ghodss/yaml"
 	"github.com/rancher/k3s/pkg/agent/templates"
 	"github.com/sirupsen/logrus"
 	yamlv3 "gopkg.in/yaml.v3"
@@ -43,7 +39,7 @@ var (
 	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
-	dockerCommand          = "curl http://rancher-mirror.cnrancher.com/autok3s/docker-install.sh | sh -s - %s"
+	dockerCommand          = "curl -sSL https://get.docker.com | sh - %s"
 	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
@@ -97,8 +93,8 @@ func InitK3sCluster(cluster *types.Cluster) error {
 		masterExtraArgs += fmt.Sprintf(" --flannel-backend=%s", cluster.Network)
 	}
 
-	if cluster.ClusterCIDR != "" {
-		masterExtraArgs += " --cluster-cidr " + cluster.ClusterCIDR
+	if cluster.ClusterCidr != "" {
+		masterExtraArgs += " --cluster-cidr " + cluster.ClusterCidr
 	}
 
 	logger.Infof("[%s] creating k3s master-%d...", cluster.Provider, 1)
@@ -186,7 +182,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	logger.Infof("[%s] successfully deployed additional manifests", cluster.Provider)
 
 	// merge current cluster to kube config.
-	if err := SaveCfg(cfg, publicIP, cluster.Name); err != nil {
+	if err := SaveCfg(cfg, publicIP, cluster.ContextName); err != nil {
 		return err
 	}
 
@@ -195,7 +191,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	// write current cluster to state file.
 	// native provider no need to operate .state file.
 	if p.GetProviderName() != "native" {
-		if err := SaveState(cluster); err != nil {
+		if err := common.DefaultDB.SaveCluster(cluster); err != nil {
 			return err
 		}
 	}
@@ -307,11 +303,12 @@ func JoinK3sNode(merged, added *types.Cluster) error {
 	// sync master & worker numbers.
 	merged.Master = strconv.Itoa(len(merged.MasterNodes))
 	merged.Worker = strconv.Itoa(len(merged.WorkerNodes))
-
+	merged.Status.Status = common.StatusRunning
 	// write current cluster to state file.
 	// native provider no need to operate .state file.
 	if p.GetProviderName() != "native" {
-		if err := SaveState(merged); err != nil {
+		if err = common.DefaultDB.SaveCluster(merged); err != nil {
+			logger.Errorf("failed to save cluster state: %v", err)
 			return nil
 		}
 	}
@@ -337,17 +334,14 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 		}
 	}
 
-	if ssh.User != "" {
-		node.SSH.User = ssh.User
+	if ssh.SSHUser != "" {
+		node.SSH.SSHUser = ssh.SSHUser
 	}
-	if ssh.Port != "" {
-		node.SSH.Port = ssh.Port
+	if ssh.SSHPort != "" {
+		node.SSH.SSHPort = ssh.SSHPort
 	}
-	if ssh.Password != "" {
-		node.SSH.Password = ssh.Password
-	}
-	if ssh.SSHKey != "" {
-		node.SSH.SSHKey = ssh.SSHKey
+	if ssh.SSHPassword != "" {
+		node.SSH.SSHPassword = ssh.SSHPassword
 	}
 	if ssh.SSHKeyPath != "" {
 		node.SSH.SSHKeyPath = ssh.SSHKeyPath
@@ -368,105 +362,16 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 		node.PublicIPAddress = []string{ip}
 	}
 
-	if node.SSH.Port == "" {
-		node.SSH.Port = "22"
+	if node.SSH.SSHPort == "" {
+		node.SSH.SSHPort = "22"
 	}
 
 	// preCheck ssh config
-	if node.SSH.User == "" || (node.SSH.Password == "" && node.SSH.SSHKeyPath == "") {
-		return fmt.Errorf("couldn't ssh to chosen node with current ssh config: --ssh-user %s --ssh-port %s --ssh-password %s --ssh-key-path %s", node.SSH.User, node.SSH.Port, node.SSH.Password, node.SSH.SSHKeyPath)
+	if node.SSH.SSHUser == "" || (node.SSH.SSHPassword == "" && node.SSH.SSHKeyPath == "") {
+		return fmt.Errorf("couldn't ssh to chosen node with current ssh config: --ssh-user %s --ssh-port %s --ssh-password %s --ssh-key-path %s", node.SSH.SSHUser, node.SSH.SSHPort, node.SSH.SSHPassword, node.SSH.SSHKeyPath)
 	}
 
 	return terminal(&hosts.Host{Node: node})
-}
-
-func ReadFromState(cluster *types.Cluster) ([]types.Cluster, error) {
-	r := make([]types.Cluster, 0)
-	v := common.CfgPath
-	if v == "" {
-		return r, errors.New("[cluster] cfg path is empty")
-	}
-
-	clusters, err := utils.ReadYaml(v, common.StateFile)
-	if err != nil {
-		return r, err
-	}
-
-	converts, err := ConvertToClusters(clusters)
-	if err != nil {
-		return r, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
-	}
-
-	for _, c := range converts {
-		name := cluster.Name
-
-		switch cluster.Provider {
-		case "alibaba":
-			if option, ok := cluster.Options.(alibaba.Options); ok {
-				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
-			}
-		case "tencent":
-			if option, ok := cluster.Options.(tencent.Options); ok {
-				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
-			}
-		case "aws":
-			if option, ok := cluster.Options.(aws.Options); ok {
-				name = fmt.Sprintf("%s.%s.%s", cluster.Name, option.Region, cluster.Provider)
-			}
-		}
-
-		if c.Provider == cluster.Provider && c.Name == name {
-			r = append(r, c)
-		}
-	}
-
-	return r, nil
-}
-
-func AppendToState(cluster *types.Cluster) ([]types.Cluster, error) {
-	v := common.CfgPath
-	if v == "" {
-		return nil, errors.New("[cluster] cfg path is empty")
-	}
-
-	clusters, err := utils.ReadYaml(v, common.StateFile)
-	if err != nil {
-		return nil, err
-	}
-
-	converts, err := ConvertToClusters(clusters)
-	if err != nil {
-		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
-	}
-
-	index := -1
-
-	for i, c := range converts {
-		if c.Provider == cluster.Provider && c.Name == cluster.Name {
-			index = i
-		}
-	}
-
-	if index > -1 {
-		converts[index] = *cluster
-	} else {
-		converts = append(converts, *cluster)
-	}
-
-	return converts, nil
-}
-
-func DeleteState(name string, provider string) error {
-	v := common.CfgPath
-	if v == "" {
-		return errors.New("[cluster] cfg path is empty")
-	}
-
-	r, err := deleteClusterFromState(name, provider)
-	if err != nil {
-		return err
-	}
-	return utils.WriteYaml(r, v, common.StateFile)
 }
 
 func UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {
@@ -485,35 +390,6 @@ func UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {
 	}
 
 	return
-}
-
-func ConvertToClusters(origin []interface{}) ([]types.Cluster, error) {
-	result := make([]types.Cluster, 0)
-
-	b, err := yaml.Marshal(origin)
-	if err != nil {
-		return nil, err
-	}
-
-	err = yaml.Unmarshal(b, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func SaveState(cluster *types.Cluster) error {
-	v := common.CfgPath
-	if v == "" {
-		return errors.New("[cluster] cfg path is empty")
-	}
-	r, err := AppendToState(cluster)
-	if err != nil {
-		return err
-	}
-
-	return utils.WriteYaml(r, v, common.StateFile)
 }
 
 func SaveCfg(cfg, ip, context string) error {
@@ -578,8 +454,8 @@ func initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluste
 		}
 	}
 
-	if cluster.Registry != "" {
-		if err := handleRegistry(&hosts.Host{Node: master}, cluster.Registry); err != nil {
+	if cluster.Registry != "" || cluster.RegistryContent != "" {
+		if err := handleRegistry(&hosts.Host{Node: master}, cluster); err != nil {
 			return err
 		}
 	}
@@ -604,8 +480,8 @@ func initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs stri
 		}
 	}
 
-	if cluster.Registry != "" {
-		if err := handleRegistry(&hosts.Host{Node: master}, cluster.Registry); err != nil {
+	if cluster.Registry != "" || cluster.RegistryContent != "" {
+		if err := handleRegistry(&hosts.Host{Node: master}, cluster); err != nil {
 			return err
 		}
 	}
@@ -637,11 +513,12 @@ func initWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
-	if cluster.Registry != "" {
-		if err := handleRegistry(&hosts.Host{Node: worker}, cluster.Registry); err != nil {
+	if cluster.Registry != "" || cluster.RegistryContent != "" {
+		if err := handleRegistry(&hosts.Host{Node: worker}, cluster); err != nil {
 			errChan <- err
 		}
 	}
+
 	sortedExtraArgs += fmt.Sprintf(" --node-external-ip %s", worker.PublicIPAddress[0])
 	sortedExtraArgs += " " + extraArgs
 
@@ -668,8 +545,8 @@ func joinMaster(k3sScript, k3sMirror, dockerMirror,
 		sortedExtraArgs += " --datastore-endpoint " + merged.DataStore
 	}
 
-	if merged.ClusterCIDR != "" {
-		sortedExtraArgs += " --cluster-cidr " + merged.ClusterCIDR
+	if merged.ClusterCidr != "" {
+		sortedExtraArgs += " --cluster-cidr " + merged.ClusterCidr
 	}
 
 	if strings.Contains(extraArgs, "--docker") {
@@ -678,8 +555,8 @@ func joinMaster(k3sScript, k3sMirror, dockerMirror,
 		}
 	}
 
-	if merged.Registry != "" {
-		if err := handleRegistry(&hosts.Host{Node: full}, merged.Registry); err != nil {
+	if merged.Registry != "" || merged.RegistryContent != "" {
+		if err := handleRegistry(&hosts.Host{Node: full}, merged); err != nil {
 			return err
 		}
 	}
@@ -708,8 +585,8 @@ func joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScript, k3sMirror, do
 		}
 	}
 
-	if merged.Registry != "" {
-		if err := handleRegistry(&hosts.Host{Node: full}, merged.Registry); err != nil {
+	if merged.Registry != "" || merged.RegistryContent != "" {
+		if err := handleRegistry(&hosts.Host{Node: full}, merged); err != nil {
 			errChan <- err
 		}
 	}
@@ -823,39 +700,6 @@ func mergeCfg(context, right string) error {
 	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
 }
 
-func deleteClusterFromState(name string, provider string) ([]types.Cluster, error) {
-	v := common.CfgPath
-	if v == "" {
-		return nil, errors.New("[cluster] cfg path is empty")
-	}
-
-	clusters, err := utils.ReadYaml(v, common.StateFile)
-	if err != nil {
-		return nil, err
-	}
-
-	converts, err := ConvertToClusters(clusters)
-	if err != nil {
-		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
-	}
-
-	index := -1
-
-	for i, c := range converts {
-		if c.Provider == provider && c.Name == name {
-			index = i
-		}
-	}
-
-	if index > -1 {
-		converts = append(converts[:index], converts[index+1:]...)
-	} else {
-		return nil, fmt.Errorf("[cluster] was not found in the .state file")
-	}
-
-	return converts, nil
-}
-
 func genK3sVersion(version, channel string) string {
 	if version != "" {
 		return fmt.Sprintf("INSTALL_K3S_VERSION='%s'", version)
@@ -863,12 +707,21 @@ func genK3sVersion(version, channel string) string {
 	return fmt.Sprintf("INSTALL_K3S_CHANNEL='%s'", channel)
 }
 
-func handleRegistry(host *hosts.Host, file string) error {
+func handleRegistry(host *hosts.Host, c *types.Cluster) (err error) {
 	cmd := make([]string, 0)
 	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", registryPath))
-	registry, err := unmarshalRegistryFile(file)
-	if err != nil {
-		return err
+	var registry *templates.Registry
+	if c.Registry != "" {
+		registry, err = unmarshalRegistryFile(c.Registry)
+		if err != nil {
+			return err
+		}
+	} else if c.RegistryContent != "" {
+		registry = &templates.Registry{}
+		err = yamlv3.Unmarshal([]byte(c.RegistryContent), registry)
+		if err != nil {
+			return err
+		}
 	}
 
 	tls, err := registryTLSMap(registry)
@@ -1010,13 +863,13 @@ func GetClusterConfig(name, kubeconfig string) (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.Timeout = 5 * time.Second
+	config.Timeout = 15 * time.Second
 	c, err := kubernetes.NewForConfig(config)
 	return c, err
 }
 
 func GetClusterStatus(c *kubernetes.Clientset) string {
-	_, err := c.RESTClient().Get().Timeout(5 * time.Second).RequestURI("/readyz").DoRaw(context.TODO())
+	_, err := c.RESTClient().Get().Timeout(15 * time.Second).RequestURI("/readyz").DoRaw(context.TODO())
 	if err != nil {
 		return types.ClusterStatusStopped
 	}
@@ -1097,32 +950,4 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 		}
 	}
 	return instanceNodes, nil
-}
-
-func GetClusterByID(id string) (*types.Cluster, error) {
-	v := common.CfgPath
-	if v == "" {
-		return nil, errors.New("[cluster] cfg path is empty")
-	}
-
-	clusters, err := utils.ReadYaml(v, common.StateFile)
-	if err != nil {
-		return nil, err
-	}
-
-	converts, err := ConvertToClusters(clusters)
-	if err != nil {
-		return nil, fmt.Errorf("[cluster] failed to unmarshal state file, msg: %s", err)
-	}
-	for _, c := range converts {
-		if c.Name == id {
-			return &c, nil
-		}
-	}
-	return nil, fmt.Errorf("cluster %s is not found", id)
-}
-
-func SaveClusterState(cluster *types.Cluster, status string) error {
-	path := common.GetClusterStatePath()
-	return utils.WriteYaml(cluster, path, fmt.Sprintf("%s_%s", cluster.Name, status))
 }

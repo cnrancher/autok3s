@@ -20,13 +20,15 @@ const (
 	WorkerInstanceName = "autok3s.%s.worker"
 	TagClusterPrefix   = "autok3s-"
 	StatusRunning      = "Running"
-	StatusStopped      = "Stopped"
 	StatusCreating     = "Creating"
-	StatusJoin         = "Join"
+	StatusMissing      = "Missing"
 	StatusFailed       = "Failed"
+	StatusUpgrading    = "Upgrading"
 	UsageInfoTitle     = "=========================== Prompt Info ==========================="
 	UsageContext       = "Use 'autok3s kubectl config use-context %s'"
 	UsagePods          = "Use 'autok3s kubectl get pods -A' get POD status`"
+	DBFolder           = ".db"
+	DBFile             = "autok3s.db"
 )
 
 var (
@@ -37,6 +39,7 @@ var (
 		Factor:   1,
 		Steps:    5,
 	} // retry 5 times, total 120 seconds.
+	DefaultDB *Store
 )
 
 func GetDefaultSSHKeyPath(clusterName, providerName string) string {
@@ -47,6 +50,6 @@ func GetClusterPath(clusterName, providerName string) string {
 	return filepath.Join(CfgPath, providerName, "clusters", clusterName)
 }
 
-func GetClusterStatePath() string {
-	return filepath.Join(CfgPath, "clusters")
+func GetDataSource() string {
+	return filepath.Join(CfgPath, DBFolder, DBFile)
 }

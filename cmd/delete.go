@@ -37,7 +37,7 @@ func DeleteCommand() *cobra.Command {
 		}
 
 		deleteCmd.Flags().AddFlagSet(utils.ConvertFlags(deleteCmd, dp.GetCredentialFlags()))
-		deleteCmd.Flags().AddFlagSet(dp.GetDeleteFlags(deleteCmd))
+		deleteCmd.Flags().AddFlagSet(utils.ConvertFlags(deleteCmd, dp.GetDeleteFlags()))
 		deleteCmd.Example = dp.GetUsageExample("delete")
 		deleteCmd.Use = fmt.Sprintf("delete -p %s", pStr)
 	}
@@ -57,7 +57,6 @@ func DeleteCommand() *cobra.Command {
 
 	deleteCmd.Run = func(cmd *cobra.Command, args []string) {
 		dp.GenerateClusterName()
-
 		if err := dp.DeleteK3sCluster(force); err != nil {
 			logrus.Fatalln(err)
 		}

@@ -3,10 +3,12 @@ package server
 import (
 	"net/http"
 
+	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/server/store/cluster"
 	"github.com/cnrancher/autok3s/pkg/server/store/credential"
 	"github.com/cnrancher/autok3s/pkg/server/store/kubectl"
 	"github.com/cnrancher/autok3s/pkg/server/store/provider"
+	"github.com/cnrancher/autok3s/pkg/server/store/template"
 	"github.com/cnrancher/autok3s/pkg/server/store/websocket"
 	autok3stypes "github.com/cnrancher/autok3s/pkg/types/apis"
 
@@ -25,6 +27,7 @@ func initProvider(s *types.APISchemas) {
 func initCluster(s *types.APISchemas) {
 	s.MustImportAndCustomize(autok3stypes.Cluster{}, func(schema *types.APISchema) {
 		schema.Store = &cluster.Store{}
+		common.DefaultDB.Register()
 		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
 		schema.ResourceMethods = []string{http.MethodGet, http.MethodDelete}
 		schema.ResourceActions["join"] = wranglertypes.Action{
@@ -66,5 +69,14 @@ func initLogs(s *types.APISchemas) {
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{}
 		schema.ListHandler = websocket.LogHandler
+	})
+}
+
+func initTemplates(s *types.APISchemas) {
+	s.MustImportAndCustomize(autok3stypes.ClusterTemplate{}, func(schema *types.APISchema) {
+		schema.Store = &template.Store{}
+		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
+		schema.ResourceMethods = []string{http.MethodGet, http.MethodDelete, http.MethodPut}
+
 	})
 }

@@ -32,3 +32,10 @@ type Config struct {
 
 type Logs struct {
 }
+
+type ClusterTemplate struct {
+	types.Metadata `json:",inline" mapstructure:",squash"`
+	types.SSH      `json:",inline"`
+	Options        interface{} `json:"options,omitempty"`
+	IsDefault      bool        `json:"is-default"`
+}
