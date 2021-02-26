@@ -8,6 +8,7 @@ import (
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/store/empty"
 	"github.com/rancher/apiserver/pkg/types"
+	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/rancher/wrangler/pkg/schemas/validation"
 	"github.com/sirupsen/logrus"
 )
@@ -45,23 +46,23 @@ func (p *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 
 func toProviderObject(provider providers.Provider, schema *types.APISchema, id string) (types.APIObject, error) {
 	// get provider options
-	options, err := provider.GetProviderOption()
-	if err != nil {
-		return types.APIObject{}, err
-	}
+	options := utils.ConvertFlagsToFields(provider.GetOptionFlags())
 
 	// get credential flag and value
-	opt, err := utils.GetCredentialByProvider(provider)
+	creds, err := utils.GetCredentialByProvider(provider)
 	if err != nil {
 		return types.APIObject{}, err
 	}
-	for k, v := range opt {
+	for k, v := range creds {
 		options[k] = v
 	}
 	// get cluster config
-	config, err := provider.GetClusterConfig()
-	if err != nil {
-		return types.APIObject{}, err
+	config := utils.ConvertFlagsToFields(provider.GetCreateFlags())
+	config["registry-content"] = schemas.Field{
+		Type:        "string",
+		Description: "K3s registry file, see: https://rancher.com/docs/k3s/latest/en/installation/private-registry",
+		Required:    false,
+		Default:     "",
 	}
 	obj := types.APIObject{
 		Type: schema.ID,

@@ -70,12 +70,11 @@ func newDialer(h *Host, kind string) (*Dialer, error) {
 	}
 
 	d = &Dialer{
-		sshAddress:      fmt.Sprintf("%s:%s", h.PublicIPAddress[0], h.Port),
-		username:        h.User,
-		password:        h.Password,
+		sshAddress:      fmt.Sprintf("%s:%s", h.PublicIPAddress[0], h.SSHPort),
+		username:        h.SSHUser,
+		password:        h.SSHPassword,
 		passphrase:      h.SSHKeyPassphrase,
 		useSSHAgentAuth: h.SSHAgentAuth,
-		sshKey:          h.SSHKey,
 		sshCert:         h.SSHCert,
 	}
 

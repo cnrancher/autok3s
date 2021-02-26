@@ -1,15 +1,12 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
-	com "github.com/cnrancher/autok3s/cmd/common"
-	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
-	"github.com/cnrancher/autok3s/pkg/types/apis"
+	"github.com/cnrancher/autok3s/pkg/providers"
 
 	"github.com/gorilla/mux"
 	"github.com/rancher/apiserver/pkg/apierror"
@@ -51,27 +48,20 @@ func joinHandler() http.Handler {
 			rw.Write([]byte("clusterID cannot be empty"))
 			return
 		}
-
-		c, err := cluster.GetClusterByID(clusterID)
-		if err != nil {
+		state, err := common.DefaultDB.GetClusterByID(clusterID)
+		if err != nil || state == nil {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte(fmt.Sprintf("cluster %s is not found", clusterID)))
-			return
 		}
-		provider, err := com.GetProviderByState(*c)
+		provider, err := providers.GetProvider(state.Provider)
 		if err != nil {
 			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte(fmt.Sprintf("provider %s is not found", c.Provider)))
-			return
+			rw.Write([]byte(fmt.Sprintf("provider %s is not found", state.Provider)))
 		}
+		provider.SetMetadata(&state.Metadata)
+		provider.SetOptions(state.Options)
+
 		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte(err.Error()))
-			return
-		}
-		apiCluster := &apis.Cluster{}
-		err = json.Unmarshal(body, apiCluster)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			rw.Write([]byte(err.Error()))
@@ -92,7 +82,7 @@ func joinHandler() http.Handler {
 		provider.GenerateClusterName()
 
 		go func() {
-			err := provider.JoinK3sNode(&apiCluster.SSH)
+			err := provider.JoinK3sNode()
 			if err != nil {
 				logrus.Errorf("join cluster error: %v", err)
 				provider.Rollback()
@@ -104,16 +94,21 @@ func joinHandler() http.Handler {
 }
 
 func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
-	clusterInfo, err := cluster.GetClusterByID(id)
-	if err != nil {
-		return types.APIObject{},
-			apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found, got error: %v", id, err))
+	state, err := common.DefaultDB.GetClusterByID(id)
+	if err != nil || state == nil {
+		// find from failed cluster
+		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found, got error: %v", id, err))
 	}
-	provider, err := com.GetProviderByState(*clusterInfo)
+	provider, err := providers.GetProvider(state.Provider)
 	if err != nil {
-		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("cluster %s is not valid", id))
+		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, err.Error())
 	}
+	provider.SetMetadata(&state.Metadata)
+	provider.SetOptions(state.Options)
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	if state.Status == common.StatusMissing {
+		kubeCfg = ""
+	}
 	c := provider.DescribeCluster(kubeCfg)
 	return types.APIObject{
 		Type:   schema.ID,

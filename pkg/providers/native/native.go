@@ -1,14 +1,9 @@
 package native
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -16,64 +11,39 @@ import (
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
-	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/rancher/wrangler/pkg/schemas"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 )
 
-const (
-	k3sVersion       = ""
-	k3sChannel       = "stable"
-	k3sInstallScript = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
-	ui               = false
-)
-
-// ProviderName is the name of this provider.
-const ProviderName = "native"
+// providerName is the name of this provider.
+const providerName = "native"
 
 var (
-	k3sMirror         = "INSTALL_K3S_MIRROR=cn"
 	dockerMirror      = ""
 	defaultUser       = "root"
 	defaultSSHKeyPath = "~/.ssh/id_rsa"
 )
 
 type Native struct {
-	types.Metadata `json:",inline"`
-	native.Options `json:",inline"`
-	types.Status   `json:"status"`
-
-	m      *sync.Map
-	logger *logrus.Logger
+	*cluster.ProviderBase `json:",inline"`
+	native.Options        `json:",inline"`
 }
 
 func init() {
-	providers.RegisterProvider(ProviderName, func() (providers.Provider, error) {
-		return NewProvider(), nil
+	providers.RegisterProvider(providerName, func() (providers.Provider, error) {
+		return newProvider(), nil
 	})
 }
 
-func NewProvider() *Native {
+func newProvider() *Native {
+	base := cluster.NewBaseProvider()
+	base.Provider = providerName
 	return &Native{
-		Metadata: types.Metadata{
-			Provider:      ProviderName,
-			UI:            ui,
-			K3sVersion:    k3sVersion,
-			K3sChannel:    k3sChannel,
-			InstallScript: k3sInstallScript,
-			Cluster:       false,
-		},
+		ProviderBase: base,
 		Options: native.Options{
 			MasterIps: "",
 			WorkerIps: "",
 		},
-		Status: types.Status{
-			MasterNodes: make([]types.Node, 0),
-			WorkerNodes: make([]types.Node, 0),
-		},
-		m: new(syncmap.Map),
 	}
 }
 
@@ -81,8 +51,13 @@ func (p *Native) GetProviderName() string {
 	return "native"
 }
 
-func (p *Native) GenerateClusterName() {
-	// no need to support.
+func (p *Native) GenerateClusterName() string {
+	return p.Name
+}
+
+func (p *Native) GenerateManifest() []string {
+	// no need to support
+	return nil
 }
 
 func (p *Native) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
@@ -95,7 +70,7 @@ func (p *Native) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.No
 	return ""
 }
 
-func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
+func (p *Native) CreateK3sCluster() (err error) {
 	logFile, err := common.GetLogFile(p.Name)
 	if err != nil {
 		return err
@@ -107,7 +82,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	}
 	defer func() {
 		if err != nil {
-			p.logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
+			p.Logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
 			if c == nil {
 				c = &types.Cluster{
 					Metadata: p.Metadata,
@@ -115,59 +90,44 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 					Status:   p.Status,
 				}
 			}
-			c.Status.Status = common.StatusFailed
-			cluster.SaveClusterState(c, common.StatusFailed)
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
 		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
-			p.logger.Info(common.UsageInfoTitle)
-			p.logger.Infof(common.UsageContext, p.Name)
-			p.logger.Info(common.UsagePods)
+			p.Logger.Info(common.UsageInfoTitle)
+			p.Logger.Infof(common.UsageContext, p.Name)
+			p.Logger.Info(common.UsagePods)
 			if p.UI {
-				p.logger.Infof("K3s UI URL: https://%s:8999", p.Status.MasterNodes[0].PublicIPAddress[0])
+				p.Logger.Infof("K3s UI URL: https://%s:8999", p.Status.MasterNodes[0].PublicIPAddress[0])
 			}
-			cluster.SaveClusterState(c, common.StatusRunning)
-			// remove creating state file and save running state
-			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusCreating)))
 		}
 		logFile.Close()
 	}()
-	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing create logic...", p.GetProviderName())
+	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger.Infof("[%s] executing create logic...", p.GetProviderName())
 
 	// set ssh default value
-	if ssh.User == "" {
-		ssh.User = defaultUser
+	if p.SSHUser == "" {
+		p.SSHUser = defaultUser
 	}
-	if ssh.Password == "" && ssh.SSHKeyPath == "" {
-		ssh.SSHKeyPath = defaultSSHKeyPath
+	if p.SSHPassword == "" && p.SSHKeyPath == "" {
+		p.SSHKeyPath = defaultSSHKeyPath
 	}
-	c.Status.Status = common.StatusCreating
-	err = cluster.SaveClusterState(c, common.StatusCreating)
-	if err != nil {
-		return err
-	}
-
 	// assemble node status.
-	if c, err = p.assembleNodeStatus(ssh); err != nil {
+	if c, err = p.assembleNodeStatus(&p.SSH); err != nil {
 		return err
 	}
-
-	c.Mirror = k3sMirror
-	c.DockerMirror = dockerMirror
-	c.Logger = p.logger
+	c.SSH = p.SSH
+	c.Logger = p.Logger
 	// initialize K3s cluster.
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return
 	}
-	p.logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
+	p.Logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
 	return nil
 }
 
-func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
-	if p.m == nil {
-		p.m = new(syncmap.Map)
+func (p *Native) JoinK3sNode() (err error) {
+	if p.M == nil {
+		p.M = new(syncmap.Map)
 	}
 	c := &types.Cluster{
 		Metadata: p.Metadata,
@@ -178,32 +138,18 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err == nil {
-			cluster.SaveClusterState(c, common.StatusRunning)
-		}
-		// remove join state file and save running state
-		os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusJoin)))
-		logFile.Close()
-	}()
-	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing join logic...", p.GetProviderName())
+	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger.Infof("[%s] executing join logic...", p.GetProviderName())
 	// set ssh default value
-	if ssh.User == "" {
-		ssh.User = defaultUser
+	if p.SSHUser == "" {
+		p.SSHUser = defaultUser
 	}
-	if ssh.Password == "" && ssh.SSHKeyPath == "" {
-		ssh.SSHKeyPath = defaultSSHKeyPath
-	}
-
-	c.Status.Status = "upgrading"
-	err = cluster.SaveClusterState(c, common.StatusJoin)
-	if err != nil {
-		return err
+	if p.SSHPassword == "" && p.SSHKeyPath == "" {
+		p.SSHKeyPath = defaultSSHKeyPath
 	}
 
 	// assemble node status.
-	if c, err = p.assembleNodeStatus(ssh); err != nil {
+	if c, err = p.assembleNodeStatus(&p.SSH); err != nil {
 		return err
 	}
 
@@ -211,9 +157,10 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 		Metadata: c.Metadata,
 		Options:  c.Options,
 		Status:   types.Status{},
+		SSH:      p.SSH,
 	}
 
-	p.m.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		// filter the number of nodes that are not generated by current command.
 		if v.Current {
@@ -223,7 +170,7 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 				added.Status.WorkerNodes = append(added.Status.WorkerNodes, v)
 			}
 			// for rollback
-			p.m.Store(v.InstanceID, types.Node{Master: v.Master, RollBack: true, InstanceID: v.InstanceID, InstanceStatus: v.InstanceStatus, PublicIPAddress: v.PublicIPAddress, InternalIPAddress: v.InternalIPAddress, SSH: v.SSH})
+			p.M.Store(v.InstanceID, types.Node{Master: v.Master, RollBack: true, InstanceID: v.InstanceID, InstanceStatus: v.InstanceStatus, PublicIPAddress: v.PublicIPAddress, InternalIPAddress: v.InternalIPAddress, SSH: v.SSH})
 		}
 		return true
 	})
@@ -243,23 +190,23 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 
 	p.Options.MasterIps = strings.Join(masterIps, ",")
 	p.Options.WorkerIps = strings.Join(workerIps, ",")
-	c.Logger = p.logger
-	added.Logger = p.logger
+	c.Logger = p.Logger
+	added.Logger = p.Logger
 	// join K3s node.
 	if err := cluster.JoinK3sNode(c, added); err != nil {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
-	return nil
+	p.Logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
+	return logFile.Close()
 }
 
 func (p *Native) Rollback() error {
-	p.logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
+	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 
 	ids := make([]string, 0)
 	nodes := make([]types.Node, 0)
-	p.m.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		if v.RollBack {
 			ids = append(ids, key.(string))
@@ -268,24 +215,28 @@ func (p *Native) Rollback() error {
 		return true
 	})
 
-	p.logger.Infof("[%s] nodes %s will be rollback", p.GetProviderName(), ids)
+	p.Logger.Infof("[%s] nodes %s will be rollback", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
 		warnMsg := cluster.UninstallK3sNodes(nodes)
 		for _, w := range warnMsg {
-			p.logger.Warnf("[%s] %s", p.GetProviderName(), w)
+			p.Logger.Warnf("[%s] %s", p.GetProviderName(), w)
 		}
 	}
 
-	p.logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
+	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
 
 	return nil
 }
 
-func (p *Native) CreateCheck(ssh *types.SSH) error {
+func (p *Native) CreateCheck() error {
 	if p.MasterIps == "" {
 		return fmt.Errorf("[%s] cluster must have one master when create", p.GetProviderName())
 	}
+	return nil
+}
+
+func (p *Native) JoinCheck() error {
 	return nil
 }
 
@@ -293,7 +244,7 @@ func (p *Native) DeleteK3sCluster(f bool) error {
 	return p.CommandNotSupport("delete")
 }
 
-func (p *Native) SSHK3sNode(ssh *types.SSH, ip string) error {
+func (p *Native) SSHK3sNode(ip string) error {
 	return p.CommandNotSupport("ssh")
 }
 
@@ -313,49 +264,19 @@ func (p *Native) IsClusterExist() (bool, []string, error) {
 	return false, []string{}, nil
 }
 
-func (p *Native) GetClusterConfig() (map[string]schemas.Field, error) {
-	config := p.GetSSHConfig()
-	sshConfig, err := utils.ConvertToFields(*config)
-	if err != nil {
-		return nil, err
-	}
-	metaConfig, err := utils.ConvertToFields(p.Metadata)
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range sshConfig {
-		metaConfig[k] = v
-	}
-	return metaConfig, nil
-}
-
-func (p *Native) GetProviderOption() (map[string]schemas.Field, error) {
-	return utils.ConvertToFields(p.Options)
-}
-
 func (p *Native) SetConfig(config []byte) error {
-	c := types.Cluster{}
-	err := json.Unmarshal(config, &c)
-	if err != nil {
-		return err
-	}
-	sourceMeta := reflect.ValueOf(&p.Metadata).Elem()
-	targetMeta := reflect.ValueOf(&c.Metadata).Elem()
-	utils.MergeConfig(sourceMeta, targetMeta)
-	sourceOption := reflect.ValueOf(&p.Options).Elem()
-	b, err := json.Marshal(c.Options)
-	if err != nil {
-		return err
-	}
-	opt := &native.Options{}
-	err = json.Unmarshal(b, opt)
-	if err != nil {
-		return err
-	}
-	targetOption := reflect.ValueOf(opt).Elem()
-	utils.MergeConfig(sourceOption, targetOption)
-
+	// no need to support
 	return nil
+}
+
+func (p *Native) SetOptions(opt []byte) error {
+	// no need to support
+	return nil
+}
+
+func (p *Native) GetProviderOptions(opt []byte) (interface{}, error) {
+	// no need to support
+	return nil, nil
 }
 
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
@@ -369,7 +290,7 @@ func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 		p.syncNodesMap(workerIps, false, ssh)
 	}
 
-	p.m.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
 		nodes := p.Status.WorkerNodes
 		if v.Master {
@@ -404,11 +325,11 @@ func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 func (p *Native) syncNodesMap(ipList []string, master bool, ssh *types.SSH) {
 	for _, ip := range ipList {
 		currentID := strings.Replace(ip, ".", "-", -1)
-		p.m.Store(currentID, types.Node{
+		p.M.Store(currentID, types.Node{
 			Master:            master,
 			RollBack:          true,
 			InstanceID:        currentID,
-			InstanceStatus:    native.StatusRunning,
+			InstanceStatus:    "-",
 			InternalIPAddress: []string{ip},
 			PublicIPAddress:   []string{ip},
 			Current:           true,

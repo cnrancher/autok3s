@@ -1,12 +1,14 @@
 package websocket
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/cnrancher/autok3s/pkg/cluster"
+	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/hosts"
 	autok3stypes "github.com/cnrancher/autok3s/pkg/types"
 
@@ -36,7 +38,7 @@ func Handler(apiOp *types.APIRequest) (types.APIObjectList, error) {
 func handler(apiOp *types.APIRequest) error {
 	queryParams := apiOp.Request.URL.Query()
 	provider := queryParams.Get("provider")
-	name := queryParams.Get("cluster")
+	id := queryParams.Get("cluster")
 	node := queryParams.Get("node")
 	height := queryParams.Get("height")
 	width := queryParams.Get("width")
@@ -55,7 +57,7 @@ func handler(apiOp *types.APIRequest) error {
 			return apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid width %s", width))
 		}
 	}
-	if provider == "" || name == "" || node == "" {
+	if provider == "" || id == "" || node == "" {
 		return apierror.NewAPIError(validation.InvalidOption, "provider, cluster, node can't be empty")
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool {
@@ -67,6 +69,7 @@ func handler(apiOp *types.APIRequest) error {
 	}
 	defer c.Close()
 
+	name := strings.Split(id, ".")[0]
 	tunnel, err := getTunnel(provider, name, node)
 	if err != nil {
 		return err
@@ -82,7 +85,7 @@ func handler(apiOp *types.APIRequest) error {
 	s.Stdout = w
 	s.Stderr = w
 
-	term := "xterm-256color"
+	term := "xterm"
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,
 		ssh.VSTATUS:       1,
@@ -113,22 +116,24 @@ func handler(apiOp *types.APIRequest) error {
 
 func getTunnel(provider, name, node string) (*hosts.Tunnel, error) {
 	// get node status from state
-	clusters, err := cluster.ReadFromState(&autok3stypes.Cluster{
-		Metadata: autok3stypes.Metadata{
-			Name:     name,
-			Provider: provider,
-		},
-	})
+	state, err := common.DefaultDB.GetCluster(name, provider)
 	if err != nil {
 		return nil, err
 	}
-	if len(clusters) == 0 {
-		return nil, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster named %s of provider %s is not found", name, provider))
+	if state == nil {
+		return nil, fmt.Errorf("[%s] cluster %s is not exist", provider, name)
 	}
-	// TODO need to sync node by instance
 	allNodes := []autok3stypes.Node{}
-	allNodes = append(allNodes, clusters[0].Status.MasterNodes...)
-	allNodes = append(allNodes, clusters[0].Status.WorkerNodes...)
+	err = json.Unmarshal(state.MasterNodes, &allNodes)
+	if err != nil {
+		return nil, err
+	}
+	nodes := []autok3stypes.Node{}
+	err = json.Unmarshal(state.WorkerNodes, &nodes)
+	if err != nil {
+		return nil, err
+	}
+	allNodes = append(allNodes, nodes...)
 	for _, n := range allNodes {
 		if n.InstanceID == node {
 			dialer, err := hosts.SSHDialer(&hosts.Host{Node: n})

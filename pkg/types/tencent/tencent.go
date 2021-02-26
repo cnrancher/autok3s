@@ -22,17 +22,18 @@ type Options struct {
 	Zone                    string            `json:"zone,omitempty" yaml:"zone,omitempty"`
 	EndpointURL             string            `json:"endpoint-url,omitempty" yaml:"endpoint-url,omitempty"`
 	SecurityGroupIds        string            `json:"security-group-ids,omitempty" yaml:"security-group-ids,omitempty"`
-	KeyIds                  string            `json:"key-ids,omitempty" yaml:"key-ids,omitempty"`
+	KeypairID               string            `json:"keypair-id,omitempty" yaml:"keypair-id,omitempty"`
 	VpcID                   string            `json:"vpc-id,omitempty" yaml:"vpc-id,omitempty"`
 	SubnetID                string            `json:"subnet-id,omitempty" yaml:"subnet-id,omitempty"`
 	ImageID                 string            `json:"image-id,omitempty" yaml:"image-id,omitempty"`
 	InstanceType            string            `json:"instance-type,omitempty" yaml:"instance-type,omitempty"`
-	SystemDiskType          string            `json:"system-disk-type,omitempty" yaml:"system-disk-type,omitempty"`
-	SystemDiskSize          string            `json:"system-disk-size,omitempty" yaml:"system-disk-size,omitempty"`
+	SystemDiskType          string            `json:"disk-type,omitempty" yaml:"disk-type,omitempty"`
+	SystemDiskSize          string            `json:"disk-size,omitempty" yaml:"disk-size,omitempty"`
 	InternetMaxBandwidthOut string            `json:"internet-max-bandwidth-out,omitempty" yaml:"internet-max-bandwidth-out,omitempty"`
-	PublicIPAssignedEIP     bool              `json:"public-ip-assigned-eip" yaml:"public-ip-assigned-eip"`
-	NetworkRouteTableName   string            `json:"network-route-table-name,omitempty" yaml:"network-route-table-name,omitempty"`
+	PublicIPAssignedEIP     bool              `json:"eip" yaml:"eip"`
+	NetworkRouteTableName   string            `json:"router,omitempty" yaml:"network-route-table-name,omitempty"`
 	Tags                    map[string]string `json:"tags,omitempty" yaml:"tags,omitempty"`
+	CloudControllerManager  bool              `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
 }
 
 type CloudControllerManager struct {
@@ -40,5 +41,5 @@ type CloudControllerManager struct {
 	SecretKey             string `json:"secret-key,omitempty" yaml:"secret-key,omitempty"`
 	Region                string `json:"region,omitempty" yaml:"region,omitempty"`
 	VpcID                 string `json:"vpc-id,omitempty" yaml:"vpc-id,omitempty"`
-	NetworkRouteTableName string `json:"network-route-table-name,omitempty" yaml:"network-route-table-name,omitempty"`
+	NetworkRouteTableName string `json:"router,omitempty" yaml:"router,omitempty"`
 }

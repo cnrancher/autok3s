@@ -2,9 +2,7 @@ package native
 
 import (
 	"github.com/cnrancher/autok3s/pkg/types"
-	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -34,37 +32,28 @@ func (p *Native) GetUsageExample(action string) string {
 	}
 }
 
-func (p *Native) GetOptionFlags() []types.Flag {
-	fs := p.sharedFlags()
-	fs = append(fs, []types.Flag{
-		{
-			Name:  "ui",
-			P:     &p.UI,
-			V:     p.UI,
-			Usage: "Enable in-cluster kubernetes/dashboard",
-		},
-		{
-			Name:  "cluster",
-			P:     &p.Cluster,
-			V:     p.Cluster,
-			Usage: "Form k3s cluster using embedded etcd (Kubernetes version must be v1.19.x or higher)",
-		},
-	}...)
-
+func (p *Native) GetCreateFlags() []types.Flag {
+	cSSH := p.GetSSHConfig()
+	p.SSH = *cSSH
+	fs := p.GetClusterOptions()
+	fs = append(fs, p.GetCreateOptions()...)
 	return fs
 }
 
-func (p *Native) GetJoinFlags(cmd *cobra.Command) *pflag.FlagSet {
-	fs := p.sharedFlags()
-	return utils.ConvertFlags(cmd, fs)
+func (p *Native) GetOptionFlags() []types.Flag {
+	return p.sharedFlags()
 }
 
-func (p *Native) GetSSHFlags(cmd *cobra.Command) *pflag.FlagSet {
-	return cmd.Flags()
+func (p *Native) GetJoinFlags() []types.Flag {
+	return p.sharedFlags()
 }
 
-func (p *Native) GetDeleteFlags(cmd *cobra.Command) *pflag.FlagSet {
-	return cmd.Flags()
+func (p *Native) GetSSHFlags() []types.Flag {
+	return []types.Flag{}
+}
+
+func (p *Native) GetDeleteFlags() []types.Flag {
+	return []types.Flag{}
 }
 
 func (p *Native) GetCredentialFlags() []types.Flag {
@@ -73,8 +62,8 @@ func (p *Native) GetCredentialFlags() []types.Flag {
 
 func (p *Native) GetSSHConfig() *types.SSH {
 	ssh := &types.SSH{
-		User:       defaultUser,
-		Port:       "22",
+		SSHUser:    defaultUser,
+		SSHPort:    "22",
 		SSHKeyPath: defaultSSHKeyPath,
 	}
 	return ssh
@@ -91,68 +80,6 @@ func (p *Native) MergeClusterOptions() error {
 
 func (p *Native) sharedFlags() []types.Flag {
 	fs := []types.Flag{
-		{
-			Name:      "name",
-			P:         &p.Name,
-			V:         p.Name,
-			ShortHand: "n",
-			Usage:     "Set the name of the kubeconfig context",
-			Required:  true,
-		},
-		{
-			Name:  "ip",
-			P:     &p.IP,
-			V:     p.IP,
-			Usage: "Public IP of an existing k3s server",
-		},
-		{
-			Name:  "k3s-version",
-			P:     &p.K3sVersion,
-			V:     p.K3sVersion,
-			Usage: "Specify the version of k3s cluster, overrides k3s-channel",
-		},
-		{
-			Name:  "k3s-channel",
-			P:     &p.K3sChannel,
-			V:     p.K3sChannel,
-			Usage: "Specify the release channel of k3s. i.e.(stable, latest, or i.e. v1.18)",
-		},
-		{
-			Name:  "k3s-install-script",
-			P:     &p.InstallScript,
-			V:     p.InstallScript,
-			Usage: "Change the default upstream k3s install script address",
-		},
-		{
-			Name:  "master-extra-args",
-			P:     &p.MasterExtraArgs,
-			V:     p.MasterExtraArgs,
-			Usage: "Master extra arguments for k3s installer, wrapped in quotes. i.e.(--master-extra-args '--no-deploy metrics-server')",
-		},
-		{
-			Name:  "worker-extra-args",
-			P:     &p.WorkerExtraArgs,
-			V:     p.WorkerExtraArgs,
-			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. i.e.(--worker-extra-args '--node-taint key=value:NoExecute')",
-		},
-		{
-			Name:  "registry",
-			P:     &p.Registry,
-			V:     p.Registry,
-			Usage: "K3s registry file, see: https://rancher.com/docs/k3s/latest/en/installation/private-registry",
-		},
-		{
-			Name:  "datastore",
-			P:     &p.DataStore,
-			V:     p.DataStore,
-			Usage: "K3s datastore connection string to enable HA, i.e. \"mysql://username:password@tcp(hostname:3306)/database-name\"",
-		},
-		{
-			Name:  "token",
-			P:     &p.Token,
-			V:     p.Token,
-			Usage: "K3s master token, if empty will automatically generated",
-		},
 		{
 			Name:  "master-ips",
 			P:     &p.MasterIps,

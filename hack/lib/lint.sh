@@ -8,7 +8,7 @@
 #    DIRTY_CHECK            -  Specify to check the git tree is dirty or not.
 
 function autok3s::lint::install() {
-  local version=${GOLANGCI_LINT_VERSION:-"v1.31.0"}
+  local version=${GOLANGCI_LINT_VERSION:-"v1.38.0"}
   curl -fL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" "${version}"
 }
 

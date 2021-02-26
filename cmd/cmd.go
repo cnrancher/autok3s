@@ -73,14 +73,20 @@ func initCfg() {
 		logrus.Fatalln(err)
 	}
 
-	if err := utils.EnsureFolderExist(common.GetClusterStatePath()); err != nil {
-		logrus.Fatalln(err)
-	}
-
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
 	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeCfg); err != nil {
 		logrus.Errorf("[kubectl] failed to set %s=%s env", clientcmd.RecommendedConfigPathEnvVar, kubeCfg)
 	}
+
+	if err := common.InitStorage(); err != nil {
+		logrus.Fatalln(err)
+	}
+
+	db, err := common.NewClusterDB(cmd.Context())
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+	common.DefaultDB = db
 }
 
 func printASCII() {

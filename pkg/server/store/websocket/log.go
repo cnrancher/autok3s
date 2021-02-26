@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/hpcloud/tail"
 	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/wrangler/pkg/schemas/validation"
@@ -38,10 +38,19 @@ func logHandler(apiOp *types.APIRequest) error {
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// check cluster is running/failed state
-	stateDir := common.GetClusterStatePath()
+	ids := strings.Split(cluster, ".")
+	name := ids[0]
+	provider := ids[len(ids)-1]
+	state, err := common.DefaultDB.GetCluster(name, provider)
+	if err != nil {
+		return err
+	}
+	if state == nil {
+		return fmt.Errorf("[%s] cluster %s is not exist", provider, name)
+	}
 	logFilePath := filepath.Join(common.GetLogPath(), cluster)
-	if !hasProcessStateFile(cluster) {
+	// show all logs if cluster is running
+	if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
 		// show all logs from file
 		logFile, err := os.Open(logFilePath)
 		if err != nil {
@@ -57,19 +66,6 @@ func logHandler(apiOp *types.APIRequest) error {
 		return logFile.Close()
 	}
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		logrus.Debugf("close watch")
-		watcher.Close()
-	}()
-	err = watcher.Add(stateDir)
-	if err != nil {
-		return err
-	}
-
 	t, err := tail.TailFile(logFilePath, tail.Config{
 		Follow:    true,
 		MustExist: true,
@@ -79,15 +75,17 @@ func logHandler(apiOp *types.APIRequest) error {
 		return err
 	}
 
+	result := make(chan *common.ClusterState)
+	go common.DefaultDB.Log(apiOp, result)
+
 	for {
 		select {
-		case event, ok := <-watcher.Events:
+		case s, ok := <-result:
 			if !ok {
 				w.Write([]byte("event: close\ndata: close\n\n"))
 				return nil
 			}
-			if event.Op == fsnotify.Remove && isProcessState(event.Name, cluster) {
-				logrus.Infof("ready to close cluster %s logs", cluster)
+			if s.ContextName == cluster {
 				// the tail is about to close, we need to read last bytes of file to show final log
 				offset, err := t.Tell()
 				if err != nil {
@@ -113,6 +111,7 @@ func logHandler(apiOp *types.APIRequest) error {
 				t.Stop()
 				t.Cleanup()
 				logFile.Close()
+				close(result)
 				logrus.Infof("close log data")
 				w.Write([]byte("event: close\ndata: close\n\n"))
 				return nil
@@ -121,6 +120,7 @@ func logHandler(apiOp *types.APIRequest) error {
 			logrus.Debug("request close from client")
 			t.Stop()
 			t.Cleanup()
+			close(result)
 			return nil
 		case line, ok := <-t.Lines:
 			if !ok {
@@ -132,21 +132,4 @@ func logHandler(apiOp *types.APIRequest) error {
 			f.Flush()
 		}
 	}
-}
-
-func isProcessState(name, cluster string) bool {
-	return name == filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", cluster, common.StatusCreating)) ||
-		name == filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", cluster, common.StatusJoin))
-}
-
-func hasProcessStateFile(cluster string) bool {
-	_, err := os.Stat(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", cluster, common.StatusCreating)))
-	if err == nil {
-		return true
-	}
-	_, err = os.Stat(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", cluster, common.StatusJoin)))
-	if err == nil {
-		return true
-	}
-	return false
 }

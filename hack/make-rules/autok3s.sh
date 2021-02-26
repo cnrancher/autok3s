@@ -8,7 +8,7 @@ CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 
 # The root of the autok3s directory
 ROOT_DIR="${CURR_DIR}"
-UI_VERSION="v0.1.1"
+UI_VERSION="v0.4.0-rc4"
 
 source "${ROOT_DIR}/hack/lib/init.sh"
 source "${CURR_DIR}/hack/lib/constant.sh"
@@ -26,8 +26,6 @@ function mod() {
   else
     autok3s::log::info "tidying"
     go mod tidy
-    autok3s::log::info "vending"
-    go mod vendor
   fi
 
   autok3s::log::info "...done"
@@ -36,12 +34,14 @@ function mod() {
 
 function ui() {
   autok3s::log::info "downloading autok3s ui"
+  cd pkg/server/ui
   curl -sL https://autok3s-ui.s3-ap-southeast-2.amazonaws.com/${UI_VERSION}.tar.gz | tar xvzf -
-  go generate
+  cd ${CURR_DIR}
 }
 
 function lint() {
-  [[ "${1:-}" != "only" ]] && ui && mod
+  [[ "${1:-}" != "only" ]] && mod
+  ui
   autok3s::log::info "linting autok3s..."
 
   local targets=(
@@ -56,7 +56,7 @@ function lint() {
 
 function build() {
   [[ "${1:-}" != "only" ]] && lint
-
+  ui
   autok3s::log::info "building autok3s(${GIT_VERSION},${GIT_COMMIT},${GIT_TREE_STATE},${BUILD_DATE})..."
 
   local version_flags="
@@ -95,13 +95,13 @@ function build() {
     local os=${os_arch[0]}
     local arch=${os_arch[1]}
     if [[ "$os" == "windows" ]]; then
-        GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
           -ldflags "${version_flags} ${flags} ${ext_flags}" \
           -o "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" \
           "${CURR_DIR}/main.go"
         cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" "${CURR_DIR}/dist/autok3s_${os}_${arch}.exe"
     else
-        GOOS=${os} GOARCH=${arch} CGO_ENABLED=0 go build \
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
           -ldflags "${version_flags} ${flags} ${ext_flags}" \
           -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
           "${CURR_DIR}/main.go"
@@ -207,6 +207,7 @@ function deploy() {
 
 function unit() {
   [[ "${1:-}" != "only" ]] && build
+  ui
   autok3s::log::info "running unit tests for autok3s..."
 
   local unit_test_targets=(
