@@ -125,6 +125,28 @@ steps:
         - tag
     depends_on:
       - compress
+  - name: package
+    image: maiwj/drone-dapper:v0.4.2
+    environment:
+      BY: dapper
+      CROSS: true
+      DOCKER_USERNAME:
+        from_secret: docker_username
+      DOCKER_PASSWORD:
+        from_secret: docker_password
+      REPO: cnrancher
+      WITHOUT_MANIFEST: true
+    commands:
+      - make autok3s package only
+      - make autok3s deploy only
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+    when:
+      event:
+        - tag
+    depends_on:
+      - compress
 volumes:
   - name: docker
     host:
