@@ -138,7 +138,7 @@ autok3s -d join --provider alibaba --name myk3s --worker 1
 
 ### UI
 
-If you want to enable the local UI, please run `autok3s serve`.
+If you want to enable the local UI, please run `autok3s serve` or run using docker `docker run -itd -p 8080:8080 cnrancher/autok3s:<tag> serve --bind-address 0.0.0.0`.
 
 <table>
   <tr>
