@@ -33,7 +33,7 @@ func init() {
 func DescribeCommand() *cobra.Command {
 	describeCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 || len(args) < 2 {
-			logrus.Fatalln("you must specify the type of resource to describe, e.g. autok3s describe cluster <cluster name>")
+			logrus.Fatalln("you must specify the type of resource to describe, i.e. autok3s describe cluster <cluster name>")
 		}
 		resource := args[0]
 		if resource != "cluster" {
@@ -49,7 +49,7 @@ func DescribeCommand() *cobra.Command {
 
 func describeCluster(args []string) {
 	if len(args) < 2 {
-		logrus.Fatalln("you must specify the type of resource to describe, e.g. autok3s describe cluster <cluster name>")
+		logrus.Fatalln("you must specify the type of resource to describe, i.e. autok3s describe cluster <cluster name>")
 	}
 	v := common.CfgPath
 	if v == "" {
@@ -58,12 +58,12 @@ func describeCluster(args []string) {
 	// get all clusters from state
 	clusters, err := utils.ReadYaml(v, common.StateFile)
 	if err != nil {
-		logrus.Fatalf("read state file error, msg: %v\n", err)
+		logrus.Fatalf("read state file error, msg: %v", err)
 	}
 
 	result, err := cluster.ConvertToClusters(clusters)
 	if err != nil {
-		logrus.Fatalf("failed to unmarshal state file, msg: %v\n", err)
+		logrus.Fatalf("failed to unmarshal state file, msg: %v", err)
 	}
 
 	resourceNames := args[1:]

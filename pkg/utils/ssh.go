@@ -53,7 +53,7 @@ func GetSSHConfig(username, sshPrivateKeyString, passphrase, sshCert string, pas
 
 			config.Auth = append(config.Auth, ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers))
 
-			logrus.Debugf("using %q SSH_AUTH_SOCK\n", sshAgentSock)
+			logrus.Debugf("using %q SSH_AUTH_SOCK", sshAgentSock)
 			return config, nil
 		}
 	} else if sshPrivateKeyString != "" {

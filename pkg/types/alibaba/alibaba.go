@@ -13,7 +13,7 @@ type Options struct {
 	DiskSize                string            `json:"disk-size,omitempty" yaml:"disk-size,omitempty"`
 	Image                   string            `json:"image,omitempty" yaml:"image,omitempty"`
 	Terway                  Terway            `json:"terway,omitempty" yaml:"terway,omitempty"`
-	Type                    string            `json:"type,omitempty" yaml:"type,omitempty"`
+	InstanceType            string            `json:"instance-type,omitempty" yaml:"instance-type,omitempty"`
 	KeyPair                 string            `json:"key-pair,omitempty" yaml:"key-pair,omitempty"`
 	Region                  string            `json:"region,omitempty" yaml:"region,omitempty"`
 	Zone                    string            `json:"zone,omitempty" yaml:"zone,omitempty"`

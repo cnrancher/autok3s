@@ -190,16 +190,16 @@ func (p *Amazon) CreateK3sCluster(ssh *types.SSH) (err error) {
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return err
 	}
-	p.logger.Infof("[%s] successfully executed create logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
 
 	if c.CloudControllerManager {
 		extraManifests := []string{fmt.Sprintf(deployCCMCommand,
 			base64.StdEncoding.EncodeToString([]byte(amazonCCMTmpl)), common.K3sManifestsDir)}
-		p.logger.Infof("[%s] start deploy aws additional manifests\n", p.GetProviderName())
+		p.logger.Infof("[%s] start deploy aws additional manifests", p.GetProviderName())
 		if err := cluster.DeployExtraManifest(c, extraManifests); err != nil {
 			return err
 		}
-		p.logger.Infof("[%s] successfully deploy aws additional manifests\n", p.GetProviderName())
+		p.logger.Infof("[%s] successfully deploy aws additional manifests", p.GetProviderName())
 	}
 	return nil
 }
@@ -227,7 +227,7 @@ func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
 	}()
 
 	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing join logic...", p.GetProviderName())
 	if ssh.User == "" {
 		ssh.User = defaultUser
 	}
@@ -270,7 +270,7 @@ func (p *Amazon) JoinK3sNode(ssh *types.SSH) (err error) {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
 	return nil
 }
 
@@ -294,20 +294,20 @@ func (p *Amazon) DeleteK3sCluster(f bool) (err error) {
 			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
 		}()
 		p.logger = common.NewLogger(common.Debug, logFile)
-		p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
+		p.logger.Infof("[%s] executing delete cluster logic...", p.GetProviderName())
 		p.newClient()
 		err = p.deleteCluster(f)
 		if err != nil {
 			return err
 		}
-		p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
+		p.logger.Infof("[%s] successfully excuted delete cluster logic", p.GetProviderName())
 	}
 	return nil
 }
 
 func (p *Amazon) SSHK3sNode(ssh *types.SSH, ip string) error {
 	p.logger = common.NewLogger(common.Debug, nil)
-	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing ssh logic...", p.GetProviderName())
 	p.newClient()
 	instanceList, err := p.syncClusterInstance(ssh)
 	if err != nil {
@@ -363,7 +363,7 @@ func (p *Amazon) SSHK3sNode(ssh *types.SSH, ip string) error {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executed ssh logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed ssh logic", p.GetProviderName())
 
 	return nil
 }
@@ -585,7 +585,7 @@ func (p *Amazon) Rollback() error {
 		return err
 	}
 	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing rollback logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 	ids := make([]string, 0)
 	p.m.Range(func(key, value interface{}) bool {
 		v := value.(types.Node)
@@ -595,7 +595,7 @@ func (p *Amazon) Rollback() error {
 		return true
 	})
 
-	p.logger.Debugf("[%s] instances %s will be rollback\n", p.GetProviderName(), ids)
+	p.logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
 		tags := []*ec2.Tag{
@@ -629,7 +629,7 @@ func (p *Amazon) Rollback() error {
 		}
 	}
 
-	p.logger.Infof("[%s] successfully executed rollback logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
 
 	return logFile.Close()
 }
@@ -642,7 +642,7 @@ func (p *Amazon) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, 
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 
-	p.logger.Infof("[%s] %d masters and %d workers will be added in region %s\n", p.GetProviderName(), masterNum, workerNum, p.Region)
+	p.logger.Infof("[%s] %d masters and %d workers will be added in region %s", p.GetProviderName(), masterNum, workerNum, p.Region)
 
 	if err := p.createKeyPair(ssh); err != nil {
 		return nil, err
@@ -656,20 +656,20 @@ func (p *Amazon) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster, 
 
 	// run ecs master instances.
 	if masterNum > 0 {
-		p.logger.Debugf("[%s] prepare for %d of master instances \n", p.GetProviderName(), masterNum)
+		p.logger.Infof("[%s] prepare for %d of master instances", p.GetProviderName(), masterNum)
 		if err := p.runInstances(masterNum, true); err != nil {
 			return nil, err
 		}
-		p.logger.Debugf("[%s] %d of master instances created successfully \n", p.GetProviderName(), masterNum)
+		p.logger.Infof("[%s] %d of master instances created successfully", p.GetProviderName(), masterNum)
 	}
 
 	// run ecs worker instances.
 	if workerNum > 0 {
-		p.logger.Debugf("[%s] prepare for %d of worker instances \n", p.GetProviderName(), workerNum)
+		p.logger.Infof("[%s] prepare for %d of worker instances", p.GetProviderName(), workerNum)
 		if err := p.runInstances(workerNum, false); err != nil {
 			return nil, err
 		}
-		p.logger.Debugf("[%s] %d of worker instances created successfully \n", p.GetProviderName(), workerNum)
+		p.logger.Infof("[%s] %d of worker instances created successfully", p.GetProviderName(), workerNum)
 	}
 
 	if err := p.getInstanceStatus(ec2.InstanceStateNameRunning); err != nil {
@@ -765,7 +765,7 @@ func (p *Amazon) runInstances(num int, master bool) error {
 		}
 		for _, spotRequest := range spotInstanceRequest.SpotInstanceRequests {
 			requestID := spotRequest.SpotInstanceRequestId
-			p.logger.Debugf("[%s] waiting for spot instance full filled", p.GetProviderName())
+			p.logger.Infof("[%s] waiting for spot instance full filled", p.GetProviderName())
 			err = utils.WaitFor(func() (bool, error) {
 				err := p.client.WaitUntilSpotInstanceRequestFulfilled(&ec2.DescribeSpotInstanceRequestsInput{
 					SpotInstanceRequestIds: []*string{requestID},
@@ -781,7 +781,7 @@ func (p *Amazon) runInstances(num int, master bool) error {
 			if err != nil {
 				return fmt.Errorf("[%s] wait for fulfilling spot request error: %v", p.GetProviderName(), err)
 			}
-			p.logger.Debugf("[%s] resolve instance information by spot request id %s", p.GetProviderName(), *requestID)
+			p.logger.Infof("[%s] resolve instance information by spot request id %s", p.GetProviderName(), *requestID)
 			err = utils.WaitFor(func() (bool, error) {
 				spotInstance, err := p.client.DescribeSpotInstanceRequests(&ec2.DescribeSpotInstanceRequestsInput{
 					SpotInstanceRequestIds: []*string{requestID},
@@ -901,7 +901,7 @@ func (p *Amazon) getInstanceStatus(aimStatus string) error {
 	})
 
 	if len(ids) > 0 {
-		p.logger.Debugf("[%s] waiting for the instances %s to be in `%s` status...\n", p.GetProviderName(), ids, aimStatus)
+		p.logger.Infof("[%s] waiting for the instances %s to be in `%s` status...", p.GetProviderName(), ids, aimStatus)
 		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not `%s` status",
 			p.GetProviderName(), p.Region, p.Zone, ids, aimStatus)
 
@@ -930,7 +930,7 @@ func (p *Amazon) getInstanceStatus(aimStatus string) error {
 		}
 	}
 
-	p.logger.Debugf("[%s] instances %s are in `%s` status\n", p.GetProviderName(), ids, aimStatus)
+	p.logger.Infof("[%s] instances %s are in `%s` status", p.GetProviderName(), ids, aimStatus)
 
 	return nil
 }
@@ -1259,7 +1259,7 @@ func (p *Amazon) createKeyPair(ssh *types.SSH) error {
 
 			if pk != nil {
 				keyName := p.Name
-				p.logger.Debugf("creating key pair: %s", keyName)
+				p.logger.Infof("creating key pair: %s", keyName)
 				_, err = p.client.ImportKeyPair(&ec2.ImportKeyPairInput{
 					KeyName:           &keyName,
 					PublicKeyMaterial: pk,
@@ -1297,7 +1297,7 @@ func (p *Amazon) getDefaultVPCId() (string, error) {
 }
 
 func (p *Amazon) configSecurityGroup() error {
-	p.logger.Infof("[%s] config default security group for %s in region %s\n", p.GetProviderName(), p.VpcID, p.Region)
+	p.logger.Infof("[%s] config default security group for %s in region %s", p.GetProviderName(), p.VpcID, p.Region)
 
 	filters := []*ec2.Filter{
 		{
@@ -1339,7 +1339,7 @@ func (p *Amazon) configSecurityGroup() error {
 			GroupName: aws.String(defaultSecurityGroupName),
 		}
 		// wait until created (dat eventual consistency)
-		p.logger.Debugf("waiting for group (%s) to become available", *securityGroup.GroupId)
+		p.logger.Infof("waiting for group (%s) to become available", *securityGroup.GroupId)
 		err = utils.WaitFor(func() (bool, error) {
 			s, err := p.getSecurityGroup(groupResp.GroupId)
 			if s != nil && err == nil {
@@ -1354,7 +1354,7 @@ func (p *Amazon) configSecurityGroup() error {
 	p.SecurityGroup = aws.StringValue(securityGroup.GroupId)
 	permissionList := p.configPermission(securityGroup)
 	if len(permissionList) != 0 {
-		p.logger.Debugf("authorizing group %s with permissions: %v", defaultSecurityGroupName, permissionList)
+		p.logger.Infof("authorizing group %s with permissions: %v", defaultSecurityGroupName, permissionList)
 		_, err := p.client.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId:       securityGroup.GroupId,
 			IpPermissions: permissionList,
@@ -1572,7 +1572,7 @@ func (p *Amazon) deleteCluster(f bool) error {
 		return fmt.Errorf("[%s] synchronizing .state file error, msg: %v", p.GetProviderName(), err)
 	}
 
-	p.logger.Infof("[%s] successfully deleted cluster %s\n", p.GetProviderName(), p.Name)
+	p.logger.Infof("[%s] successfully deleted cluster %s", p.GetProviderName(), p.Name)
 	return nil
 }
 

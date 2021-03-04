@@ -159,7 +159,7 @@ We integrate some advanced components such as private registries and UI related 
 
 ### Setting up Private Registry
 
-When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, i.e:
 
 ```bash
 autok3s -d create \

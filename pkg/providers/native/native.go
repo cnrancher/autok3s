@@ -134,7 +134,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	}()
 	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
 	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing create logic...", p.GetProviderName())
 
 	// set ssh default value
 	if ssh.User == "" {
@@ -161,7 +161,7 @@ func (p *Native) CreateK3sCluster(ssh *types.SSH) (err error) {
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return
 	}
-	p.logger.Infof("[%s] successfully executed create logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
 	return nil
 }
 
@@ -187,7 +187,7 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 		logFile.Close()
 	}()
 	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing join logic...", p.GetProviderName())
 	// set ssh default value
 	if ssh.User == "" {
 		ssh.User = defaultUser
@@ -250,12 +250,12 @@ func (p *Native) JoinK3sNode(ssh *types.SSH) (err error) {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
 	return nil
 }
 
 func (p *Native) Rollback() error {
-	p.logger.Infof("[%s] executing rollback logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 
 	ids := make([]string, 0)
 	nodes := make([]types.Node, 0)
@@ -268,16 +268,16 @@ func (p *Native) Rollback() error {
 		return true
 	})
 
-	p.logger.Debugf("[%s] nodes %s will be rollback\n", p.GetProviderName(), ids)
+	p.logger.Infof("[%s] nodes %s will be rollback", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
 		warnMsg := cluster.UninstallK3sNodes(nodes)
 		for _, w := range warnMsg {
-			p.logger.Warnf("[%s] %s\n", p.GetProviderName(), w)
+			p.logger.Warnf("[%s] %s", p.GetProviderName(), w)
 		}
 	}
 
-	p.logger.Infof("[%s] successfully executed rollback logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
 
 	return nil
 }

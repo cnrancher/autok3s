@@ -195,7 +195,7 @@ This command will show detail information of specified cluster, such as instance
 autok3s describe cluster <clusterName>
 ```
 
-> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster. e.g. `autok3s describe cluster <clusterName> -p tencent -r <region>`
+> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster. i.e. `autok3s describe cluster <clusterName> -p tencent -r <region>`
 
 ```bash
 Name: myk3s
@@ -254,7 +254,7 @@ autok3s kubectl config use-context <context>
 
 ## SSH K3s Cluster's Node
 
-Login to a specific k3s cluster node via ssh, e.g myk3s.
+Login to a specific k3s cluster node via ssh, i.e myk3s.
 
 ```bash
 autok3s ssh --provider tencent --name myk3s
@@ -286,7 +286,7 @@ configs:
       ca_file:   # path to the ca file used in the registry
 ```
 
-When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+When running `autok3s create` or `autok3s join` command, take effect with the`--registry /etc/autok3s/registries.yaml` flag, i.e:
 
 ```bash
 autok3s -d create -p tencent --name myk3s --master 3 --registry /etc/autok3s/registries.yaml

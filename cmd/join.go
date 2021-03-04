@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +15,7 @@ import (
 var (
 	joinCmd = &cobra.Command{
 		Use:   "join",
-		Short: "Join k3s node",
+		Short: "Join one or more K3s node(s) to an existing cluster",
 	}
 
 	jProvider = ""
@@ -48,6 +51,7 @@ func JoinCommand() *cobra.Command {
 		joinCmd.Flags().AddFlagSet(utils.ConvertFlags(joinCmd, jp.GetCredentialFlags()))
 		joinCmd.Flags().AddFlagSet(jp.GetJoinFlags(joinCmd))
 		joinCmd.Example = jp.GetUsageExample("join")
+		joinCmd.Use = fmt.Sprintf("join -p %s", pStr)
 	}
 
 	joinCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
@@ -64,7 +68,7 @@ func JoinCommand() *cobra.Command {
 	}
 
 	joinCmd.Run = func(cmd *cobra.Command, args []string) {
-		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
+		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
 		jp.GenerateClusterName()
 
 		// join k3s node to the cluster which named with generated cluster name.

@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/utils"
@@ -12,7 +14,7 @@ import (
 var (
 	deleteCmd = &cobra.Command{
 		Use:   "delete",
-		Short: "Delete k3s cluster",
+		Short: "Delete a K3s cluster",
 	}
 	dProvider = ""
 	force     = false
@@ -36,7 +38,8 @@ func DeleteCommand() *cobra.Command {
 
 		deleteCmd.Flags().AddFlagSet(utils.ConvertFlags(deleteCmd, dp.GetCredentialFlags()))
 		deleteCmd.Flags().AddFlagSet(dp.GetDeleteFlags(deleteCmd))
-		joinCmd.Example = dp.GetUsageExample("delete")
+		deleteCmd.Example = dp.GetUsageExample("delete")
+		deleteCmd.Use = fmt.Sprintf("delete -p %s", pStr)
 	}
 
 	deleteCmd.PreRunE = func(cmd *cobra.Command, args []string) error {

@@ -175,7 +175,7 @@ func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 	os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
 
 	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing create logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing create logic...", p.GetProviderName())
 	if ssh.User == "" {
 		ssh.User = defaultUser
 	}
@@ -197,7 +197,7 @@ func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 	if err = cluster.InitK3sCluster(c); err != nil {
 		return
 	}
-	p.logger.Infof("[%s] successfully executed create logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
 
 	if option, ok := c.Options.(tencent.Options); ok {
 		extraManifests := make([]string, 0)
@@ -219,11 +219,11 @@ func (p *Tencent) CreateK3sCluster(ssh *types.SSH) (err error) {
 			extraManifests = append(extraManifests, fmt.Sprintf(deployCCMCommand,
 				base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
 		}
-		p.logger.Infof("[%s] start deploy tencent additional manifests\n", p.GetProviderName())
+		p.logger.Infof("[%s] start deploy tencent additional manifests", p.GetProviderName())
 		if err := cluster.DeployExtraManifest(c, extraManifests); err != nil {
 			return err
 		}
-		p.logger.Infof("[%s] successfully deploy tencent additional manifests\n", p.GetProviderName())
+		p.logger.Infof("[%s] successfully deploy tencent additional manifests", p.GetProviderName())
 	}
 
 	return nil
@@ -252,7 +252,7 @@ func (p *Tencent) JoinK3sNode(ssh *types.SSH) (err error) {
 	}()
 
 	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing join logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing join logic...", p.GetProviderName())
 	if ssh.User == "" {
 		ssh.User = defaultUser
 	}
@@ -293,7 +293,7 @@ func (p *Tencent) JoinK3sNode(ssh *types.SSH) (err error) {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executed join logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
 	return nil
 }
 
@@ -303,7 +303,7 @@ func (p *Tencent) Rollback() error {
 		return err
 	}
 	p.logger = common.NewLogger(common.Debug, logFile)
-	p.logger.Infof("[%s] executing rollback logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 
 	ids := make([]string, 0)
 	p.m.Range(func(key, value interface{}) bool {
@@ -314,13 +314,13 @@ func (p *Tencent) Rollback() error {
 		return true
 	})
 
-	p.logger.Debugf("[%s] instances %s will be rollback\n", p.GetProviderName(), ids)
+	p.logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
 
 	if len(ids) > 0 {
 		if p.PublicIPAssignedEIP {
 			eips, err := p.describeAddresses(nil, tencentCommon.StringPtrs(ids))
 			if err != nil {
-				p.logger.Errorf("[%s] error when query eip info\n", p.GetProviderName())
+				p.logger.Errorf("[%s] error when query eip info", p.GetProviderName())
 			}
 			var (
 				eipIds  []string
@@ -329,22 +329,22 @@ func (p *Tencent) Rollback() error {
 			for _, eip := range eips {
 				eipIds = append(eipIds, *eip.AddressId)
 				if taskID, err := p.disassociateAddress(*eip.AddressId); err != nil {
-					p.logger.Warnf("[%s] disassociate eip [%s] error\n", p.GetProviderName(), *eip.AddressId)
+					p.logger.Warnf("[%s] disassociate eip [%s] error", p.GetProviderName(), *eip.AddressId)
 				} else {
 					taskIds = append(taskIds, taskID)
 				}
 			}
 			for _, taskID := range taskIds {
 				if err := p.describeVpcTaskResult(taskID); err != nil {
-					p.logger.Warnf("[%s] disassociate eip task [%d] error\n", p.GetProviderName(), taskID)
+					p.logger.Warnf("[%s] disassociate eip task [%d] error", p.GetProviderName(), taskID)
 				}
 			}
 			taskID, err := p.releaseAddresses(eipIds)
 			if err != nil {
-				p.logger.Warnf("[%s] release eip [%s] error\n", p.GetProviderName(), eipIds)
+				p.logger.Warnf("[%s] release eip [%s] error", p.GetProviderName(), eipIds)
 			}
 			if err := p.describeVpcTaskResult(taskID); err != nil {
-				p.logger.Warnf("[%s] release eip task [%d] error\n", p.GetProviderName(), taskID)
+				p.logger.Warnf("[%s] release eip task [%d] error", p.GetProviderName(), taskID)
 			}
 		}
 
@@ -374,7 +374,7 @@ func (p *Tencent) Rollback() error {
 		return fmt.Errorf("[%s] remove cluster store folder (%s) error, msg: %v", p.GetProviderName(), common.GetClusterPath(p.Name, p.GetProviderName()), err)
 	}
 
-	p.logger.Infof("[%s] successfully executed rollback logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
 
 	return logFile.Close()
 }
@@ -400,7 +400,7 @@ func (p *Tencent) DeleteK3sCluster(f bool) error {
 			os.Remove(filepath.Join(common.GetClusterStatePath(), fmt.Sprintf("%s_%s", p.Name, common.StatusFailed)))
 		}()
 		p.logger = common.NewLogger(common.Debug, logFile)
-		p.logger.Infof("[%s] executing delete cluster logic...\n", p.GetProviderName())
+		p.logger.Infof("[%s] executing delete cluster logic...", p.GetProviderName())
 
 		if err := p.generateClientSDK(); err != nil {
 			return err
@@ -410,7 +410,7 @@ func (p *Tencent) DeleteK3sCluster(f bool) error {
 			return err
 		}
 
-		p.logger.Infof("[%s] successfully excuted delete cluster logic\n", p.GetProviderName())
+		p.logger.Infof("[%s] successfully excuted delete cluster logic", p.GetProviderName())
 	}
 
 	return nil
@@ -418,7 +418,7 @@ func (p *Tencent) DeleteK3sCluster(f bool) error {
 
 func (p *Tencent) SSHK3sNode(ssh *types.SSH, ip string) error {
 	p.logger = common.NewLogger(common.Debug, nil)
-	p.logger.Infof("[%s] executing ssh logic...\n", p.GetProviderName())
+	p.logger.Infof("[%s] executing ssh logic...", p.GetProviderName())
 
 	if err := p.generateClientSDK(); err != nil {
 		return err
@@ -475,7 +475,7 @@ func (p *Tencent) SSHK3sNode(ssh *types.SSH, ip string) error {
 		return err
 	}
 
-	p.logger.Infof("[%s] successfully executed ssh logic\n", p.GetProviderName())
+	p.logger.Infof("[%s] successfully executed ssh logic", p.GetProviderName())
 
 	return nil
 }
@@ -760,7 +760,7 @@ func (p *Tencent) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 
-	p.logger.Debugf("[%s] %d masters and %d workers will be added\n", p.GetProviderName(), masterNum, workerNum)
+	p.logger.Infof("[%s] %d masters and %d workers will be added", p.GetProviderName(), masterNum, workerNum)
 
 	if p.VpcID == "" {
 		// config default vpc and subnet
@@ -787,20 +787,20 @@ func (p *Tencent) generateInstance(fn checkFun, ssh *types.SSH) (*types.Cluster,
 
 	// run ecs master instances.
 	if masterNum > 0 {
-		p.logger.Debugf("[%s] %d number of master instances will be created\n", p.GetProviderName(), masterNum)
+		p.logger.Infof("[%s] %d number of master instances will be created", p.GetProviderName(), masterNum)
 		if err := p.runInstances(masterNum, true, ssh.Password); err != nil {
 			return nil, err
 		}
-		p.logger.Debugf("[%s] %d number of master instances successfully created\n", p.GetProviderName(), masterNum)
+		p.logger.Infof("[%s] %d number of master instances successfully created", p.GetProviderName(), masterNum)
 	}
 
 	// run ecs worker instances.
 	if workerNum > 0 {
-		p.logger.Debugf("[%s] %d number of worker instances will be created\n", p.GetProviderName(), workerNum)
+		p.logger.Infof("[%s] %d number of worker instances will be created", p.GetProviderName(), workerNum)
 		if err := p.runInstances(workerNum, false, ssh.Password); err != nil {
 			return nil, err
 		}
-		p.logger.Debugf("[%s] %d number of worker instances successfully created\n", p.GetProviderName(), workerNum)
+		p.logger.Infof("[%s] %d number of worker instances successfully created", p.GetProviderName(), workerNum)
 	}
 
 	// wait ecs instances to be running status.
@@ -911,7 +911,7 @@ func (p *Tencent) deleteCluster(f bool) error {
 	}
 
 	if err == nil && len(ids) > 0 {
-		p.logger.Debugf("[%s] cluster %s will be deleted\n", p.GetProviderName(), p.Name)
+		p.logger.Infof("[%s] cluster %s will be deleted", p.GetProviderName(), p.Name)
 
 		err := p.terminateInstances(ids)
 		if err != nil {
@@ -942,7 +942,7 @@ func (p *Tencent) deleteCluster(f bool) error {
 	}
 	// remove log file
 	os.Remove(filepath.Join(common.GetLogPath(), p.Name))
-	p.logger.Debugf("[%s] successfully deleted cluster %s\n", p.GetProviderName(), p.Name)
+	p.logger.Infof("[%s] successfully deleted cluster %s", p.GetProviderName(), p.Name)
 
 	return nil
 }
@@ -1037,7 +1037,7 @@ func (p *Tencent) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 		if p.PublicIPAssignedEIP {
 			eipInfos, err := p.describeAddresses(nil, []*string{status.InstanceId})
 			if err != nil {
-				p.logger.Errorf("[%s] error when query eip info of instance:[%s]\n", p.GetProviderName(), *status.InstanceId)
+				p.logger.Errorf("[%s] error when query eip info of instance:[%s]", p.GetProviderName(), *status.InstanceId)
 				return nil, err
 			}
 			for _, eipInfo := range eipInfos {
@@ -1054,7 +1054,7 @@ func (p *Tencent) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			v.SSH = *ssh
 			// check upload keypair
 			if uploadKeyPair {
-				p.logger.Debugf("[%s] waiting for upload keypair...\n", p.GetProviderName())
+				p.logger.Infof("[%s] waiting for upload keypair...", p.GetProviderName())
 				if err := p.uploadKeyPair(v, publicKey); err != nil {
 					return nil, err
 				}
@@ -1347,7 +1347,7 @@ func (p *Tencent) getInstanceStatus(aimStatus string) error {
 	})
 
 	if len(ids) > 0 {
-		p.logger.Debugf("[%s] waiting for the instances %s to be in `%s` status...\n", p.GetProviderName(), ids, aimStatus)
+		p.logger.Infof("[%s] waiting for the instances %s to be in `%s` status...", p.GetProviderName(), ids, aimStatus)
 		request := cvm.NewDescribeInstancesStatusRequest()
 		request.InstanceIds = tencentCommon.StringPtrs(ids)
 
@@ -1379,7 +1379,7 @@ func (p *Tencent) getInstanceStatus(aimStatus string) error {
 		}
 	}
 
-	p.logger.Debugf("[%s] instances %s are in `%s` status\n", p.GetProviderName(), ids, aimStatus)
+	p.logger.Infof("[%s] instances %s are in `%s` status", p.GetProviderName(), ids, aimStatus)
 
 	return nil
 }
@@ -1419,7 +1419,7 @@ func (p *Tencent) configNetwork() error {
 	}
 
 	if response != nil && response.Response != nil && len(response.Response.VpcSet) > 0 {
-		p.logger.Debugf("[%s] find existed default vpc %s for autok3s\n", p.GetProviderName(), vpcName)
+		p.logger.Infof("[%s] find existed default vpc %s for autok3s", p.GetProviderName(), vpcName)
 		defaultVPC := response.Response.VpcSet[0]
 		p.VpcID = *defaultVPC.VpcId
 		// find default subnet
@@ -1442,7 +1442,7 @@ func (p *Tencent) configNetwork() error {
 		}
 
 		if resp != nil && resp.Response != nil && len(resp.Response.SubnetSet) > 0 {
-			p.logger.Debugf("[%s] find existed default subnet %s for vpc %s\n", p.GetProviderName(), subnetName, vpcName)
+			p.logger.Infof("[%s] find existed default subnet %s for vpc %s", p.GetProviderName(), subnetName, vpcName)
 			p.SubnetID = *resp.Response.SubnetSet[0].SubnetId
 		} else {
 			return p.generateDefaultSubnet()
@@ -1463,7 +1463,7 @@ func (p *Tencent) configNetwork() error {
 }
 
 func (p *Tencent) generateDefaultVPC() error {
-	p.logger.Debugf("[%s] generate default vpc %s in region %s\n", p.GetProviderName(), vpcName, p.Region)
+	p.logger.Infof("[%s] generate default vpc %s in region %s", p.GetProviderName(), vpcName, p.Region)
 	request := vpc.NewCreateVpcRequest()
 	request.VpcName = tencentCommon.StringPtr(vpcName)
 	request.CidrBlock = tencentCommon.StringPtr(vpcCidrBlock)
@@ -1479,13 +1479,13 @@ func (p *Tencent) generateDefaultVPC() error {
 	}
 
 	p.VpcID = *response.Response.Vpc.VpcId
-	p.logger.Debugf("[%s] generate default vpc %s in region %s successfully\n", p.GetProviderName(), vpcName, p.Region)
+	p.logger.Infof("[%s] generate default vpc %s in region %s successfully", p.GetProviderName(), vpcName, p.Region)
 
 	return err
 }
 
 func (p *Tencent) generateDefaultSubnet() error {
-	p.logger.Debugf("[%s] generate default subnet %s for vpc %s in region %s\n", p.GetProviderName(), subnetName, vpcName, p.Region)
+	p.logger.Infof("[%s] generate default subnet %s for vpc %s in region %s", p.GetProviderName(), subnetName, vpcName, p.Region)
 	request := vpc.NewCreateSubnetRequest()
 
 	request.Tags = []*vpc.Tag{
@@ -1504,12 +1504,12 @@ func (p *Tencent) generateDefaultSubnet() error {
 		return fmt.Errorf("[%s] fail to create default subnet for vpc %s in region %s, zone %s: %v", p.GetProviderName(), p.VpcID, p.Region, p.Zone, err)
 	}
 	p.SubnetID = *response.Response.Subnet.SubnetId
-	p.logger.Debugf("[%s] generate default subnet %s for vpc %s in region %s successfully\n", p.GetProviderName(), subnetName, vpcName, p.Region)
+	p.logger.Infof("[%s] generate default subnet %s for vpc %s in region %s successfully", p.GetProviderName(), subnetName, vpcName, p.Region)
 	return nil
 }
 
 func (p *Tencent) configSecurityGroup() error {
-	p.logger.Debugf("[%s] check default security group %s in region %s\n", p.GetProviderName(), defaultSecurityGroupName, p.Region)
+	p.logger.Infof("[%s] check default security group %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Region)
 	// find default security group
 	request := vpc.NewDescribeSecurityGroupsRequest()
 
@@ -1536,7 +1536,7 @@ func (p *Tencent) configSecurityGroup() error {
 
 	if securityGroupID == "" {
 		// create default security group
-		p.logger.Debugf("[%s] create default security group %s in region %s\n", p.GetProviderName(), defaultSecurityGroupName, p.Region)
+		p.logger.Infof("[%s] create default security group %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Region)
 		err = p.generateDefaultSecurityGroup()
 		if err != nil {
 			return fmt.Errorf("[%s] fail to create default security group %s: %v", p.GetProviderName(), defaultSecurityGroupName, err)
@@ -1570,7 +1570,7 @@ func (p *Tencent) generateDefaultSecurityGroup() error {
 }
 
 func (p *Tencent) configDefaultSecurityPermission() error {
-	p.logger.Debugf("[%s] check rules of security group %s\n", p.GetProviderName(), defaultSecurityGroupName)
+	p.logger.Infof("[%s] check rules of security group %s", p.GetProviderName(), defaultSecurityGroupName)
 	// get security group rules
 	request := vpc.NewDescribeSecurityGroupPoliciesRequest()
 	request.SecurityGroupId = tencentCommon.StringPtr(p.SecurityGroupIds)
@@ -1748,17 +1748,17 @@ func (p *Tencent) allocateEIPForInstance(num int, master bool) ([]uint64, error)
 		return nil, err
 	}
 	if err = p.describeVpcTaskResult(taskID); err != nil {
-		p.logger.Errorf("[%s] failed to allocate eip(s) for instance(s): taskId:[%d]\n", p.GetProviderName(), taskID)
+		p.logger.Errorf("[%s] failed to allocate eip(s) for instance(s): taskId:[%d]", p.GetProviderName(), taskID)
 		return nil, err
 	}
 	eipAddresses, err := p.describeAddresses(eips, nil)
 	if err != nil {
-		p.logger.Errorf("[%s] error when query eip info:[%s]\n", p.GetProviderName(), tencentCommon.StringValues(eips))
+		p.logger.Errorf("[%s] error when query eip info:[%s]", p.GetProviderName(), tencentCommon.StringValues(eips))
 		return nil, err
 	}
 
 	if eipAddresses != nil {
-		p.logger.Debugf("[%s] associating %d eip(s) for instance(s)\n", p.GetProviderName(), num)
+		p.logger.Infof("[%s] associating %d eip(s) for instance(s)", p.GetProviderName(), num)
 		p.m.Range(func(key, value interface{}) bool {
 			v := value.(types.Node)
 			if v.Master == master && v.PublicIPAddress == nil {
@@ -1774,7 +1774,7 @@ func (p *Tencent) allocateEIPForInstance(num int, master bool) ([]uint64, error)
 			}
 			return true
 		})
-		p.logger.Debugf("[%s] successfully associated %d eip(s) for instance(s)\n", p.GetProviderName(), num)
+		p.logger.Infof("[%s] successfully associated %d eip(s) for instance(s)", p.GetProviderName(), num)
 	}
 
 	return eipIds, nil
@@ -1798,14 +1798,14 @@ func (p *Tencent) uploadKeyPair(node types.Node, publicKey string) error {
 	)
 	command := fmt.Sprintf("mkdir -p ~/.ssh; echo '%s' > ~/.ssh/authorized_keys", strings.Trim(publicKey, "\n"))
 
-	p.logger.Debugf("[%s] upload the public key with command: %s\n", p.GetProviderName(), command)
+	p.logger.Infof("[%s] upload the public key with command: %s", p.GetProviderName(), command)
 
 	tunnel.Cmd(command)
 
 	if err := tunnel.SetStdio(&stdout, &stderr).Run(); err != nil || stderr.String() != "" {
 		return fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	p.logger.Debugf("[%s] upload keypair with output: %s\n", p.GetProviderName(), stdout.String())
+	p.logger.Infof("[%s] upload keypair with output: %s", p.GetProviderName(), stdout.String())
 	return nil
 }
 
@@ -1859,7 +1859,7 @@ func (p *Tencent) syncClusterInstance(ssh *types.SSH) ([]*cvm.Instance, error) {
 		if p.PublicIPAssignedEIP {
 			eipInfos, err := p.describeAddresses(nil, []*string{instance.InstanceId})
 			if err != nil {
-				p.logger.Errorf("[%s] error when query eip info of instance:[%s]\n", p.GetProviderName(), *instance.InstanceId)
+				p.logger.Errorf("[%s] error when query eip info of instance:[%s]", p.GetProviderName(), *instance.InstanceId)
 				continue
 			}
 			for _, eipInfo := range eipInfos {

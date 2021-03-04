@@ -261,7 +261,7 @@ func toClusterEvent(op fsnotify.Op, name, id string) types.APIEvent {
 		return event
 	}
 	// event name is formed by "cfg-path/clusters/cluster-id_event",
-	//e.g. .autok3s/clusters/myk3s.region.provider_Join
+	//i.e. .autok3s/clusters/myk3s.region.provider_Join
 	context := strings.Split(name, "_")
 	contextArray := strings.Split(context[0], "/")
 	clusterInfo, err := cluster.GetClusterByID(contextArray[len(contextArray)-1])

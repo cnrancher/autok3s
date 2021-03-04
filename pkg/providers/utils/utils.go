@@ -52,7 +52,7 @@ func IsExistedNodes(nodes []types.Node, instance string) (int, bool) {
 func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) ([]byte, error) {
 	var keyPath string
 	if ssh.SSHKeyPath == "" && keypair == "" {
-		logrus.Infof("[%s] generate default key-pair \n", providerName)
+		logrus.Infof("[%s] generate default key-pair", providerName)
 		if err := utils.GenerateSSHKey(common.GetDefaultSSHKeyPath(name, providerName)); err != nil {
 			return nil, err
 		}
@@ -60,7 +60,7 @@ func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) ([]byte, 
 	} else {
 		keyPath = ssh.SSHKeyPath
 		if keypair != "" {
-			logrus.Infof("[%s] Using existing key pair %s \n", providerName, keypair)
+			logrus.Infof("[%s] Using existing key pair %s", providerName, keypair)
 			return nil, nil
 		}
 	}

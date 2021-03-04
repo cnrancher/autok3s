@@ -294,7 +294,7 @@ autok3s kubectl config use-context <context>
 
 ## SSH K3s Cluster's Node
 
-Login to a specific k3s cluster node via ssh, e.g myk3s.
+Login to a specific k3s cluster node via ssh, i.e myk3s.
 
 ```bash
 autok3s ssh --provider alibaba --name myk3s
@@ -328,7 +328,7 @@ configs:
       ca_file:   # path to the ca file used in the registry
 ```
 
-When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, e.g:
+When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, i.e:
 
 ```bash
 autok3s -d create \
