@@ -1,12 +1,13 @@
 package alibaba
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types/alibaba"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/spf13/cobra"
@@ -132,7 +133,18 @@ func (p *Alibaba) MergeClusterOptions() error {
 	if matched != nil {
 		p.overwriteMetadata(matched)
 		// delete command need merge status value.
-		p.mergeOptions(*matched)
+		source := reflect.ValueOf(&p.Options).Elem()
+		b, err := json.Marshal(matched.Options)
+		if err != nil {
+			return err
+		}
+		opt := &alibaba.Options{}
+		err = json.Unmarshal(b, opt)
+		if err != nil {
+			return err
+		}
+		target := reflect.ValueOf(opt).Elem()
+		utils.MergeConfig(source, target)
 	}
 
 	return nil
@@ -201,27 +213,6 @@ func (p *Alibaba) BindCredentialFlags() *pflag.FlagSet {
 	nfs.StringVar(&p.AccessKey, accessKeyID, p.AccessKey, "User access key ID")
 	nfs.StringVar(&p.AccessSecret, accessKeySecret, p.AccessSecret, "User access key secret")
 	return nfs
-}
-
-func (p *Alibaba) mergeOptions(input types.Cluster) {
-	source := reflect.ValueOf(&p.Options).Elem()
-	target := reflect.Indirect(reflect.ValueOf(&input.Options)).Elem()
-
-	p.mergeValues(source, target)
-}
-
-func (p *Alibaba) mergeValues(source, target reflect.Value) {
-	for i := 0; i < source.NumField(); i++ {
-		for _, k := range target.MapKeys() {
-			if strings.Contains(source.Type().Field(i).Tag.Get("yaml"), k.String()) {
-				if source.Field(i).Kind().String() == "struct" {
-					p.mergeValues(source.Field(i), target.MapIndex(k).Elem())
-				} else {
-					source.Field(i).SetString(fmt.Sprintf("%s", target.MapIndex(k)))
-				}
-			}
-		}
-	}
 }
 
 func (p *Alibaba) overwriteMetadata(matched *types.Cluster) {
@@ -342,6 +333,12 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			P:     &p.EIP,
 			V:     &p.EIP,
 			Usage: "Allocate EIP for instance",
+		},
+		{
+			Name:  "tags",
+			P:     &p.Tags,
+			V:     p.Tags,
+			Usage: "Set instance additional tags, e.g.(--tags a=b,b=c)",
 		},
 		{
 			Name:  "ip",
