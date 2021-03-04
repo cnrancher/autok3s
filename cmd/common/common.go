@@ -69,7 +69,7 @@ func bindEnvFlags(cmd *cobra.Command) {
 
 // Borrowed from https://github.com/docker/machine/blob/master/commands/create.go#L267.
 func FlagHackLookup(flagName string) string {
-	// e.g. "-d" for "--driver"
+	// i.e. "-d" for "--driver"
 	flagPrefix := flagName[1:3]
 
 	// TODO: Should we support -flag-name (single hyphen) syntax as well?

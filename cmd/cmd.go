@@ -77,7 +77,7 @@ func initCfg() {
 
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
 	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeCfg); err != nil {
-		logrus.Errorf("[kubectl] failed to set %s=%s env\n", clientcmd.RecommendedConfigPathEnvVar, kubeCfg)
+		logrus.Errorf("[kubectl] failed to set %s=%s env", clientcmd.RecommendedConfigPathEnvVar, kubeCfg)
 	}
 }
 

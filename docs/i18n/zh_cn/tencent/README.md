@@ -197,7 +197,7 @@ myk3s  ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 autok3s describe cluster <clusterName>
 ```
 
-> 注意：如果使用不同的 provider 创建的集群名称相同，describe 时会显示多个集群信息，可以使用`-p <provider> -r <region>`对 provider 及 region 进一步过滤。e.g. `autok3s describe cluster <clusterName> -p tencent -r <region>`
+> 注意：如果使用不同的 provider 创建的集群名称相同，describe 时会显示多个集群信息，可以使用`-p <provider> -r <region>`对 provider 及 region 进一步过滤。例如 `autok3s describe cluster <clusterName> -p tencent -r <region>`
 
 ```bash
 Name: myk3s

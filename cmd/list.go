@@ -20,7 +20,7 @@ import (
 var (
 	listCmd = &cobra.Command{
 		Use:     "list",
-		Short:   "List K3s clusters",
+		Short:   "Display all K3s clusters",
 		Example: `  autok3s list`,
 	}
 )
@@ -47,12 +47,12 @@ func listCluster() {
 	// get all clusters from state
 	clusters, err := utils.ReadYaml(v, common.StateFile)
 	if err != nil {
-		logrus.Fatalf("read state file error, msg: %v\n", err)
+		logrus.Fatalf("read state file error, msg: %v", err)
 	}
 
 	result, err := cluster.ConvertToClusters(clusters)
 	if err != nil {
-		logrus.Fatalf("failed to unmarshal state file, msg: %v\n", err)
+		logrus.Fatalf("failed to unmarshal state file, msg: %v", err)
 	}
 	var p providers.Provider
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)

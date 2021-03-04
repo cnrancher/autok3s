@@ -13,7 +13,7 @@ import (
 var (
 	sshCmd = &cobra.Command{
 		Use:   "ssh",
-		Short: "SSH k3s node",
+		Short: "Connect to a K3s node through SSH",
 	}
 
 	sProvider = ""

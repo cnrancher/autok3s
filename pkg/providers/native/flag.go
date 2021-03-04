@@ -41,13 +41,13 @@ func (p *Native) GetOptionFlags() []types.Flag {
 			Name:  "ui",
 			P:     &p.UI,
 			V:     p.UI,
-			Usage: "Enable K3s UI.",
+			Usage: "Enable in-cluster kubernetes/dashboard",
 		},
 		{
 			Name:  "cluster",
 			P:     &p.Cluster,
 			V:     p.Cluster,
-			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19)",
+			Usage: "Form k3s cluster using embedded etcd (Kubernetes version must be v1.19.x or higher)",
 		},
 	}...)
 
@@ -109,13 +109,13 @@ func (p *Native) sharedFlags() []types.Flag {
 			Name:  "k3s-version",
 			P:     &p.K3sVersion,
 			V:     p.K3sVersion,
-			Usage: "Used to specify the version of k3s cluster, overrides k3s-channel",
+			Usage: "Specify the version of k3s cluster, overrides k3s-channel",
 		},
 		{
 			Name:  "k3s-channel",
 			P:     &p.K3sChannel,
 			V:     p.K3sChannel,
-			Usage: "Used to specify the release channel of k3s. e.g.(stable, latest, or i.e. v1.18)",
+			Usage: "Specify the release channel of k3s. i.e.(stable, latest, or i.e. v1.18)",
 		},
 		{
 			Name:  "k3s-install-script",
@@ -127,13 +127,13 @@ func (p *Native) sharedFlags() []types.Flag {
 			Name:  "master-extra-args",
 			P:     &p.MasterExtraArgs,
 			V:     p.MasterExtraArgs,
-			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--no-deploy metrics-server')",
+			Usage: "Master extra arguments for k3s installer, wrapped in quotes. i.e.(--master-extra-args '--no-deploy metrics-server')",
 		},
 		{
 			Name:  "worker-extra-args",
 			P:     &p.WorkerExtraArgs,
 			V:     p.WorkerExtraArgs,
-			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute')",
+			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. i.e.(--worker-extra-args '--node-taint key=value:NoExecute')",
 		},
 		{
 			Name:  "registry",
@@ -145,7 +145,7 @@ func (p *Native) sharedFlags() []types.Flag {
 			Name:  "datastore",
 			P:     &p.DataStore,
 			V:     p.DataStore,
-			Usage: "K3s datastore, HA mode `create/join` master node needed this flag",
+			Usage: "K3s datastore connection string to enable HA, i.e. \"mysql://username:password@tcp(hostname:3306)/database-name\"",
 		},
 		{
 			Name:  "token",

@@ -12,7 +12,7 @@ import (
 var (
 	versionCmd = &cobra.Command{
 		Use:     "version",
-		Short:   "Show the version",
+		Short:   "Display autok3s version",
 		Example: `  autok3s version`,
 	}
 

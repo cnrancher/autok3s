@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/cnrancher/autok3s/cmd/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -13,7 +15,7 @@ import (
 var (
 	createCmd = &cobra.Command{
 		Use:   "create",
-		Short: "Create k3s cluster",
+		Short: "Create a K3s cluster",
 	}
 
 	cProvider = ""
@@ -50,6 +52,7 @@ func CreateCommand() *cobra.Command {
 		createCmd.Flags().AddFlagSet(utils.ConvertFlags(createCmd, cp.GetCredentialFlags()))
 		createCmd.Flags().AddFlagSet(utils.ConvertFlags(createCmd, cp.GetOptionFlags()))
 		createCmd.Example = cp.GetUsageExample("create")
+		createCmd.Use = fmt.Sprintf("create -p %s", pStr)
 	}
 
 	createCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
@@ -61,7 +64,7 @@ func CreateCommand() *cobra.Command {
 	}
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
-		// generate cluster name. e.g. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>"
+		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>"
 		cp.GenerateClusterName()
 		if err := cp.CreateCheck(cSSH); err != nil {
 			logrus.Fatalln(err)
