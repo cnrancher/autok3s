@@ -333,13 +333,19 @@ func (p *Amazon) sharedFlags() []types.Flag {
 			Name:  "request-spot-instance",
 			P:     &p.RequestSpotInstance,
 			V:     p.RequestSpotInstance,
-			Usage: "request for spot instance",
+			Usage: "Request for spot instance",
 		},
 		{
 			Name:  "spot-price",
 			P:     &p.SpotPrice,
 			V:     p.SpotPrice,
-			Usage: "spot instance bid price (in dollar)",
+			Usage: "Spot instance bid price (in dollar)",
+		},
+		{
+			Name:  "tags",
+			P:     &p.Tags,
+			V:     p.Tags,
+			Usage: "Set instance additional tags, e.g.(--tags a=b,b=c)",
 		},
 		{
 			Name:  "ip",

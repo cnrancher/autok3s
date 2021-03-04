@@ -841,10 +841,10 @@ func (p *Amazon) runInstances(num int, master bool) error {
 		p.m.Store(aws.StringValue(ins.InstanceId), types.Node{Master: master, RollBack: true, InstanceID: aws.StringValue(ins.InstanceId), InstanceStatus: aws.StringValue(ins.State.Name)})
 	}
 
-	return p.setInstanceTags(master, ids)
+	return p.setInstanceTags(master, ids, p.Tags)
 }
 
-func (p *Amazon) setInstanceTags(master bool, instanceIDs []*string) error {
+func (p *Amazon) setInstanceTags(master bool, instanceIDs []*string, additionalTags map[string]string) error {
 	tags := []*ec2.Tag{
 		{
 			Key:   aws.String("autok3s"),
@@ -858,6 +858,13 @@ func (p *Amazon) setInstanceTags(master bool, instanceIDs []*string) error {
 			Key:   aws.String("master"),
 			Value: aws.String(strconv.FormatBool(master)),
 		},
+	}
+
+	for k, v := range additionalTags {
+		tags = append(tags, &ec2.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
 	}
 
 	if master {
@@ -878,6 +885,7 @@ func (p *Amazon) setInstanceTags(master bool, instanceIDs []*string) error {
 			Value: aws.String("owned"),
 		})
 	}
+
 	_, err := p.client.CreateTags(&ec2.CreateTagsInput{
 		Resources: instanceIDs,
 		Tags:      tags,

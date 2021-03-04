@@ -1,12 +1,13 @@
 package tencent
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/spf13/cobra"
@@ -152,8 +153,21 @@ func (p *Tencent) MergeClusterOptions() error {
 
 	if matched != nil {
 		p.overwriteMetadata(matched)
-		p.mergeOptions(*matched)
+		// delete command need merge status value.
+		source := reflect.ValueOf(&p.Options).Elem()
+		b, err := json.Marshal(matched.Options)
+		if err != nil {
+			return err
+		}
+		opt := &tencent.Options{}
+		err = json.Unmarshal(b, opt)
+		if err != nil {
+			return err
+		}
+		target := reflect.ValueOf(opt).Elem()
+		utils.MergeConfig(source, target)
 	}
+
 	return nil
 }
 
@@ -193,32 +207,6 @@ func (p *Tencent) BindCredentialFlags() *pflag.FlagSet {
 	nfs.StringVar(&p.SecretID, secretID, p.SecretID, "User access key ID")
 	nfs.StringVar(&p.SecretKey, secretKey, p.SecretKey, "User access key secret")
 	return nfs
-}
-
-func (p *Tencent) mergeOptions(input types.Cluster) {
-	source := reflect.ValueOf(&p.Options).Elem()
-	target := reflect.Indirect(reflect.ValueOf(&input.Options)).Elem()
-
-	p.mergeValues(source, target)
-}
-
-func (p *Tencent) mergeValues(source, target reflect.Value) {
-	for i := 0; i < source.NumField(); i++ {
-		for _, key := range target.MapKeys() {
-			if strings.Contains(source.Type().Field(i).Tag.Get("yaml"), key.String()) {
-				if source.Field(i).Kind().String() == "struct" {
-					p.mergeValues(source.Field(i), target.MapIndex(key).Elem())
-				} else {
-					switch source.Field(i).Type().Name() {
-					case "bool":
-						source.Field(i).SetBool(target.MapIndex(key).Interface().(bool))
-					default:
-						source.Field(i).SetString(target.MapIndex(key).Interface().(string))
-					}
-				}
-			}
-		}
-	}
 }
 
 func (p *Tencent) overwriteMetadata(matched *types.Cluster) {
@@ -339,6 +327,12 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			P:     &p.InternetMaxBandwidthOut,
 			V:     p.InternetMaxBandwidthOut,
 			Usage: "Used to specify the maximum out flow of the instance internet",
+		},
+		{
+			Name:  "tags",
+			P:     &p.Tags,
+			V:     p.Tags,
+			Usage: "Set instance additional tags, e.g.(--tags a=b,b=c)",
 		},
 		{
 			Name:  "ip",

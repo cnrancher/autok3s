@@ -754,6 +754,11 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 	}
 
 	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.Name}}
+
+	for k, v := range p.Tags {
+		tag = append(tag, ecs.RunInstancesTag{Key: k, Value: v})
+	}
+
 	if master {
 		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.Name)
 		tag = append(tag, ecs.RunInstancesTag{Key: "master", Value: "true"})

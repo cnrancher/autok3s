@@ -1127,11 +1127,16 @@ func (p *Tencent) runInstances(num int, master bool, password string) error {
 		PublicIpAssigned:        tencentCommon.BoolPtr(!p.PublicIPAssignedEIP),
 	}
 
-	// tags
+	// set instance tags
 	tags := []*cvm.Tag{
 		{Key: tencentCommon.StringPtr("autok3s"), Value: tencentCommon.StringPtr("true")},
 		{Key: tencentCommon.StringPtr("cluster"), Value: tencentCommon.StringPtr(common.TagClusterPrefix + p.Name)},
 	}
+
+	for k, v := range p.Tags {
+		tags = append(tags, &cvm.Tag{Key: tencentCommon.StringPtr(k), Value: tencentCommon.StringPtr(v)})
+	}
+
 	if master {
 		request.InstanceName = tencentCommon.StringPtr(fmt.Sprintf(common.MasterInstanceName, p.Name))
 		tags = append(tags, &cvm.Tag{Key: tencentCommon.StringPtr("master"), Value: tencentCommon.StringPtr("true")})
