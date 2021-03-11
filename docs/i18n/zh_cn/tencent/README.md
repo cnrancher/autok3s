@@ -88,7 +88,6 @@ Rule        Protocol    Port      Source             Description
 InBound     TCP         22        ALL                SSH Connect Port
 InBound     TCP         6443      K3s agent nodes    Kubernetes API
 InBound     TCP         10250     K3s server & agent Kubelet
-InBound     TCP         8999      K3s dashboard      (Optional) Required only for Dashboard UI
 InBound     UDP         8472      K3s server & agent (Optional) Required only for Flannel VXLAN
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
@@ -194,10 +193,10 @@ myk3s  ap-nanjing   tencent   Running  2        1        v1.19.5+k3s2
 显示具体的 k3s 信息，包括实例状态、主机 ip、集群版本等信息。
 
 ```bash
-autok3s describe cluster <clusterName>
+autok3s describe -n <clusterName> -p tencent
 ```
 
-> 注意：如果使用不同的 provider 创建的集群名称相同，describe 时会显示多个集群信息，可以使用`-p <provider> -r <region>`对 provider 及 region 进一步过滤。例如 `autok3s describe cluster <clusterName> -p tencent -r <region>`
+> 注意：如果使用不同的 provider 创建的集群名称相同，describe 时会显示多个集群信息，可以使用`-p <provider>`对 provider 进一步过滤。例如 `autok3s describe -n myk3s -p tencent`
 
 ```bash
 Name: myk3s

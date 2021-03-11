@@ -73,7 +73,6 @@ Rule        Protocol    Port      Source             Description
 InBound     TCP         22        ALL                SSH Connect Port
 InBound     TCP         6443      K3s agent nodes    Kubernetes API
 InBound     TCP         10250     K3s server & agent Kubelet
-InBound     TCP         8999      K3s dashboard      (Optional) Required only for Dashboard UI
 InBound     UDP         8472      K3s server & agent (Optional) Required only for Flannel VXLAN
 InBound     TCP         2379,2380 K3s server nodes   (Optional) Required only for embedded ETCD
 OutBound    ALL         ALL       ALL                Allow All
@@ -178,10 +177,10 @@ myk3s    ap-southeast-2  aws   Running  1        0        v1.20.2+k3s1
 This command will show detail information of specified cluster, such as instance status, node IP, kubelet version, etc.
 
 ```bash
-autok3s describe cluster <clusterName>
+autok3s describe -n <clusterName> -p aws
 ```
 
-> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider> -r <region>` to choose specified cluster. i.e. `autok3s describe cluster <clusterName> -p aws -r <region>`
+> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider>` to choose specified cluster. i.e. `autok3s describe cluster myk3s -p aws`
 
 ```bash
 Name: myk3s
