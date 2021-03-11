@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/utils"
@@ -42,14 +43,15 @@ var (
 
 func init() {
 	cobra.OnInitialize(initCfg)
+	setHelpTemplate(cmd)
+	setEnvVars()
 	cmd.PersistentFlags().BoolVarP(&common.Debug, "debug", "d", common.Debug, "Enable log debug level")
-	cmd.Flags().StringVarP(&common.CfgPath, "cfg", "c", common.CfgPath, "Path to the cfg file to use for CLI requests")
-	cmd.Flags().IntVarP(&common.Backoff.Steps, "retry", "r", common.Backoff.Steps, "The number of retries waiting for the desired state")
 }
 
 func Command() *cobra.Command {
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		printASCII()
+
 		if err := cmd.Help(); err != nil {
 			logrus.Errorln(err)
 			os.Exit(1)
@@ -83,4 +85,58 @@ func initCfg() {
 
 func printASCII() {
 	fmt.Print(aec.Apply(ascIIStr))
+}
+
+/*
+ * setEnvVars In order to avoid autok3s kubectl pre-check problem, we have to using environment variables to set the
+ * global parameters(https://github.com/kubernetes/kubernetes/pull/92343).
+ */
+func setEnvVars() {
+	cfgEnv := os.Getenv("AUTOK3S_CONFIG")
+	retryEnv := os.Getenv("AUTOK3S_RETRY")
+
+	if cfgEnv != "" {
+		common.CfgPath = os.Getenv("AUTOK3S_CONFIG")
+	}
+
+	if retryEnv != "" {
+		retryInt, err := strconv.Atoi(retryEnv)
+		if err != nil {
+			logrus.Errorln(err)
+			os.Exit(1)
+		}
+		common.Backoff.Steps = retryInt
+	}
+}
+
+func setHelpTemplate(cmd *cobra.Command) {
+	t := `Usage:{{if .Runnable}}
+  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Global Environments:
+  AUTOK3S_CONFIG  Path to the cfg file to use for CLI requests (default ~/.autok3s)
+  AUTOK3S_RETRY   The number of retries waiting for the desired state (default 5)
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
+	cmd.SetHelpTemplate(t)
 }
