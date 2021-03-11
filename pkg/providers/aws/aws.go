@@ -1057,15 +1057,6 @@ func (p *Amazon) configPermission(group *ec2.SecurityGroup) []*ec2.IpPermission 
 		})
 	}
 
-	if p.UI && !hasPorts["8999/tcp"] {
-		perms = append(perms, &ec2.IpPermission{
-			IpProtocol: aws.String("tcp"),
-			FromPort:   aws.Int64(int64(8999)),
-			ToPort:     aws.Int64(int64(8999)),
-			IpRanges:   []*ec2.IpRange{{CidrIp: aws.String(ipRange)}},
-		})
-	}
-
 	return perms
 }
 
