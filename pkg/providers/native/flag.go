@@ -2,8 +2,6 @@ package native
 
 import (
 	"github.com/cnrancher/autok3s/pkg/types"
-
-	"github.com/spf13/pflag"
 )
 
 const createUsageExample = `  autok3s -d create \
@@ -69,9 +67,8 @@ func (p *Native) GetSSHConfig() *types.SSH {
 	return ssh
 }
 
-func (p *Native) BindCredentialFlags() *pflag.FlagSet {
-	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
-	return nfs
+func (p *Native) BindCredential() error {
+	return nil
 }
 
 func (p *Native) MergeClusterOptions() error {

@@ -7,14 +7,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 
 	"github.com/hpcloud/tail"
+	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/wrangler/pkg/schemas/validation"
-	"github.com/sirupsen/logrus"
 )
 
 func LogHandler(apiOp *types.APIRequest) (types.APIObjectList, error) {
@@ -26,7 +25,7 @@ func LogHandler(apiOp *types.APIRequest) (types.APIObjectList, error) {
 
 func logHandler(apiOp *types.APIRequest) error {
 	cluster := apiOp.Request.URL.Query().Get("cluster")
-
+	provider := apiOp.Request.URL.Query().Get("provider")
 	w := apiOp.Response
 	f, ok := w.(http.Flusher)
 	if !ok {
@@ -38,15 +37,16 @@ func logHandler(apiOp *types.APIRequest) error {
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	ids := strings.Split(cluster, ".")
-	name := ids[0]
-	provider := ids[len(ids)-1]
-	state, err := common.DefaultDB.GetCluster(name, provider)
+	if provider == "native" {
+		return nativeLogHandler(apiOp.Context(), w, f, cluster, provider)
+	}
+
+	state, err := common.DefaultDB.GetClusterByID(cluster)
 	if err != nil {
 		return err
 	}
 	if state == nil {
-		return fmt.Errorf("[%s] cluster %s is not exist", provider, name)
+		return apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
 	}
 	logFilePath := filepath.Join(common.GetLogPath(), cluster)
 	// show all logs if cluster is running
@@ -66,11 +66,7 @@ func logHandler(apiOp *types.APIRequest) error {
 		return logFile.Close()
 	}
 
-	t, err := tail.TailFile(logFilePath, tail.Config{
-		Follow:    true,
-		MustExist: true,
-		Poll:      true,
-	})
+	t, err := NewTailLog(logFilePath)
 	if err != nil {
 		return err
 	}
@@ -86,40 +82,17 @@ func logHandler(apiOp *types.APIRequest) error {
 				return nil
 			}
 			if s.ContextName == cluster {
-				// the tail is about to close, we need to read last bytes of file to show final log
-				offset, err := t.Tell()
+				err = WriteLastLogs(t, w, f, logFilePath)
 				if err != nil {
 					w.Write([]byte("event: close\ndata: close\n\n"))
 					return err
 				}
-				logFile, err := os.Open(logFilePath)
-				if err != nil {
-					w.Write([]byte("event: close\ndata: close\n\n"))
-					return err
-				}
-				_, err = logFile.Seek(offset, os.SEEK_CUR)
-				if err != nil {
-					w.Write([]byte("event: close\ndata: close\n\n"))
-					return err
-				}
-				scanner := bufio.NewScanner(logFile)
-				for scanner.Scan() {
-					var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
-					w.Write(bs.Bytes())
-					f.Flush()
-				}
-				t.Stop()
-				t.Cleanup()
-				logFile.Close()
 				close(result)
-				logrus.Infof("close log data")
 				w.Write([]byte("event: close\ndata: close\n\n"))
 				return nil
 			}
 		case <-apiOp.Context().Done():
-			logrus.Debug("request close from client")
-			t.Stop()
-			t.Cleanup()
+			CloseLog(t)
 			close(result)
 			return nil
 		case line, ok := <-t.Lines:
@@ -132,4 +105,46 @@ func logHandler(apiOp *types.APIRequest) error {
 			f.Flush()
 		}
 	}
+}
+
+func NewTailLog(logFilePath string) (*tail.Tail, error) {
+	t, err := tail.TailFile(logFilePath, tail.Config{
+		Follow:    true,
+		MustExist: true,
+		Poll:      true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func CloseLog(t *tail.Tail) {
+	t.Stop()
+	t.Cleanup()
+}
+
+func WriteLastLogs(t *tail.Tail, w http.ResponseWriter, f http.Flusher, logFilePath string) error {
+	// the tail is about to close, we need to read last bytes of file to show final log
+	offset, err := t.Tell()
+	if err != nil {
+		return err
+	}
+	logFile, err := os.Open(logFilePath)
+	if err != nil {
+		return err
+	}
+	_, err = logFile.Seek(offset, os.SEEK_CUR)
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(logFile)
+	for scanner.Scan() {
+		var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
+		w.Write(bs.Bytes())
+		f.Flush()
+	}
+	CloseLog(t)
+	logFile.Close()
+	return nil
 }

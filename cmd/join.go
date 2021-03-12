@@ -45,7 +45,7 @@ func JoinCommand() *cobra.Command {
 		if jProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
-		common.InitPFlags(cmd, jp)
+		common.BindEnvFlags(cmd)
 		err := jp.MergeClusterOptions()
 		if err != nil {
 			return err

@@ -19,7 +19,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	typesaws "github.com/cnrancher/autok3s/pkg/types/aws"
 	"github.com/cnrancher/autok3s/pkg/utils"
-	"github.com/cnrancher/autok3s/pkg/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -314,13 +313,6 @@ func (p *Amazon) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 }
 
 func (p *Amazon) newClient() {
-	if p.AccessKey == "" {
-		p.AccessKey = viper.GetString(p.GetProviderName(), "access-key")
-	}
-
-	if p.SecretKey == "" {
-		p.SecretKey = viper.GetString(p.GetProviderName(), "secret-key")
-	}
 	config := aws.NewConfig()
 	config = config.WithRegion(p.Region)
 	config = config.WithCredentials(credentials.NewStaticCredentials(p.AccessKey, p.SecretKey, ""))

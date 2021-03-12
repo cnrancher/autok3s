@@ -42,7 +42,7 @@ func SSHCommand() *cobra.Command {
 		if sProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
-		common.InitPFlags(cmd, sp)
+		common.BindEnvFlags(cmd)
 		err := sp.MergeClusterOptions()
 		if err != nil {
 			return err

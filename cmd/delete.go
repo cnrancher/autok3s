@@ -46,7 +46,7 @@ func DeleteCommand() *cobra.Command {
 		if dProvider == "" {
 			logrus.Fatalln("required flags(s) \"[provider]\" not set")
 		}
-		common.InitPFlags(cmd, dp)
+		common.BindEnvFlags(cmd)
 		err := dp.MergeClusterOptions()
 		if err != nil {
 			return err

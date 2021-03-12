@@ -85,6 +85,12 @@ var (
 				is_default               bool,
 				unique (name, provider)
 			);`,
+		`CREATE TABLE IF NOT EXISTS credentials
+			(
+				id integer not null primary key autoincrement,
+				provider TEXT not null,
+				secrets BLOB
+			);`,
 	}
 )
 

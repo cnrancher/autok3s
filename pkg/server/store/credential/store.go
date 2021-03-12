@@ -1,14 +1,12 @@
 package credential
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
+	"strconv"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
-	"github.com/cnrancher/autok3s/pkg/server/store/utils"
 	"github.com/cnrancher/autok3s/pkg/types/apis"
 
 	"github.com/rancher/apiserver/pkg/apierror"
@@ -16,7 +14,6 @@ import (
 	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/wrangler/pkg/schemas/validation"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 type Store struct {
@@ -24,54 +21,44 @@ type Store struct {
 }
 
 func (cred *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
-	provider, err := providers.GetProvider(id)
+	credID, err := strconv.Atoi(id)
 	if err != nil {
-		logrus.Errorf("get provider %s error: %v", id, err)
-		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, err.Error())
+		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid id %s", id))
 	}
-	fields, err := utils.GetCredentialByProvider(provider)
+	c, err := common.DefaultDB.GetCredential(credID)
 	if err != nil {
 		return types.APIObject{}, err
 	}
-	secrets := make(map[string]string, 0)
-	for k, field := range fields {
-		value, ok := field.Default.(string)
-		if ok && value != "" {
-			secrets[k] = value
-		}
+	if c == nil {
+		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("credential %s is not exist", id))
 	}
-	credential := apis.Credential{
-		Provider:     id,
-		SecretFields: fields,
-		Secrets:      secrets,
+
+	credential, err := toCredential(c)
+	if err != nil {
+		return types.APIObject{}, err
 	}
 	return types.APIObject{
 		Type:   schema.ID,
-		ID:     id,
+		ID:     strconv.Itoa(c.ID),
 		Object: credential,
 	}, nil
 }
 
 func (cred *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
-	list := providers.ListProviders()
+	credList, err := common.DefaultDB.ListCredential()
+	if err != nil {
+		return types.APIObjectList{}, err
+	}
 	result := types.APIObjectList{}
-	for _, p := range list {
-		provider, err := providers.GetProvider(p.Name)
+	for _, c := range credList {
+		credential, err := toCredential(c)
 		if err != nil {
-			logrus.Errorf("get provider %s error: %v", p.Name, err)
+			logrus.Errorf("failed to convert credential secrets to map: %v", err)
 			continue
-		}
-		fields, err := utils.GetCredentialByProvider(provider)
-		if err != nil {
-			return result, err
-		}
-		credential := apis.Credential{
-			Provider:     p.Name,
-			SecretFields: fields,
 		}
 		result.Objects = append(result.Objects, types.APIObject{
 			Type:   schema.ID,
-			ID:     p.Name,
+			ID:     strconv.Itoa(c.ID),
 			Object: credential,
 		})
 	}
@@ -80,78 +67,87 @@ func (cred *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types
 
 func (cred *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	secrets := data.Data().Map("secrets")
-	if err := viper.ReadInConfig(); err != nil {
+	p := data.Data().String("provider")
+	c, err := generateCredential(secrets, p)
+	if err != nil {
 		return types.APIObject{}, err
 	}
-	id := data.Data().String("provider")
-	for key, secret := range secrets {
-		if viper.IsSet(fmt.Sprintf(common.BindPrefix, id, key)) {
-			return types.APIObject{}, apierror.NewAPIError(validation.Conflict, fmt.Sprintf("you have already set credential settings for provider %s", id))
-		}
-		viper.Set(fmt.Sprintf(common.BindPrefix, id, key), secret)
-	}
-	if err := viper.WriteConfig(); err != nil {
+	err = common.DefaultDB.CreateCredential(c)
+	if err != nil {
 		return types.APIObject{}, err
 	}
-	if err := viper.MergeInConfig(); err != nil {
+	credential, err := toCredential(c)
+	if err != nil {
 		return types.APIObject{}, err
 	}
-	return cred.ByID(apiOp, schema, id)
+	return types.APIObject{
+		Type:   schema.ID,
+		ID:     strconv.Itoa(c.ID),
+		Object: credential,
+	}, nil
 }
 
 func (cred *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject, id string) (types.APIObject, error) {
-	if err := viper.ReadInConfig(); err != nil {
-		return types.APIObject{}, err
+	credID, err := strconv.Atoi(id)
+	if err != nil {
+		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid id %s", id))
 	}
 	secrets := data.Data().Map("secrets")
-	for key, secret := range secrets {
-		if !viper.IsSet(fmt.Sprintf(common.BindPrefix, id, key)) {
-			return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("please set credential settings for provider %s before update", id))
-		}
-		viper.Set(fmt.Sprintf(common.BindPrefix, id, key), secret)
+	p := data.Data().String("provider")
+	c, err := generateCredential(secrets, p)
+	if err != nil {
+		return types.APIObject{}, err
 	}
-	if err := viper.WriteConfig(); err != nil {
+	c.ID = credID
+	err = common.DefaultDB.UpdateCredential(c)
+	if err != nil {
 		return types.APIObject{}, err
 	}
 	return cred.ByID(apiOp, schema, id)
 }
 
 func (cred *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
-	provider, err := providers.GetProvider(id)
+	credID, err := strconv.Atoi(id)
 	if err != nil {
-		logrus.Errorf("get provider %s error: %v", id, err)
-		return types.APIObject{}, err
+		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid id %s", id))
 	}
+	err = common.DefaultDB.DeleteCredential(credID)
+	return types.APIObject{}, err
+}
+
+func generateCredential(secrets map[string]interface{}, p string) (*common.Credential, error) {
+	provider, err := providers.GetProvider(p)
+	if err != nil {
+		return nil, apierror.NewAPIError(validation.NotFound, err.Error())
+	}
+	// valid credential keys
 	flags := provider.GetCredentialFlags()
-	if err := viper.ReadInConfig(); err != nil {
-		return types.APIObject{}, err
-	}
-	// remove env vars and viper config for credential
-	for _, flag := range flags {
-		if flag.EnvVar != "" && os.Getenv(flag.EnvVar) != "" {
-			os.Setenv(flag.EnvVar, "")
+	for _, f := range flags {
+		if _, ok := secrets[f.Name]; !ok {
+			return nil, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("missing credential %s", f.Name))
 		}
 	}
-
-	settings := viper.AllSettings()
-	providerConfigs, ok := settings["autok3s"].(map[string]interface{})
-	if !ok {
-		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("credential settings for provider %s is not exist", id))
-	}
-	config, ok := providerConfigs["providers"].(map[string]interface{})
-	if !ok {
-		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("credential settings for provider %s is not exist", id))
-	}
-	if _, ok := config[id]; !ok {
-		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("credential settings for provider %s is not exist", id))
-	}
-	delete(config, id)
-	viper.MergeConfigMap(settings)
-	encodedConfig, _ := json.MarshalIndent(settings, "", " ")
-	err = viper.ReadConfig(bytes.NewReader(encodedConfig))
+	value, err := json.Marshal(secrets)
 	if err != nil {
-		return types.APIObject{}, err
+		return nil, err
 	}
-	err = viper.WriteConfig()
-	return types.APIObject{}, err
+	c := &common.Credential{
+		Provider: p,
+		Secrets:  value,
+	}
+	return c, nil
+}
+
+func toCredential(c *common.Credential) (*apis.Credential, error) {
+	secrets := map[string]string{}
+	err := json.Unmarshal(c.Secrets, &secrets)
+	if err != nil {
+		return nil, err
+	}
+	credential := &apis.Credential{
+		ID:       c.ID,
+		Provider: c.Provider,
+		Secrets:  secrets,
+	}
+	return credential, nil
 }

@@ -20,7 +20,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
-	"github.com/cnrancher/autok3s/pkg/viper"
 
 	"github.com/sirupsen/logrus"
 	tencentCommon "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
@@ -375,14 +374,6 @@ func (p *Tencent) GetProviderOptions(opt []byte) (interface{}, error) {
 }
 
 func (p *Tencent) generateClientSDK() error {
-	if p.SecretID == "" {
-		p.SecretID = viper.GetString(p.GetProviderName(), secretID)
-	}
-
-	if p.SecretKey == "" {
-		p.SecretKey = viper.GetString(p.GetProviderName(), secretKey)
-	}
-
 	credential := tencentCommon.NewCredential(
 		p.SecretID,
 		p.SecretKey,

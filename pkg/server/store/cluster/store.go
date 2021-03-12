@@ -15,7 +15,6 @@ import (
 	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/wrangler/pkg/schemas/validation"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 type Store struct {
@@ -36,17 +35,7 @@ func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	id := p.GenerateClusterName()
 	// save credential config
 	if providerName != "native" {
-		if err := viper.ReadInConfig(); err != nil {
-			return types.APIObject{}, err
-		}
-		credFlags := p.GetCredentialFlags()
-		options := data.Data().Map("options")
-		for _, credential := range credFlags {
-			if v, ok := options[credential.Name]; ok {
-				viper.Set(fmt.Sprintf(common.BindPrefix, providerName, credential.Name), v)
-			}
-		}
-		if err := viper.WriteConfig(); err != nil {
+		if err = p.BindCredential(); err != nil {
 			return types.APIObject{}, err
 		}
 	}

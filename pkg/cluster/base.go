@@ -524,6 +524,28 @@ func (p *ProviderBase) SetClusterConfig(config []byte) (*types.Cluster, error) {
 	return &c, nil
 }
 
+func (p *ProviderBase) SaveCredential(secrets map[string]string) error {
+	creds, err := common.DefaultDB.GetCredentialByProvider(p.Provider)
+	if err != nil {
+		return err
+	}
+	if len(creds) == 0 {
+		s, err := json.Marshal(secrets)
+		if err != nil {
+			return err
+		}
+		err = common.DefaultDB.CreateCredential(&common.Credential{
+			Provider: p.Provider,
+			Secrets:  s,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func ListClusters() ([]*types.ClusterInfo, error) {
 	stateList, err := common.DefaultDB.ListCluster()
 	if err != nil {

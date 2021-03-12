@@ -17,7 +17,6 @@ import (
 	"github.com/morikuni/aec"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -61,14 +60,6 @@ func Command() *cobra.Command {
 }
 
 func initCfg() {
-	viper.SetConfigType("yaml")
-	viper.SetConfigFile(fmt.Sprintf("%s/%s", common.CfgPath, common.ConfigFile))
-	viper.AutomaticEnv()
-
-	if err := utils.EnsureFileExist(common.CfgPath, common.ConfigFile); err != nil {
-		logrus.Fatalln(err)
-	}
-
 	if err := utils.EnsureFolderExist(common.GetLogPath()); err != nil {
 		logrus.Fatalln(err)
 	}

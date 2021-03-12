@@ -19,7 +19,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/alibaba"
 	"github.com/cnrancher/autok3s/pkg/utils"
-	"github.com/cnrancher/autok3s/pkg/viper"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
@@ -332,14 +331,6 @@ func (p *Alibaba) GetProviderOptions(opt []byte) (interface{}, error) {
 }
 
 func (p *Alibaba) generateClientSDK() error {
-	if p.AccessKey == "" {
-		p.AccessKey = viper.GetString(p.GetProviderName(), accessKeyID)
-	}
-
-	if p.AccessSecret == "" {
-		p.AccessSecret = viper.GetString(p.GetProviderName(), accessKeySecret)
-	}
-
 	client, err := ecs.NewClientWithAccessKey(p.Region, p.AccessKey, p.AccessSecret)
 	if err != nil {
 		return err

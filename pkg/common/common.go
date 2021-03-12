@@ -10,8 +10,6 @@ import (
 )
 
 const (
-	BindPrefix         = "autok3s.providers.%s.%s"
-	ConfigFile         = "config.yaml"
 	StateFile          = ".state"
 	KubeCfgFile        = ".kube/config"
 	KubeCfgTempName    = "autok3s-temp"

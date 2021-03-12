@@ -29,6 +29,12 @@ type Template struct {
 	IsDefault      bool `json:"is-default" gorm:"type:bool"`
 }
 
+type Credential struct {
+	ID       int    `json:"id" gorm:"type:integer"`
+	Provider string `json:"provider"`
+	Secrets  []byte `json:"secrets,omitempty" gorm:"type:bytes"`
+}
+
 type templateEvent struct {
 	Name   string
 	Object *Template
@@ -79,7 +85,7 @@ func (d *Store) hook(db *gorm.DB, event string) {
 					Object: temp,
 				})
 			}
-		} else {
+		} else if db.Statement.Schema.Name == "Cluster" {
 			state := convertToClusterState(db.Statement.Model)
 			if state != nil {
 				d.broadcaster.Broadcast(&clusterEvent{
@@ -413,4 +419,59 @@ func toTemplate(temp *Template) *apis.ClusterTemplate {
 	}
 	c.Options = opt
 	return c
+}
+
+func (d *Store) CreateCredential(cred *Credential) error {
+	// find exist provider credential
+	list, err := d.GetCredentialByProvider(cred.Provider)
+	if err != nil {
+		return err
+	}
+	if len(list) > 0 {
+		// TODO: need to support multiple credentials for each provider
+		logrus.Warnf("only support one credential for provider %s, will update with the new one.", cred.Provider)
+		credential := list[0]
+		credential.Secrets = cred.Secrets
+		result := d.DB.Updates(credential)
+		return result.Error
+	}
+	result := d.DB.Create(cred)
+	return result.Error
+}
+
+func (d *Store) UpdateCredential(cred *Credential) error {
+	result := d.DB.Model(cred).
+		Where("id = ? ", cred.ID).
+		Omit("id", "provider").Save(cred)
+	return result.Error
+}
+
+func (d *Store) ListCredential() ([]*Credential, error) {
+	list := []*Credential{}
+	result := d.DB.Find(&list)
+	return list, result.Error
+}
+
+func (d *Store) GetCredentialByProvider(provider string) ([]*Credential, error) {
+	list := []*Credential{}
+	result := d.DB.Where("provider = ? ", provider).Find(&list)
+	return list, result.Error
+}
+
+func (d *Store) GetCredential(id int) (*Credential, error) {
+	cred := &Credential{}
+	result := d.DB.Where("id = ? ", id).Find(cred)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, nil
+	}
+	return cred, nil
+}
+
+func (d *Store) DeleteCredential(id int) error {
+	cred := &Credential{}
+	result := d.DB.Where("id = ? ", id).Delete(cred)
+	return result.Error
 }

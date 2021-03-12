@@ -6,8 +6,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/aws"
 	"github.com/cnrancher/autok3s/pkg/utils"
-
-	"github.com/spf13/pflag"
 )
 
 const createUsageExample = `  autok3s -d create \
@@ -148,11 +146,12 @@ func (p *Amazon) GetSSHConfig() *types.SSH {
 	return ssh
 }
 
-func (p *Amazon) BindCredentialFlags() *pflag.FlagSet {
-	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
-	nfs.StringVar(&p.AccessKey, "access-key", p.AccessKey, "AWS access key")
-	nfs.StringVar(&p.SecretKey, "secret-key", p.SecretKey, "AWS secret key")
-	return nfs
+func (p *Amazon) BindCredential() error {
+	secretMap := map[string]string{
+		"access-key": p.AccessKey,
+		"secret-key": p.SecretKey,
+	}
+	return p.SaveCredential(secretMap)
 }
 
 func (p *Amazon) MergeClusterOptions() error {

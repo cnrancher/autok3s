@@ -1,7 +1,11 @@
 package native
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -11,6 +15,7 @@ import (
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
+	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"golang.org/x/sync/syncmap"
 )
@@ -40,10 +45,6 @@ func newProvider() *Native {
 	base.Provider = providerName
 	return &Native{
 		ProviderBase: base,
-		Options: native.Options{
-			MasterIps: "",
-			WorkerIps: "",
-		},
 	}
 }
 
@@ -52,7 +53,8 @@ func (p *Native) GetProviderName() string {
 }
 
 func (p *Native) GenerateClusterName() string {
-	return p.Name
+	p.ContextName = p.Name
+	return p.ContextName
 }
 
 func (p *Native) GenerateManifest() []string {
@@ -95,14 +97,17 @@ func (p *Native) CreateK3sCluster() (err error) {
 			p.Logger.Info(common.UsageInfoTitle)
 			p.Logger.Infof(common.UsageContext, p.Name)
 			p.Logger.Info(common.UsagePods)
-			if p.UI {
-				p.Logger.Infof("K3s UI URL: https://%s:8999", p.Status.MasterNodes[0].PublicIPAddress[0])
-			}
 		}
+		os.Remove(filepath.Join(p.getStatePath(), fmt.Sprintf("%s_%s", c.Name, common.StatusCreating)))
 		logFile.Close()
 	}()
+
 	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing create logic...", p.GetProviderName())
+	err = p.saveState(c, common.StatusCreating)
+	if err != nil {
+		return err
+	}
 
 	// set ssh default value
 	if p.SSHUser == "" {
@@ -138,6 +143,12 @@ func (p *Native) JoinK3sNode() (err error) {
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		os.Remove(filepath.Join(p.getStatePath(), fmt.Sprintf("%s_%s", c.Name, common.StatusUpgrading)))
+		logFile.Close()
+	}()
+
 	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing join logic...", p.GetProviderName())
 	// set ssh default value
@@ -146,6 +157,11 @@ func (p *Native) JoinK3sNode() (err error) {
 	}
 	if p.SSHPassword == "" && p.SSHKeyPath == "" {
 		p.SSHKeyPath = defaultSSHKeyPath
+	}
+
+	err = p.saveState(c, common.StatusUpgrading)
+	if err != nil {
+		return err
 	}
 
 	// assemble node status.
@@ -198,10 +214,17 @@ func (p *Native) JoinK3sNode() (err error) {
 	}
 
 	p.Logger.Infof("[%s] successfully executed join logic", p.GetProviderName())
-	return logFile.Close()
+	return nil
 }
 
 func (p *Native) Rollback() error {
+	logFile, err := common.GetLogFile(p.ContextName)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		logFile.Close()
+	}()
 	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 
 	ids := make([]string, 0)
@@ -233,10 +256,25 @@ func (p *Native) CreateCheck() error {
 	if p.MasterIps == "" {
 		return fmt.Errorf("[%s] cluster must have one master when create", p.GetProviderName())
 	}
+	// check file exists
+	if p.SSHKeyPath != "" {
+		if _, err := os.Stat(p.SSHKeyPath); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (p *Native) JoinCheck() error {
+	if p.MasterIps == "" && p.WorkerIps == "" {
+		return fmt.Errorf("[%s] cluster must have one node when join", p.GetProviderName())
+	}
+	// check file exists
+	if p.SSHKeyPath != "" {
+		if _, err := os.Stat(p.SSHKeyPath); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -265,18 +303,41 @@ func (p *Native) IsClusterExist() (bool, []string, error) {
 }
 
 func (p *Native) SetConfig(config []byte) error {
-	// no need to support
+	c, err := p.SetClusterConfig(config)
+	if err != nil {
+		return err
+	}
+	sourceOption := reflect.ValueOf(&p.Options).Elem()
+	b, err := json.Marshal(c.Options)
+	if err != nil {
+		return err
+	}
+	opt := &native.Options{}
+	err = json.Unmarshal(b, opt)
+	if err != nil {
+		return err
+	}
+	targetOption := reflect.ValueOf(opt).Elem()
+	utils.MergeConfig(sourceOption, targetOption)
 	return nil
 }
 
 func (p *Native) SetOptions(opt []byte) error {
-	// no need to support
+	sourceOption := reflect.ValueOf(&p.Options).Elem()
+	option := &native.Options{}
+	err := json.Unmarshal(opt, option)
+	if err != nil {
+		return err
+	}
+	targetOption := reflect.ValueOf(option).Elem()
+	utils.MergeConfig(sourceOption, targetOption)
 	return nil
 }
 
 func (p *Native) GetProviderOptions(opt []byte) (interface{}, error) {
-	// no need to support
-	return nil, nil
+	options := &native.Options{}
+	err := json.Unmarshal(opt, options)
+	return options, err
 }
 
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
@@ -336,4 +397,17 @@ func (p *Native) syncNodesMap(ipList []string, master bool, ssh *types.SSH) {
 			SSH:               *ssh,
 		})
 	}
+}
+
+func (p *Native) getStatePath() string {
+	return filepath.Join(common.GetLogPath(), p.GetProviderName())
+}
+
+func (p *Native) saveState(c *types.Cluster, status string) error {
+	statePath := p.getStatePath()
+	err := utils.EnsureFolderExist(statePath)
+	if err != nil {
+		return err
+	}
+	return utils.WriteYaml(c, statePath, fmt.Sprintf("%s_%s", c.Name, status))
 }

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/rancher/wrangler/pkg/schemas"
-
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
