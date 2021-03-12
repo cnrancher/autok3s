@@ -41,6 +41,7 @@ require (
 	github.com/briandowns/spinner v1.11.1
 	github.com/creack/pty v1.1.11
 	github.com/docker/docker v20.10.0-beta1.0.20201108103107-c7109494fe65+incompatible
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
@@ -55,7 +56,6 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e

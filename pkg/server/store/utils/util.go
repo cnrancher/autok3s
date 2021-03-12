@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"fmt"
+	"encoding/json"
 	"os"
 	"reflect"
 
@@ -10,27 +10,42 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/rancher/wrangler/pkg/schemas"
-	"github.com/spf13/viper"
+	"github.com/sirupsen/logrus"
 )
 
-func GetCredentialByProvider(p providers.Provider) (map[string]schemas.Field, error) {
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, err
-	}
+func GetCredentialFields(p providers.Provider) map[string]schemas.Field {
 	credFlags := p.GetCredentialFlags()
 	result := make(map[string]schemas.Field, 0)
 	for _, flag := range credFlags {
-		value := ""
-		if flag.EnvVar != "" && os.Getenv(flag.EnvVar) != "" {
-			value = os.Getenv(flag.EnvVar)
-		} else {
-			value = viper.GetString(fmt.Sprintf(common.BindPrefix, p.GetProviderName(), flag.Name))
-		}
 		result[flag.Name] = schemas.Field{
 			Type:        "password",
 			Description: flag.Usage,
 			Required:    flag.Required,
-			Default:     value,
+		}
+	}
+	return result
+}
+
+func GetCredentialByProvider(p providers.Provider) (map[string]schemas.Field, error) {
+	result := GetCredentialFields(p)
+	credList, err := common.DefaultDB.GetCredentialByProvider(p.GetProviderName())
+	if err != nil {
+		logrus.Errorf("failed to get credential for provider %s: %v", p.GetProviderName(), err)
+		return result, nil
+	}
+	if len(credList) > 0 {
+		cred := credList[0]
+		secrets := map[string]string{}
+		err = json.Unmarshal(cred.Secrets, &secrets)
+		if err != nil {
+			logrus.Errorf("failed to get convert credential secrets for provider %s: %v", p.GetProviderName(), err)
+			return result, nil
+		}
+		for name, field := range result {
+			if value, ok := secrets[name]; ok {
+				field.Default = value
+				result[name] = field
+			}
 		}
 	}
 	return result, nil

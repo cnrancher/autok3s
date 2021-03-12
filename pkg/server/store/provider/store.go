@@ -71,6 +71,7 @@ func toProviderObject(provider providers.Provider, schema *types.APISchema, id s
 			Name:    id,
 			Options: options,
 			Config:  config,
+			Secrets: utils.GetCredentialFields(provider),
 		},
 	}
 	return obj, nil

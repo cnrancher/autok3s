@@ -43,7 +43,7 @@ func initCredential(s *types.APISchemas) {
 	s.MustImportAndCustomize(autok3stypes.Credential{}, func(schema *types.APISchema) {
 		schema.Store = &credential.Store{}
 		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
-		schema.ResourceMethods = []string{http.MethodGet, http.MethodPut}
+		schema.ResourceMethods = []string{http.MethodGet, http.MethodPut, http.MethodDelete}
 	})
 }
 

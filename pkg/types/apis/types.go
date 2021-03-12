@@ -9,6 +9,7 @@ type Provider struct {
 	Name    string                   `json:"name"`
 	Options map[string]schemas.Field `json:"options,omitempty"`
 	Config  map[string]schemas.Field `json:"config,omitempty"`
+	Secrets map[string]schemas.Field `json:"secrets,omitempty"`
 }
 
 type Cluster struct {
@@ -18,9 +19,14 @@ type Cluster struct {
 }
 
 type Credential struct {
+	ID       int               `json:"id"`
+	Provider string            `json:"provider"`
+	Secrets  map[string]string `json:"secrets,omitempty"`
+}
+
+type ProviderCredential struct {
 	Provider     string                   `json:"provider"`
 	SecretFields map[string]schemas.Field `json:"secretFields"`
-	Secrets      map[string]string        `json:"secrets,omitempty"`
 }
 
 type Mutual struct {

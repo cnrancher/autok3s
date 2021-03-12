@@ -46,13 +46,16 @@ func CreateCommand() *cobra.Command {
 		if cProvider == "" {
 			logrus.Fatalln("required flags(s) \"--provider\" not set")
 		}
-		common.InitPFlags(cmd, cp)
+		common.BindEnvFlags(cmd)
 		return common.MakeSureCredentialFlag(cmd.Flags(), cp)
 	}
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
 		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>"
 		cp.GenerateClusterName()
+		if err := cp.BindCredential(); err != nil {
+			logrus.Fatalln(err)
+		}
 		if err := cp.CreateCheck(); err != nil {
 			logrus.Fatalln(err)
 		}

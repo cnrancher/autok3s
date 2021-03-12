@@ -8,7 +8,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types/apis"
 
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/pflag"
 )
 
 // Factory is a function that returns a Provider.Interface.
@@ -36,8 +35,6 @@ type Provider interface {
 	GetSSHFlags() []types.Flag
 	// Credential flags.
 	GetCredentialFlags() []types.Flag
-	// Use this method to bind Viper, although it is somewhat repetitive.
-	BindCredentialFlags() *pflag.FlagSet
 	// Generate cluster name.
 	GenerateClusterName() string
 	// create/join extra master args for different provider
@@ -80,6 +77,8 @@ type Provider interface {
 	GetCreateOptions() []types.Flag
 	// convert options to specified provider option interface
 	GetProviderOptions(opt []byte) (interface{}, error)
+	// persistent credential from flags to db
+	BindCredential() error
 }
 
 // RegisterProvider registers a provider.Factory by name.
@@ -110,11 +109,9 @@ func ListProviders() []apis.Provider {
 	defer providersMutex.Unlock()
 	list := make([]apis.Provider, 0)
 	for p := range providers {
-		if p != "native" {
-			list = append(list, apis.Provider{
-				Name: p,
-			})
-		}
+		list = append(list, apis.Provider{
+			Name: p,
+		})
 	}
 	return list
 }

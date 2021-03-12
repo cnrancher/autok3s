@@ -6,8 +6,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
-
-	"github.com/spf13/pflag"
 )
 
 const createUsageExample = `  autok3s -d create \
@@ -167,11 +165,12 @@ func (p *Tencent) GetSSHConfig() *types.SSH {
 	return ssh
 }
 
-func (p *Tencent) BindCredentialFlags() *pflag.FlagSet {
-	nfs := pflag.NewFlagSet("", pflag.ContinueOnError)
-	nfs.StringVar(&p.SecretID, secretID, p.SecretID, "User access key ID")
-	nfs.StringVar(&p.SecretKey, secretKey, p.SecretKey, "User access key secret")
-	return nfs
+func (p *Tencent) BindCredential() error {
+	secretMap := map[string]string{
+		secretID:  p.SecretID,
+		secretKey: p.SecretKey,
+	}
+	return p.SaveCredential(secretMap)
 }
 
 func (p *Tencent) sharedFlags() []types.Flag {

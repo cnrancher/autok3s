@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -12,48 +13,16 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
-func bindPFlags(cmd *cobra.Command, p providers.Provider) {
-	name, err := cmd.Flags().GetString("provider")
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-
-	cmd.Flags().Visit(func(f *pflag.Flag) {
-		if IsCredentialFlag(f.Name, p.BindCredentialFlags()) {
-			if err := viper.BindPFlag(fmt.Sprintf(common.BindPrefix, name, f.Name), f); err != nil {
-				logrus.Fatalln(err)
-			}
-		}
-	})
-}
-
-func InitPFlags(cmd *cobra.Command, p providers.Provider) {
-	// bind env to flags
-	bindEnvFlags(cmd)
-	bindPFlags(cmd, p)
-
-	// read options from config.
-	if err := viper.ReadInConfig(); err != nil {
-		logrus.Fatalln(err)
-	}
-
-	// sync config data to local cfg path.
-	if err := viper.WriteConfig(); err != nil {
-		logrus.Fatalln(err)
-	}
-}
-
-func bindEnvFlags(cmd *cobra.Command) {
+func BindEnvFlags(cmd *cobra.Command) {
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		envAnnotation := f.Annotations[utils.BashCompEnvVarFlag]
 		if len(envAnnotation) == 0 {
 			return
 		}
-
-		if os.Getenv(envAnnotation[0]) != "" {
+		v, _ := cmd.Flags().GetString(f.Name)
+		if v == "" && os.Getenv(envAnnotation[0]) != "" {
 			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", os.Getenv(envAnnotation[0])))
 		}
 	})
@@ -84,23 +53,39 @@ func FlagHackLookup(flagName string) string {
 	return ""
 }
 
-func IsCredentialFlag(s string, nfs *pflag.FlagSet) bool {
+func isCredentialFlag(s string, p providers.Provider) bool {
 	found := false
-	nfs.VisitAll(func(f *pflag.Flag) {
-		if strings.EqualFold(s, f.Name) {
+	credFlags := p.GetCredentialFlags()
+	for _, flag := range credFlags {
+		if strings.EqualFold(s, flag.Name) {
 			found = true
 		}
-	})
+	}
 	return found
 }
 
 func MakeSureCredentialFlag(flags *pflag.FlagSet, p providers.Provider) error {
 	flags.VisitAll(func(flag *pflag.Flag) {
-		// if viper has set the value, make sure flag has the value set to pass require check
-		if IsCredentialFlag(flag.Name, p.BindCredentialFlags()) && viper.IsSet(fmt.Sprintf(common.BindPrefix, p.GetProviderName(), flag.Name)) {
-			flags.Set(flag.Name, viper.GetString(fmt.Sprintf(common.BindPrefix, p.GetProviderName(), flag.Name)))
+		if isCredentialFlag(flag.Name, p) {
+			v, err := flags.GetString(flag.Name)
+			if err != nil || v == "" {
+				credentials, err := common.DefaultDB.GetCredentialByProvider(p.GetProviderName())
+				if err != nil {
+					logrus.Errorf("failed to get credential by provider %s: %v", p.GetProviderName(), err)
+					return
+				}
+				if len(credentials) > 0 {
+					cred := credentials[0]
+					secrets := map[string]string{}
+					err = json.Unmarshal(cred.Secrets, &secrets)
+					if err != nil {
+						logrus.Errorf("failed to convert credential value: %v", err)
+						return
+					}
+					flags.Set(flag.Name, secrets[flag.Name])
+				}
+			}
 		}
 	})
-
 	return nil
 }
