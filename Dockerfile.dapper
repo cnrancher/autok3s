@@ -1,11 +1,21 @@
-FROM golang:1.16.1-buster
+FROM karalabe/xgo-base
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-        xz-utils \
-        unzip \
-        netcat \
+        xz-utils unzip netcat wget \
+        --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # -- for make rules
+## install golang
+RUN wget --no-check-certificate -O - https://golang.org/dl/go1.16.2.linux-amd64.tar.gz | tar -xz -C /usr/local
+
+# Fix any stock package issues
+RUN ln -s /usr/include/asm-generic /usr/include/asm
+
+ENV PATH /usr/local/go/bin:$PATH
+RUN mkdir -p /go/src /go/bin && chmod -R 777 /go
+ENV GOPATH /go
+ENV PATH /go/bin:$PATH
+
 ## install docker client
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
         apt-transport-https \
@@ -21,6 +31,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
         docker-ce-cli=5:19.03.* \
     && rm -rf /var/lib/apt/lists/*; \
     docker --version
+
 ## install golangci-lint
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.38.0; \
@@ -51,4 +62,3 @@ ENV HOME ${DAPPER_SOURCE}
 
 WORKDIR ${DAPPER_SOURCE}
 ENTRYPOINT ["make", "-se", "autok3s"]
-

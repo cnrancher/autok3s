@@ -95,17 +95,41 @@ function build() {
     local os=${os_arch[0]}
     local arch=${os_arch[1]}
     if [[ "$os" == "windows" ]]; then
-        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
-          -ldflags "${version_flags} ${flags} ${ext_flags}" \
-          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" \
-          "${CURR_DIR}/main.go"
-        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" "${CURR_DIR}/dist/autok3s_${os}_${arch}.exe"
-    else
-        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+        if [[ "$arch" == "amd64" ]]; then
+            GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc-posix CXX=x86_64-w64-mingw32-g++-posix go build \
+              -ldflags "${version_flags} ${flags} ${ext_flags}" \
+              -o "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" \
+              "${CURR_DIR}/main.go"
+            cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" "${CURR_DIR}/dist/autok3s_${os}_${arch}.exe"
+        else
+            GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 CC=i686-w64-mingw32-gcc-posix CXX=i686-w64-mingw32-g++-posix go build \
+              -ldflags "${version_flags} ${flags} ${ext_flags}" \
+              -o "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" \
+              "${CURR_DIR}/main.go"
+            cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" "${CURR_DIR}/dist/autok3s_${os}_${arch}.exe"
+        fi
+    elif [[ "$arch" == "arm" ]]; then
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 GOARM=7 CC=arm-linux-gnueabihf-gcc-5 CXX=arm-linux-gnueabihf-g++-5 CGO_CFLAGS="-march=armv7-a -fPIC" CGO_CXXFLAGS="-march=armv7-a -fPIC" go build \
           -ldflags "${version_flags} ${flags} ${ext_flags}" \
           -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
           "${CURR_DIR}/main.go"
         cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+    elif [[ "$arch" == "arm64" ]]; then
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc-5 CXX=aarch64-linux-gnu-g++-5 go build \
+          -ldflags "${version_flags} ${flags} ${ext_flags}" \
+          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+          "${CURR_DIR}/main.go"
+        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+    else
+        if [[ "$os" == "darwin" ]]; then
+            echo "Skip darwin cross build"
+        else
+            GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+              -ldflags "${version_flags} ${flags} ${ext_flags}" \
+              -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+              "${CURR_DIR}/main.go"
+            cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+        fi
     fi
   done
 
@@ -291,5 +315,3 @@ if [[ ${BY:-} == "dapper" ]]; then
 else
   entry "$@"
 fi
-
-
