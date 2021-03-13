@@ -120,16 +120,18 @@ function build() {
           -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
           "${CURR_DIR}/main.go"
         cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+    elif [[ "$os" == "darwin" ]]; then
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+          -ldflags "${version_flags} ${flags}" \
+          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+          "${CURR_DIR}/main.go"
+        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
     else
-        if [[ "$os" == "darwin" ]]; then
-            echo "Skip darwin cross build"
-        else
-            GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
-              -ldflags "${version_flags} ${flags} ${ext_flags}" \
-              -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
-              "${CURR_DIR}/main.go"
-            cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
-        fi
+        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+          -ldflags "${version_flags} ${flags} ${ext_flags}" \
+          -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+          "${CURR_DIR}/main.go"
+        cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
     fi
   done
 
