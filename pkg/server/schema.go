@@ -10,6 +10,8 @@ import (
 	"github.com/cnrancher/autok3s/pkg/server/store/provider"
 	"github.com/cnrancher/autok3s/pkg/server/store/template"
 	"github.com/cnrancher/autok3s/pkg/server/store/websocket"
+	wkube "github.com/cnrancher/autok3s/pkg/server/store/websocket/kubectl"
+	"github.com/cnrancher/autok3s/pkg/server/store/websocket/ssh"
 	autok3stypes "github.com/cnrancher/autok3s/pkg/types/apis"
 
 	"github.com/rancher/apiserver/pkg/types"
@@ -51,7 +53,7 @@ func initMutual(s *types.APISchemas) {
 	s.MustImportAndCustomize(autok3stypes.Mutual{}, func(schema *types.APISchema) {
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{}
-		schema.ListHandler = websocket.Handler
+		schema.ListHandler = ssh.Handler
 	})
 }
 
@@ -60,7 +62,7 @@ func initKubeconfig(s *types.APISchemas) {
 		schema.Store = &kubectl.Store{}
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{http.MethodGet}
-		schema.ByIDHandler = websocket.KubeHandler
+		schema.ByIDHandler = wkube.KubeHandler
 	})
 }
 

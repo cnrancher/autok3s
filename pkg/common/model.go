@@ -85,7 +85,7 @@ func (d *Store) hook(db *gorm.DB, event string) {
 					Object: temp,
 				})
 			}
-		} else if db.Statement.Schema.Name == "Cluster" {
+		} else if db.Statement.Schema.Name == "ClusterState" {
 			state := convertToClusterState(db.Statement.Model)
 			if state != nil {
 				d.broadcaster.Broadcast(&clusterEvent{
