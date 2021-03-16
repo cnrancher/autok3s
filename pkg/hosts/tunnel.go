@@ -58,7 +58,6 @@ func (t *Tunnel) Terminal() error {
 	}
 	t.Modes = ssh.TerminalModes{
 		ssh.ECHO:          1,
-		ssh.VSTATUS:       1,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}

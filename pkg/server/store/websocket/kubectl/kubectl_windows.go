@@ -1,6 +1,6 @@
 // +build windows
 
-package websocket
+package kubectl
 
 import (
 	"fmt"
