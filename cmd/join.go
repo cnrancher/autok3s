@@ -43,7 +43,7 @@ func JoinCommand() *cobra.Command {
 
 	joinCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if jProvider == "" {
-			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+			logrus.Fatalln("required flag(s) \"[provider]\" not set")
 		}
 		common.BindEnvFlags(cmd)
 		err := jp.MergeClusterOptions()
@@ -51,7 +51,11 @@ func JoinCommand() *cobra.Command {
 			return err
 		}
 
-		return common.MakeSureCredentialFlag(cmd.Flags(), jp)
+		if err = common.MakeSureCredentialFlag(cmd.Flags(), jp); err != nil {
+			return err
+		}
+		utils.ValidateRequiredFlags(cmd.Flags())
+		return nil
 	}
 
 	joinCmd.Run = func(cmd *cobra.Command, args []string) {

@@ -44,10 +44,14 @@ func CreateCommand() *cobra.Command {
 
 	createCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if cProvider == "" {
-			logrus.Fatalln("required flags(s) \"--provider\" not set")
+			logrus.Fatalln("required flag(s) \"--provider\" not set")
 		}
 		common.BindEnvFlags(cmd)
-		return common.MakeSureCredentialFlag(cmd.Flags(), cp)
+		if err := common.MakeSureCredentialFlag(cmd.Flags(), cp); err != nil {
+			return err
+		}
+		utils.ValidateRequiredFlags(cmd.Flags())
+		return nil
 	}
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {

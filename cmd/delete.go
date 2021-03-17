@@ -44,7 +44,7 @@ func DeleteCommand() *cobra.Command {
 
 	deleteCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if dProvider == "" {
-			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+			logrus.Fatalln("required flag(s) \"[provider]\" not set")
 		}
 		common.BindEnvFlags(cmd)
 		err := dp.MergeClusterOptions()
@@ -52,7 +52,11 @@ func DeleteCommand() *cobra.Command {
 			return err
 		}
 
-		return common.MakeSureCredentialFlag(cmd.Flags(), dp)
+		if err = common.MakeSureCredentialFlag(cmd.Flags(), dp); err != nil {
+			return err
+		}
+		utils.ValidateRequiredFlags(cmd.Flags())
+		return nil
 	}
 
 	deleteCmd.Run = func(cmd *cobra.Command, args []string) {
