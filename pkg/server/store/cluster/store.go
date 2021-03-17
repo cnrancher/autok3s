@@ -32,6 +32,9 @@ func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, err.Error())
 	}
 	err = p.SetConfig(b)
+	if err != nil {
+		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, err.Error())
+	}
 	id := p.GenerateClusterName()
 	// save credential config
 	if providerName != "native" {
