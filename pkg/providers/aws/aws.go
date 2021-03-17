@@ -52,6 +52,8 @@ type Amazon struct {
 	*cluster.ProviderBase `json:",inline"`
 	typesaws.Options      `json:",inline"`
 	client                *ec2.EC2
+
+	spotInstanceRequestIDs []string
 }
 
 func init() {
@@ -75,6 +77,7 @@ func newProvider() *Amazon {
 			RequestSpotInstance:    requestSpotInstance,
 			CloudControllerManager: false,
 		},
+		spotInstanceRequestIDs: []string{},
 	}
 }
 
@@ -249,6 +252,13 @@ func (p *Amazon) Rollback() error {
 		return err
 	}
 	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
+
+	// cancel unfulfilled spot instance request
+	if len(p.spotInstanceRequestIDs) > 0 {
+		if err = p.cancelSpotInstance(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -378,6 +388,7 @@ func (p *Amazon) runInstances(num int, master bool, ssh *types.SSH) error {
 		}
 		for _, spotRequest := range spotInstanceRequest.SpotInstanceRequests {
 			requestID := spotRequest.SpotInstanceRequestId
+			p.spotInstanceRequestIDs = append(p.spotInstanceRequestIDs, aws.StringValue(requestID))
 			p.Logger.Infof("[%s] waiting for spot instance full filled", p.GetProviderName())
 			err = p.client.WaitUntilSpotInstanceRequestFulfilled(&ec2.DescribeSpotInstanceRequestsInput{
 				SpotInstanceRequestIds: []*string{requestID},
@@ -1223,4 +1234,14 @@ func (p *Amazon) terminateInstance(ids []string) error {
 		}
 	}
 	return nil
+}
+
+func (p *Amazon) cancelSpotInstance() error {
+	if p.client == nil {
+		p.newClient()
+	}
+	_, err := p.client.CancelSpotInstanceRequests(&ec2.CancelSpotInstanceRequestsInput{
+		SpotInstanceRequestIds: aws.StringSlice(p.spotInstanceRequestIDs),
+	})
+	return err
 }
