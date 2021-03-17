@@ -55,3 +55,18 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 
 	return cmd.Flags()
 }
+
+// ValidateRequiredFlags set `flag.Change` if the required flag has default value
+// but not changed by flags.Set to pass the required check
+// https://github.com/spf13/cobra/blob/v1.1.1/command.go#L1001
+func ValidateRequiredFlags(flags *pflag.FlagSet) {
+	flags.VisitAll(func(flag *pflag.Flag) {
+		requiredAnnotation, found := flag.Annotations[cobra.BashCompOneRequiredFlag]
+		if !found {
+			return
+		}
+		if (requiredAnnotation[0] == "true") && flag.Value.String() != "" && !flag.Changed {
+			flag.Changed = true
+		}
+	})
+}

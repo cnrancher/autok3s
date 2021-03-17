@@ -40,14 +40,18 @@ func SSHCommand() *cobra.Command {
 
 	sshCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if sProvider == "" {
-			logrus.Fatalln("required flags(s) \"[provider]\" not set")
+			logrus.Fatalln("required flag(s) \"[provider]\" not set")
 		}
 		common.BindEnvFlags(cmd)
 		err := sp.MergeClusterOptions()
 		if err != nil {
 			return err
 		}
-		return common.MakeSureCredentialFlag(cmd.Flags(), sp)
+		if err = common.MakeSureCredentialFlag(cmd.Flags(), sp); err != nil {
+			return err
+		}
+		utils.ValidateRequiredFlags(cmd.Flags())
+		return nil
 	}
 
 	sshCmd.Run = func(cmd *cobra.Command, args []string) {
