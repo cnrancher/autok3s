@@ -135,7 +135,7 @@ steps:
       DOCKER_PASSWORD:
         from_secret: docker_password
       REPO: cnrancher
-      WITHOUT_MANIFEST: true
+      WITHOUT_MANIFEST: false
     commands:
       - make autok3s package only
       - make autok3s deploy only
