@@ -350,6 +350,8 @@ autok3s -d create \
 
 ### Enabling Alibaba Cloud Controller Manager(CCM)
 
+Please check [here](https://github.com/kubernetes/cloud-provider-alibaba-cloud/blob/master/docs/getting-started.md) for more information about Aliyun Cloud Provider.
+
 ```bash
 autok3s -d create \
     ... \

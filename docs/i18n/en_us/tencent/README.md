@@ -293,7 +293,7 @@ autok3s -d create -p tencent --name myk3s --master 3 --registry /etc/autok3s/reg
 
 ### Enable Tencent Cloud Controller Manager
 
-You should create cluster route table if enabled CCM, and set `--router` with you router table name.
+You should create cluster route table if enabled [CCM](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/blob/master/docs/getting-started.md), and set `--router` with you router table name.
 
 Autok3s uses `10.42.0.0/16` as default cluster CIDR, your route table should set the same cidr-block.
 

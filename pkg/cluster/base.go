@@ -69,13 +69,13 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			Name:  "ui",
 			P:     &p.UI,
 			V:     p.UI,
-			Usage: "Enable K3s UI.",
+			Usage: "Enable K3s UI(kubernetes/dashboard). For how to login to UI, please see: https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md",
 		},
 		{
 			Name:  "cluster",
 			P:     &p.Cluster,
 			V:     p.Cluster,
-			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19)",
+			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19), see: https://rancher.com/docs/k3s/latest/en/installation/ha-embedded/",
 		},
 	}
 }
@@ -94,7 +94,7 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Name:  "ip",
 			P:     &p.IP,
 			V:     p.IP,
-			Usage: "Public IP of an existing k3s server",
+			Usage: "IP for an existing k3s server",
 		},
 		{
 			Name:  "k3s-version",
@@ -106,25 +106,25 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Name:  "k3s-channel",
 			P:     &p.K3sChannel,
 			V:     p.K3sChannel,
-			Usage: "Used to specify the release channel of k3s. e.g.(stable, latest, or i.e. v1.18)",
+			Usage: "Channel to use for fetching K3s download URL. Defaults to “stable”. Options include: stable, latest, testing",
 		},
 		{
 			Name:  "k3s-install-script",
 			P:     &p.InstallScript,
 			V:     p.InstallScript,
-			Usage: "Change the default upstream k3s install script address",
+			Usage: "Change the default upstream k3s install script address, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/#options-for-installation-with-script",
 		},
 		{
 			Name:  "master-extra-args",
 			P:     &p.MasterExtraArgs,
 			V:     p.MasterExtraArgs,
-			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--no-deploy metrics-server')",
+			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--no-deploy metrics-server'), for more information, please see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/",
 		},
 		{
 			Name:  "worker-extra-args",
 			P:     &p.WorkerExtraArgs,
 			V:     p.WorkerExtraArgs,
-			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute')",
+			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute'), for more information, please see: https://rancher.com/docs/k3s/latest/en/installation/install-options/agent-config/",
 		},
 		{
 			Name:  "registry",
@@ -136,13 +136,13 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Name:  "datastore",
 			P:     &p.DataStore,
 			V:     p.DataStore,
-			Usage: "K3s datastore, HA mode `create/join` master node needed this flag",
+			Usage: "K3s datastore endpoint, Specify etcd, Mysql, Postgres, or Sqlite (default) data source name, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/#database",
 		},
 		{
 			Name:  "token",
 			P:     &p.Token,
 			V:     p.Token,
-			Usage: "K3s master token, if empty will automatically generated",
+			Usage: "K3s token, if empty will automatically generated, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/#cluster-options",
 		},
 		{
 			Name:  "master",

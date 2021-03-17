@@ -21,13 +21,13 @@ type Options struct {
 	Region                  string            `json:"region,omitempty" yaml:"region,omitempty"`
 	Zone                    string            `json:"zone,omitempty" yaml:"zone,omitempty"`
 	EndpointURL             string            `json:"endpoint-url,omitempty" yaml:"endpoint-url,omitempty"`
-	SecurityGroupIds        string            `json:"security-group-ids,omitempty" yaml:"security-group-ids,omitempty"`
+	SecurityGroupIds        string            `json:"security-group,omitempty" yaml:"security-group,omitempty"`
 	KeypairID               string            `json:"keypair-id,omitempty" yaml:"keypair-id,omitempty"`
 	VpcID                   string            `json:"vpc-id,omitempty" yaml:"vpc-id,omitempty"`
 	SubnetID                string            `json:"subnet-id,omitempty" yaml:"subnet-id,omitempty"`
-	ImageID                 string            `json:"image-id,omitempty" yaml:"image-id,omitempty"`
+	ImageID                 string            `json:"image,omitempty" yaml:"image,omitempty"`
 	InstanceType            string            `json:"instance-type,omitempty" yaml:"instance-type,omitempty"`
-	SystemDiskType          string            `json:"disk-type,omitempty" yaml:"disk-type,omitempty"`
+	SystemDiskType          string            `json:"disk-category,omitempty" yaml:"disk-category,omitempty"`
 	SystemDiskSize          string            `json:"disk-size,omitempty" yaml:"disk-size,omitempty"`
 	InternetMaxBandwidthOut string            `json:"internet-max-bandwidth-out,omitempty" yaml:"internet-max-bandwidth-out,omitempty"`
 	PublicIPAssignedEIP     bool              `json:"eip" yaml:"eip"`
