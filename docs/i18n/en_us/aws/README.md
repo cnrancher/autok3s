@@ -268,7 +268,7 @@ autok3s -d create \
 
 ### Enabling AWS Cloud Controller Manager(CCM)
 
-Please check [this](https://kubernetes.github.io/cloud-provider-aws/prerequisites.html) to prepare IAM policies as prerequisites.
+Please check [this](https://github.com/kubernetes/cloud-provider-aws/blob/master/docs/prerequisites.md) to prepare IAM policies as prerequisites.
 
 ```bash
 autok3s -d create -p aws \

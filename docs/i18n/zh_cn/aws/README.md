@@ -266,7 +266,7 @@ configs:
 
 ### 启用 AWS CCM(Cloud Controller Manager)
 
-如果您要使用 AWS CCM 功能需要提前准备好两个 IAM policies，以保证 CCM 功能的正常使用，具体内容请参考[这里](https://kubernetes.github.io/cloud-provider-aws/prerequisites.html)
+如果您要使用 AWS CCM 功能需要提前准备好两个 IAM policies，以保证 CCM 功能的正常使用，具体内容请参考[这里](https://github.com/kubernetes/cloud-provider-aws/blob/master/docs/prerequisites.md)
 
 ```bash
 autok3s -d create -p aws \

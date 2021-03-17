@@ -350,6 +350,8 @@ autok3s -d create \
 
 ### 启用阿里云 CCM(Cloud Controller Manager)
 
+更多关于Aliyun Cloud Provider信息，请点击[这里](https://github.com/kubernetes/cloud-provider-alibaba-cloud/blob/master/docs/getting-started.md)查看
+
 ```bash
 autok3s -d create \
     ... \

@@ -297,7 +297,7 @@ configs:
 
 ### 启用腾讯云 CCM(Cloud Controller Manager)
 
-如果启用 CCM，您需要提前创建好集群路由表，以便 POD 可以通过 VPC 正常通信，并将路由表的名称通过`--router`参数传入。
+如果启用 [CCM](https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/blob/master/docs/getting-started.md)，您需要提前创建好集群路由表，以便 POD 可以通过 VPC 正常通信，并将路由表的名称通过`--router`参数传入。
 
 autok3s 默认使用的 cluster cidr 为`10.42.0.0/16`，您需要为该网段创建路由表。
 
