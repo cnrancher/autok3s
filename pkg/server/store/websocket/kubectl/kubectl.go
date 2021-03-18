@@ -91,9 +91,12 @@ func (s *Shell) startTerminal(ctx context.Context, rows, cols int) error {
 		return err
 	}
 	s.ptmx = p
+	r := websocketutil.NewReader(s.conn)
+	r.SetResizeFunction(s.ChangeSize)
 	w := websocketutil.NewWriter(s.conn)
+	go io.Copy(s.ptmx, r)
 	go io.Copy(w, s.ptmx)
-	return websocketutil.ReadMessage(ctx, s.conn, s.Close, s.WriteToShell, s.ChangeSize)
+	return websocketutil.ReadMessage(ctx, s.conn, s.Close, kubeBash.Wait, r.ClosedCh)
 }
 
 func (s *Shell) Close() {

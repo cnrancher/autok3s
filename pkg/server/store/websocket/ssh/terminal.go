@@ -22,6 +22,7 @@ type Terminal struct {
 	conn         *websocket.Conn
 	session      *ssh.Session
 	sshStdinPipe io.WriteCloser
+	reader       *websocketutils.TerminalReader
 }
 
 func NewTerminal(conn *websocket.Conn) *Terminal {
@@ -41,10 +42,10 @@ func (t *Terminal) StartTerminal(sshClient *hosts.Tunnel, rows, cols int) error 
 	}
 	t.session = s
 
-	t.sshStdinPipe, err = t.session.StdinPipe()
-	if err != nil {
-		return err
-	}
+	r := websocketutils.NewReader(t.conn)
+	r.SetResizeFunction(t.ChangeWindowSize)
+	t.reader = r
+	t.session.Stdin = r
 	w := websocketutils.NewWriter(t.conn)
 	t.session.Stdout = w
 	t.session.Stderr = w
@@ -55,15 +56,13 @@ func (t *Terminal) StartTerminal(sshClient *hosts.Tunnel, rows, cols int) error 
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
-	if err := t.session.RequestPty(term, rows, cols, modes); err != nil {
+	if err = t.session.RequestPty(term, rows, cols, modes); err != nil {
 		return err
 	}
 
-	if err := t.session.Shell(); err != nil {
+	if err = t.session.Shell(); err != nil {
 		return err
 	}
-
-	go t.session.Wait()
 
 	return nil
 }
@@ -85,7 +84,7 @@ func (t *Terminal) ChangeWindowSize(win *websocketutils.WindowSize) {
 }
 
 func (t *Terminal) ReadMessage(ctx context.Context) error {
-	return websocketutils.ReadMessage(ctx, t.conn, t.Close, t.WriteToTerminal, t.ChangeWindowSize)
+	return websocketutils.ReadMessage(ctx, t.conn, t.Close, t.session.Wait, t.reader.ClosedCh)
 }
 
 func getTunnel(id, node string) (*hosts.Tunnel, error) {

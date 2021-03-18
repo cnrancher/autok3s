@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -222,9 +223,8 @@ func (p *Native) Rollback() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		logFile.Close()
-	}()
+	defer logFile.Close()
+	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
 
 	ids := make([]string, 0)
@@ -258,7 +258,16 @@ func (p *Native) CreateCheck() error {
 	}
 	// check file exists
 	if p.SSHKeyPath != "" {
-		if _, err := os.Stat(p.SSHKeyPath); err != nil {
+		sshPrivateKey := p.SSHKeyPath
+		if strings.HasPrefix(sshPrivateKey, "~/") {
+			usr, err := user.Current()
+			if err != nil {
+				return fmt.Errorf("[%s] failed to get user home directory: %v", p.GetProviderName(), err)
+			}
+			baseDir := usr.HomeDir
+			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
+		}
+		if _, err := os.Stat(sshPrivateKey); err != nil {
 			return err
 		}
 	}
@@ -271,7 +280,16 @@ func (p *Native) JoinCheck() error {
 	}
 	// check file exists
 	if p.SSHKeyPath != "" {
-		if _, err := os.Stat(p.SSHKeyPath); err != nil {
+		sshPrivateKey := p.SSHKeyPath
+		if strings.HasPrefix(sshPrivateKey, "~/") {
+			usr, err := user.Current()
+			if err != nil {
+				return fmt.Errorf("[%s] failed to get user home directory: %v", p.GetProviderName(), err)
+			}
+			baseDir := usr.HomeDir
+			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
+		}
+		if _, err := os.Stat(sshPrivateKey); err != nil {
 			return err
 		}
 	}

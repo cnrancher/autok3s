@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -44,34 +45,86 @@ type WindowSize struct {
 	Height int
 }
 
-func ReadMessage(ctx context.Context, con *websocket.Conn, close func(), write func([]byte), changeSize func(size *WindowSize)) error {
+type changeSizeFunc func(size *WindowSize)
+
+type TerminalReader struct {
+	conn     *websocket.Conn
+	reader   io.Reader
+	resize   changeSizeFunc
+	ClosedCh chan bool
+}
+
+func NewReader(con *websocket.Conn) *TerminalReader {
+	return &TerminalReader{
+		conn:     con,
+		ClosedCh: make(chan bool, 1),
+	}
+}
+
+func (t *TerminalReader) SetResizeFunction(resizeFun func(size *WindowSize)) {
+	t.resize = resizeFun
+}
+
+func (t *TerminalReader) Read(p []byte) (int, error) {
+	var msgType int
+	var err error
+	for {
+		if t.reader == nil {
+			msgType, t.reader, err = t.conn.NextReader()
+			if err != nil {
+				t.reader = nil
+				t.ClosedCh <- true
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseNoStatusReceived) {
+					return 0, io.EOF
+				}
+				return 0, err
+			}
+		}
+		switch msgType {
+		case websocket.TextMessage:
+			body, e := ioutil.ReadAll(t.reader)
+			if e != nil {
+				logrus.Errorf("read text message error: %v", e)
+				break
+			}
+			r := &WindowSize{}
+			if err = json.Unmarshal(body, r); err != nil {
+				logrus.Errorf("[terminal] failed to convert resize object body: %v", err)
+				break
+			}
+			if r.Width > 0 && r.Height > 0 {
+				t.resize(r)
+			}
+		case websocket.BinaryMessage:
+			n, readErr := t.reader.Read(p)
+			return n, convert(readErr)
+		}
+		t.reader = nil
+	}
+}
+
+func ReadMessage(ctx context.Context, con *websocket.Conn, closeSession func(), wait func() error, stop chan bool) error {
+	sessionClosed := make(chan error, 1)
+	go func() {
+		sessionClosed <- wait()
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
-			close()
+			closeSession()
 			return nil
-		default:
-			msgType, data, err := con.ReadMessage()
-			if err != nil {
-				close()
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseNoStatusReceived) {
-					return nil
-				}
-				logrus.Errorf("[ssh terminal] read message error: %v", err)
-				return err
-			}
-			switch msgType {
-			case websocket.TextMessage:
-				r := &WindowSize{}
-				if err = json.Unmarshal(data, r); err != nil {
-					logrus.Errorf("[ssh terminal] failed to convert resize object body: %v", err)
-					continue
-				}
-				if r.Width > 0 && r.Height > 0 {
-					changeSize(r)
-				}
-			case websocket.BinaryMessage:
-				write(data)
+		case <-sessionClosed:
+			closeSession()
+			close(sessionClosed)
+			con.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "EOF"))
+			return nil
+		case isStop := <-stop:
+			// check stop from client
+			if isStop {
+				closeSession()
+				close(stop)
+				return nil
 			}
 		}
 	}
