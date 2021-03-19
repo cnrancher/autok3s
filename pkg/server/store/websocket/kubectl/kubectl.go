@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cnrancher/autok3s/pkg/common"
 	websocketutil "github.com/cnrancher/autok3s/pkg/server/store/websocket/utils"
 
 	"github.com/creack/pty"
@@ -75,12 +74,10 @@ func ptyHandler(apiOp *types.APIRequest) error {
 	s := &Shell{
 		conn: c,
 	}
-	return s.startTerminal(apiOp.Request.Context(), rows, columns)
+	return s.startTerminal(apiOp.Request.Context(), rows, columns, apiOp.Name)
 }
 
-func (s *Shell) startTerminal(ctx context.Context, rows, cols int) error {
-	os.Symlink(fmt.Sprintf("%s kubectl", os.Args[0]), fmt.Sprintf("%s/kubectl", common.CfgPath))
-
+func (s *Shell) startTerminal(ctx context.Context, rows, cols int, id string) error {
 	kubeBash := exec.CommandContext(ctx, "sh")
 	// Start the command with a pty.
 	p, err := pty.StartWithSize(kubeBash, &pty.Winsize{
@@ -94,6 +91,8 @@ func (s *Shell) startTerminal(ctx context.Context, rows, cols int) error {
 	r := websocketutil.NewReader(s.conn)
 	r.SetResizeFunction(s.ChangeSize)
 	w := websocketutil.NewWriter(s.conn)
+	aliasCmd := fmt.Sprintf("alias kubectl='%s kubectl --context %s'\n", os.Args[0], id)
+	s.ptmx.Write([]byte(aliasCmd))
 	go io.Copy(s.ptmx, r)
 	go io.Copy(w, s.ptmx)
 	return websocketutil.ReadMessage(ctx, s.conn, s.Close, kubeBash.Wait, r.ClosedCh)
