@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM scratch
+FROM --platform=$TARGETPLATFORM alpine
 
 # NB(thxCode): automatic platform ARGs, ref to:
 # - https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
