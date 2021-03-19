@@ -29,3 +29,5 @@ main
 !**/Dockerfile.dapper
 .autok3s/
 static/
+upx*.tar.xz
+upx*/
