@@ -78,7 +78,7 @@ func ptyHandler(apiOp *types.APIRequest) error {
 }
 
 func (s *Shell) startTerminal(ctx context.Context, rows, cols int, id string) error {
-	kubeBash := exec.CommandContext(ctx, "sh")
+	kubeBash := exec.CommandContext(ctx, "bash")
 	// Start the command with a pty.
 	p, err := pty.StartWithSize(kubeBash, &pty.Winsize{
 		Cols: uint16(cols),
@@ -92,6 +92,7 @@ func (s *Shell) startTerminal(ctx context.Context, rows, cols int, id string) er
 	r.SetResizeFunction(s.ChangeSize)
 	w := websocketutil.NewWriter(s.conn)
 	aliasCmd := fmt.Sprintf("alias kubectl='%s kubectl --context %s'\n", os.Args[0], id)
+	aliasCmd = fmt.Sprintf("%salias k='%s kubectl --context %s'\n", aliasCmd, os.Args[0], id)
 	s.ptmx.Write([]byte(aliasCmd))
 	go io.Copy(s.ptmx, r)
 	go io.Copy(w, s.ptmx)
