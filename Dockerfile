@@ -10,3 +10,4 @@ WORKDIR /
 VOLUME /var/lib/autok3s
 COPY bin/autok3s_${TARGETOS}_${TARGETARCH} /autok3s
 ENTRYPOINT ["/autok3s"]
+CMD ["serve", "--bind-address=0.0.0.0"]
