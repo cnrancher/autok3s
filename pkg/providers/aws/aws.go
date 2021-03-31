@@ -865,7 +865,7 @@ func (p *Amazon) createKeyPair(ssh *types.SSH) error {
 
 			if pk != nil {
 				keyName := p.ContextName
-				p.Logger.Infof("creating key pair: %s", keyName)
+				p.Logger.Infof("[%s] creating key pair: %s", p.GetProviderName(), keyName)
 				_, err = p.client.ImportKeyPair(&ec2.ImportKeyPairInput{
 					KeyName:           &keyName,
 					PublicKeyMaterial: pk,
