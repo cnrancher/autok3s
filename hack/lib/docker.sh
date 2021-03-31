@@ -34,13 +34,20 @@ function autok3s::docker::login() {
   return 0
 }
 
+function autok3s::docker::prebuild() {
+  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes i
+  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx create --name multibuilder
+  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx inspect multibuilder --bootstrap
+  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx use multibuilder
+}
+
 function autok3s::docker::build() {
   if ! autok3s::docker::validate; then
     autok3s::log::fatal "docker hasn't been installed"
   fi
   # NB(thxCode): use Docker buildkit to cross build images, ref to:
   # - https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope#buildkit
-  DOCKER_BUILDKIT=1 docker build "$@"
+  DOCKER_CLI_EXPERIMENTAL=enabled DOCKER_BUILDKIT=1 docker buildx build "$@"
 }
 
 function autok3s::docker::manifest() {

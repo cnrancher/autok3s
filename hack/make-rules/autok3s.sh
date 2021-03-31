@@ -149,6 +149,7 @@ function package() {
   local platforms
   if [[ "${CROSS:-false}" == "true" ]]; then
     autok3s::log::info "crossed packaging"
+    autok3s::docker::prebuild
     platforms=("${SUPPORTED_PLATFORMS[@]}")
   else
     local os="${OS:-$(go env GOOS)}"
@@ -167,7 +168,7 @@ function package() {
     autok3s::log::info "packaging ${image_tag}"
     autok3s::docker::build \
       --platform "${platform}" \
-      -t "${image_tag}" .
+      -t "${image_tag}" --load .
   done
   popd >/dev/null 2>&1
 
