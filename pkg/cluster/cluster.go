@@ -780,6 +780,9 @@ func registryTLSMap(registry *templates.Registry) (m map[string]map[string][]byt
 		if _, ok := m[r]; !ok {
 			m[r] = map[string][]byte{}
 		}
+		if c.TLS == nil {
+			continue
+		}
 		if c.TLS.CertFile != "" {
 			b, err := ioutil.ReadFile(c.TLS.CertFile)
 			if err != nil {
