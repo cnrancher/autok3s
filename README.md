@@ -6,7 +6,7 @@
     <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?color=default&label=release&logo=github">
     <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?include_prereleases&label=pre-release&logo=github">
   </p>
-  <span>English / </span> <a href="docs/i18n/zh_cn/README.md">简体中文</a>
+  <span>English / </span> <a href="http://docs.rancher.cn/docs/k3s/autok3s/_index/">Simplified Chinese</a>
 </div>
 
 <hr />
