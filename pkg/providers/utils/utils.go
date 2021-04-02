@@ -12,14 +12,14 @@ import (
 )
 
 // Borrowed from https://github.com/AliyunContainerService/docker-machine-driver-aliyunecs/blob/master/aliyunecs/utils.go#L38
-const digitals = "0123456789"
+const digital = "0123456789"
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 const specialChars = "()`~!@#$%^&*-+=|{}[]:;'<>,.?/"
-const dictionary = digitals + alphabet + specialChars
-const paswordLen = 16
+const dictionary = digital + alphabet + specialChars
+const passwordLen = 16
 
 func RandomPassword() string {
-	var bytes = make([]byte, paswordLen)
+	var bytes = make([]byte, passwordLen)
 	rand.Read(bytes)
 	for k, v := range bytes {
 		var ch byte
@@ -28,7 +28,7 @@ func RandomPassword() string {
 		case 0:
 			ch = alphabet[v%byte(len(alphabet))]
 		case 1:
-			ch = digitals[v%byte(len(digitals))]
+			ch = digital[v%byte(len(digital))]
 		case 2:
 			ch = specialChars[v%byte(len(specialChars))]
 		default:
