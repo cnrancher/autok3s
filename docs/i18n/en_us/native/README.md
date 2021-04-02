@@ -1,7 +1,5 @@
 # Native Provider
 
-English / [简体中文](https://github.com/cnrancher/autok3s/blob/master/docs/i18n/zh_cn/native/README.md)
-
 ## Introduction
 
 This article provides users with the instructions to create and launch a K3s cluster on a virtual machine(VM), and to add nodes for an existing K3s cluster on the VM. In additon, this article provides guidance of advanced usages of running K3s on VM, such as setting up private registry, and enabling UI components.

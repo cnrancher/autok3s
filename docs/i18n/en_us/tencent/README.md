@@ -1,7 +1,5 @@
 # Tencent Provider
 
-English / [简体中文](https://github.com/cnrancher/autok3s/blob/master/docs/i18n/zh_cn/tencent/README.md)
-
 ## Introduction
 
 This article provides users with the instructions to create and launch a K3s cluster on an Tencent CVM instance, and to add nodes for an existing K3s cluster on Tencent CVM instance. In additon, this article provides guidance of advanced usages of running K3s on Tencent CVM, such as setting up private registry, enabling Tencent CCM, and enabling UI components.
@@ -148,20 +146,8 @@ autok3s -d join --provider tencent --name myk3s --worker 1
 
 The commands to add one or more nodes for an existing HA K3s cluster varies based on the types of HA cluster. Please choose one of the following commands to run.
 
-#### Embedded etcd
-
-Run the command below, to add 2 master nodes for an Embedded etcd HA cluster(embedded etcd: >= 1.19.1-k3s1).
-
 ```bash
-autok3s -d join --provider tencent --name myk3s --master 2
-```
-
-#### External Database
-
-Run the command below, to add 2 master nodes for an HA cluster with external database, you will need to fill in `--datastore "PATH"` as well.
-
-```bash
-autok3s -d join --provider tencent --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+autok3s -d join --provider tencent --name myk3s --master 2 --worker 1
 ```
 
 ## Delete K3s Cluster
