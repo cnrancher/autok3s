@@ -33,53 +33,30 @@ node:
   instance: agent-amd64
 ---
 kind: pipeline
-name: integration-test
+name: build
 platform:
   os: linux
   arch: amd64
 steps:
-  - name: build
+  - name: build-amd64
     image: maiwj/drone-dapper:v0.4.2
     privileged: true
     environment:
       BY: dapper
       CROSS: false
     commands:
-      - make autok3s build only
+      - make autok3s build
     volumes:
       - name: docker
         path: /var/run/docker.sock
-  - name: verify
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - make autok3s unit only
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-volumes:
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-trigger:
-  event:
-    include:
-      - push
-      - pull_request
-node:
-  instance: agent-amd64
-depends_on:
-  - lint
----
-kind: pipeline
-name: cross-build
-platform:
-  os: linux
-  arch: amd64
-steps:
-  - name: build
+    when:
+      event:
+        include:
+          - push
+          - pull_request
+        exclude:
+          - tag
+  - name: build-cross
     image: maiwj/drone-dapper:v0.4.2
     privileged: true
     environment:
@@ -90,6 +67,9 @@ steps:
     volumes:
       - name: docker
         path: /var/run/docker.sock
+    when:
+      event:
+        - tag
   - name: compress
     image: maiwj/drone-dapper:v0.4.2
     privileged: true
@@ -107,7 +87,7 @@ steps:
       event:
         - tag
     depends_on:
-      - build
+      - build-cross
   - name: github_binary_release
     image: ibuildthecloud/github-release:v0.0.1
     settings:
@@ -184,7 +164,7 @@ trigger:
 node:
   instance: agent-amd64
 depends_on:
-  - integration-test
+  - lint
 ---
 kind: pipeline
 name: manifest
@@ -232,5 +212,5 @@ trigger:
 node:
   instance: agent-amd64
 depends_on:
-  - cross-build
+  - build
 
