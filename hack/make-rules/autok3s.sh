@@ -149,6 +149,12 @@ function package() {
   local platforms
   if [[ "${CROSS:-false}" == "true" ]]; then
     autok3s::log::info "crossed packaging"
+    local QEMU_ARCHS="arm aarch64"
+
+    for i in ${QEMU_ARCHS}; do
+      curl -fsSL https://github.com/multiarch/qemu-user-static/releases/download/v3.1.0-2/qemu-${i}-static.tar.gz | tar zxvf - -C /usr/bin;
+    done
+    chmod +x /usr/bin/qemu-*
     autok3s::docker::prebuild
     platforms=("${SUPPORTED_PLATFORMS[@]}")
   else
