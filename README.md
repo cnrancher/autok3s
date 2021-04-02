@@ -49,14 +49,15 @@ Autok3s can support the following providers, we are happy to add more if you nee
 
 ## Quick Start (tl;dr)
 
-Scenarios using Docker:
+Scenario 1 - Use Docker:
+
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 
 docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.4.0 serve --bind-address=0.0.0.0
 ```
 
-Scenarios using CLI:
+Scenario 2 - Use CLI:
 
 ```bash
 # The command use the shell script on MacOS and Linux, or visit the Releases page to download the executable for Windows.
@@ -96,11 +97,12 @@ Use `Makefile` to manage project compilation, testing and packaging.
 - packing: `make autok3s package only`
 
 Use `dapper` to manage project compilation, testing and packaging.
-Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
 
 - compilation: `BY=dapper make autok3s build`
 - testing: `BY=dapper make autok3s unit`
 - packing: `BY=dapper make autok3s package only`
+
+Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
 
 # License
 
