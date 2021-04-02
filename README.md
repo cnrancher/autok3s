@@ -96,11 +96,12 @@ Use `Makefile` to manage project compilation, testing and packaging.
 - packing: `make autok3s package only`
 
 Use `dapper` to manage project compilation, testing and packaging.
-Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
 
 - compilation: `BY=dapper make autok3s build`
 - testing: `BY=dapper make autok3s unit`
 - packing: `BY=dapper make autok3s package only`
+
+Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
 
 # License
 
