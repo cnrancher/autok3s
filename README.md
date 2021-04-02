@@ -65,8 +65,8 @@ curl -sS http://rancher-mirror.cnrancher.com/autok3s/install.sh  | sh
 
 # The commands below can create a K3s cluster on AWS EC2.
 
-export ECS_ACCESS_KEY_ID='<Your access key ID>'
-export ECS_ACCESS_KEY_SECRET='<Your secret access key>'
+export AWS_ACCESS_KEY_ID='<Your access key ID>'
+export AWS_SECRET_ACCESS_KEY='<Your secret access key>'
 
 autok3s -d create -p aws --name myk3s --master 1 --worker 1
 ```
@@ -93,7 +93,6 @@ Use `Makefile` to manage project compilation, testing and packaging.
 Of course, you can also choose to compile using `dapper`.
 Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
 
-- vendor: `GO111MODULE=on go mod vendor`
 - compilation: `make autok3s build`
 - testing: `make autok3s unit`
 - packing: `make autok3s package only`
