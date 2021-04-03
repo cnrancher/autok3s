@@ -36,9 +36,9 @@ function autok3s::docker::login() {
 
 function autok3s::docker::prebuild() {
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes i
-  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx create --name multibuilder
-  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx inspect multibuilder --bootstrap
-  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx use multibuilder
+  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx create --name multi-builder
+  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx inspect multi-builder --bootstrap
+  DOCKER_CLI_EXPERIMENTAL=enabled docker buildx use multi-builder
 }
 
 function autok3s::docker::build() {
