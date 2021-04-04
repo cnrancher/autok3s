@@ -44,6 +44,10 @@ func GetDefaultSSHKeyPath(clusterName, providerName string) string {
 	return filepath.Join(CfgPath, providerName, "clusters", clusterName, "id_rsa")
 }
 
+func GetDefaultSSHPublicKeyPath(clusterName, providerName string) string {
+	return filepath.Join(CfgPath, providerName, "clusters", clusterName, "id_rsa.pub")
+}
+
 func GetClusterPath(clusterName, providerName string) string {
 	return filepath.Join(CfgPath, providerName, "clusters", clusterName)
 }

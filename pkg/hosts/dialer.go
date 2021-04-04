@@ -11,7 +11,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/transport"
 )
 
 const (
@@ -35,17 +34,11 @@ type Dialer struct {
 	useSSHAgentAuth bool
 }
 
-type DialersOptions struct {
-	K8sWrapTransport transport.WrapperFunc
-}
-
 func SSHDialer(h *Host) (*Dialer, error) {
 	return newDialer(h, networkKind)
 }
 
 func (d *Dialer) OpenTunnel(timeout bool) (*Tunnel, error) {
-	wait.ErrWaitTimeout = fmt.Errorf("[dialer] calling openTunnel error. address [%s]", d.sshAddress)
-
 	var conn *ssh.Client
 	var err error
 
@@ -56,7 +49,7 @@ func (d *Dialer) OpenTunnel(timeout bool) (*Tunnel, error) {
 		}
 		return true, nil
 	}); err != nil {
-		return nil, fmt.Errorf("[dialer] failed to open ssh tunnel using address [%s]: %v", d.sshAddress, err)
+		return nil, fmt.Errorf("[dialer] calling openTunnel [%s] error: %w", d.sshAddress, err)
 	}
 
 	return &Tunnel{conn: conn}, nil

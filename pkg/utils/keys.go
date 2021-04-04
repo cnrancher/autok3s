@@ -133,3 +133,12 @@ func GenerateSSHKey(path string) error {
 
 	return nil
 }
+
+// RemoveSSHKey delete SSH keypair based on path.
+func RemoveSSHKey(path string) error {
+	if _, err := os.Stat(path); err == nil {
+		_ = os.Remove(path)
+	}
+
+	return nil
+}
