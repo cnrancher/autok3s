@@ -60,7 +60,7 @@ func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) ([]byte, 
 	} else {
 		keyPath = ssh.SSHKeyPath
 		if keypair != "" {
-			logrus.Infof("[%s] Using existing key pair %s", providerName, keypair)
+			logrus.Infof("[%s] use existing key pair %s", providerName, keypair)
 			return nil, nil
 		}
 	}

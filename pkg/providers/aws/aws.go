@@ -852,7 +852,7 @@ func (p *Amazon) createKeyPair(ssh *types.SSH) error {
 		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeypairName)
 	}
 
-	// check upload keypair
+	// check create & upload keypair
 	if ssh.SSHKeyPath == "" {
 		if _, err := os.Stat(common.GetDefaultSSHKeyPath(p.ContextName, p.GetProviderName())); err != nil {
 			if !os.IsNotExist(err) {
@@ -865,15 +865,25 @@ func (p *Amazon) createKeyPair(ssh *types.SSH) error {
 
 			if pk != nil {
 				keyName := p.ContextName
-				p.Logger.Infof("[%s] creating key pair: %s", p.GetProviderName(), keyName)
+				p.Logger.Infof("[%s] creating key pair %s...", p.GetProviderName(), keyName)
 				_, err = p.client.ImportKeyPair(&ec2.ImportKeyPairInput{
 					KeyName:           &keyName,
 					PublicKeyMaterial: pk,
 				})
 				if err != nil {
-					return err
+					if ae, ok := err.(awserr.Error); ok && strings.EqualFold(ae.Code(), "InvalidKeyPair.Duplicate") {
+						// atomicity preservation:
+						//   1. delete id_rsa & id_rsa.pub.
+						//   2. reset cluster's ssh-key-path'.
+						p.SSHKeyPath = ""
+						_ = utils.RemoveSSHKey(common.GetDefaultSSHKeyPath(p.ContextName, p.GetProviderName()))
+						_ = utils.RemoveSSHKey(common.GetDefaultSSHPublicKeyPath(p.ContextName, p.GetProviderName()))
+						return fmt.Errorf("[%s] key pair %s is duplicate on aws, please create new one or use the one which already exist on %s", p.GetProviderName(), keyName, p.GetProviderName())
+					}
+					return fmt.Errorf("[%s] created key pair %s error: %w", p.GetProviderName(), keyName, err)
 				}
 				p.KeypairName = keyName
+				p.Logger.Infof("[%s] successfully created key pair %s", p.GetProviderName(), keyName)
 			}
 		}
 		p.KeypairName = p.ContextName
