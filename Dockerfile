@@ -14,8 +14,10 @@ RUN mkdir /home/shell && \
     echo 'source <(autok3s kubectl completion bash)' >> /home/shell/.bashrc && \
     echo 'PS1="> "' >> /home/shell/.bashrc
 
+ENV AUTOK3S_CONFIG /root/.autok3s
+
 WORKDIR /home/shell
-VOLUME /var/lib/autok3s
+VOLUME /root/.autok3s
 COPY bin/autok3s_${TARGETOS}_${TARGETARCH} /usr/local/bin/autok3s
 ENTRYPOINT ["autok3s"]
 CMD ["serve", "--bind-address=0.0.0.0"]
