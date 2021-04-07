@@ -31,8 +31,8 @@ type Metadata struct {
 	DataStore       string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
 	K3sVersion      string `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
 	K3sChannel      string `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`
-	InstallScript   string `json:"installScript,omitempty" yaml:"installScript,omitempty"`
-	Mirror          string `json:"mirror,omitempty" yaml:"mirror,omitempty"`
+	InstallScript   string `json:"k3s-install-script,omitempty" yaml:"k3s-install-script,omitempty"`
+	Mirror          string `json:"k3s-install-mirror,omitempty" yaml:"k3s-install-mirror,omitempty"`
 	DockerMirror    string `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
 	DockerScript    string `json:"dockerScript,omitempty" yaml:"dockerScript,omitempty"`
 	Network         string `json:"network,omitempty" yaml:"network,omitempty"`

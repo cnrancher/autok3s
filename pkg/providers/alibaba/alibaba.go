@@ -153,23 +153,10 @@ func (p *Alibaba) JoinK3sNode() (err error) {
 }
 
 func (p *Alibaba) Rollback() error {
-	logFile, err := common.GetLogFile(p.ContextName)
-	if err != nil {
-		return err
-	}
-	p.Logger = common.NewLogger(common.Debug, logFile)
-	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
-	ids := make([]string, 0)
-	p.M.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		if v.RollBack {
-			ids = append(ids, key.(string))
-		}
-		return true
-	})
+	return p.RollbackCluster(p.rollbackInstance)
+}
 
-	p.Logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
-
+func (p *Alibaba) rollbackInstance(ids []string) error {
 	if len(ids) > 0 {
 		p.releaseEipAddresses(true)
 
@@ -198,9 +185,7 @@ func (p *Alibaba) Rollback() error {
 			return err
 		}
 	}
-
-	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
-	return logFile.Close()
+	return nil
 }
 
 func (p *Alibaba) DeleteK3sCluster(f bool) error {
@@ -417,6 +402,11 @@ func (p *Alibaba) deleteInstance(f bool) (string, error) {
 		return p.ContextName, nil
 	}
 
+	if p.UI && p.CloudControllerManager {
+		if err = p.ReleaseManifests(); err != nil {
+			return "", err
+		}
+	}
 	p.releaseEipAddresses(false)
 	if err == nil && len(ids) > 0 {
 		p.Logger.Infof("[%s] cluster %s will be deleted", p.GetProviderName(), p.Name)

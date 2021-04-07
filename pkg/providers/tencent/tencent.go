@@ -146,24 +146,10 @@ func (p *Tencent) JoinK3sNode() (err error) {
 }
 
 func (p *Tencent) Rollback() error {
-	logFile, err := common.GetLogFile(p.ContextName)
-	if err != nil {
-		return err
-	}
-	p.Logger = common.NewLogger(common.Debug, logFile)
-	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
+	return p.RollbackCluster(p.rollbackInstance)
+}
 
-	ids := make([]string, 0)
-	p.M.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		if v.RollBack {
-			ids = append(ids, key.(string))
-		}
-		return true
-	})
-
-	p.Logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
-
+func (p *Tencent) rollbackInstance(ids []string) error {
 	if len(ids) > 0 {
 		if p.PublicIPAssignedEIP {
 			eips, err := p.describeAddresses(nil, tencentCommon.StringPtrs(ids))
@@ -215,9 +201,7 @@ func (p *Tencent) Rollback() error {
 			return err
 		}
 	}
-
-	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
-	return logFile.Close()
+	return nil
 }
 
 func (p *Tencent) DeleteK3sCluster(f bool) error {
@@ -537,6 +521,12 @@ func (p *Tencent) deleteInstance(f bool) (string, error) {
 			return "", fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist", p.GetProviderName(), p.Name)
 		}
 		return p.ContextName, nil
+	}
+
+	if p.UI && p.CloudControllerManager {
+		if err = p.ReleaseManifests(); err != nil {
+			return "", err
+		}
 	}
 
 	taggedResource, err := p.describeResourcesByTags()
@@ -1082,7 +1072,12 @@ func (p *Tencent) configNetwork() error {
 
 		if resp != nil && resp.Response != nil && len(resp.Response.SubnetSet) > 0 {
 			p.Logger.Infof("[%s] find existed default subnet %s for vpc %s", p.GetProviderName(), subnetName, vpcName)
-			p.SubnetID = *resp.Response.SubnetSet[0].SubnetId
+			for _, subnet := range resp.Response.SubnetSet {
+				if *subnet.Zone == p.Zone {
+					p.SubnetID = *subnet.SubnetId
+					break
+				}
+			}
 		} else {
 			return p.generateDefaultSubnet()
 		}
