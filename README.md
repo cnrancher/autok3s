@@ -54,7 +54,7 @@ Scenario 1 - Use Docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 
-docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.4.0 serve --bind-address=0.0.0.0
+docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.4.1
 ```
 
 Scenario 2 - Use CLI:
