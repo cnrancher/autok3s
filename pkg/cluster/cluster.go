@@ -374,7 +374,8 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 	return terminal(&hosts.Host{Node: node})
 }
 
-func UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {
+func UninstallK3sNodes(nodes []types.Node, l *logrus.Logger) (warnMsg []string) {
+	logger = l
 	for _, node := range nodes {
 		if node.Master {
 			_, e := execute(&hosts.Host{Node: node}, []string{masterUninstallCommand})

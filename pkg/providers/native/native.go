@@ -219,37 +219,19 @@ func (p *Native) JoinK3sNode() (err error) {
 }
 
 func (p *Native) Rollback() error {
-	logFile, err := common.GetLogFile(p.ContextName)
-	if err != nil {
-		return err
-	}
-	defer logFile.Close()
-	p.Logger = common.NewLogger(common.Debug, logFile)
-	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
-
-	ids := make([]string, 0)
-	nodes := make([]types.Node, 0)
-	p.M.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		if v.RollBack {
-			ids = append(ids, key.(string))
-			nodes = append(nodes, v)
+	return p.RollbackCluster(func(ids []string) error {
+		nodes := []types.Node{}
+		for _, id := range ids {
+			if node, ok := p.M.Load(id); ok {
+				nodes = append(nodes, node.(types.Node))
+			}
 		}
-		return true
-	})
-
-	p.Logger.Infof("[%s] nodes %s will be rollback", p.GetProviderName(), ids)
-
-	if len(ids) > 0 {
-		warnMsg := cluster.UninstallK3sNodes(nodes)
+		warnMsg := cluster.UninstallK3sNodes(nodes, p.Logger)
 		for _, w := range warnMsg {
 			p.Logger.Warnf("[%s] %s", p.GetProviderName(), w)
 		}
-	}
-
-	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
-
-	return nil
+		return nil
+	})
 }
 
 func (p *Native) CreateCheck() error {

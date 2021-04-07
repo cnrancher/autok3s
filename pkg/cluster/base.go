@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -113,6 +115,12 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			P:     &p.InstallScript,
 			V:     p.InstallScript,
 			Usage: "Change the default upstream k3s install script address, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/#options-for-installation-with-script",
+		},
+		{
+			Name:  "k3s-install-mirror",
+			P:     &p.Mirror,
+			V:     p.Mirror,
+			Usage: "For Chinese users, set INSTALL_K3S_MIRROR=cn to use the mirror address to accelerate k3s binary file download",
 		},
 		{
 			Name:  "master-extra-args",
@@ -685,6 +693,9 @@ func (p *ProviderBase) Connect(ip string, ssh *types.SSH, c *types.Cluster, desc
 	p.Logger = common.NewLogger(common.Debug, nil)
 	p.Logger.Infof("[%s] executing ssh logic...", p.Provider)
 
+	if describeInstance == nil {
+		return fmt.Errorf("failed to list instance for provider %s", p.Provider)
+	}
 	instanceList, err := describeInstance()
 	if err != nil {
 		return err
@@ -720,5 +731,65 @@ func (p *ProviderBase) Connect(ip string, ssh *types.SSH, c *types.Cluster, desc
 	}
 
 	p.Logger.Infof("[%s] successfully executed ssh logic", p.Provider)
+	return nil
+}
+
+func (p *ProviderBase) RollbackCluster(rollbackInstance func(ids []string) error) error {
+	logFile, err := common.GetLogFile(p.ContextName)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		logFile.Close()
+	}()
+	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger.Infof("[%s] executing rollback logic...", p.Provider)
+	if rollbackInstance != nil {
+		ids := make([]string, 0)
+		p.M.Range(func(key, value interface{}) bool {
+			v := value.(types.Node)
+			if v.RollBack {
+				ids = append(ids, key.(string))
+			}
+			return true
+		})
+
+		p.Logger.Infof("[%s] instances %s will be rollback", p.Provider, ids)
+
+		// remove instance
+		if err = rollbackInstance(ids); err != nil {
+			return err
+		}
+		p.Logger.Infof("[%s] successfully executed rollback logic", p.Provider)
+	}
+
+	return nil
+}
+
+func (p *ProviderBase) ReleaseManifests() error {
+	// remove ui manifest to release ELB
+	masterIP := p.IP
+	for _, n := range p.Status.MasterNodes {
+		if n.InternalIPAddress[0] == masterIP {
+			dialer, err := hosts.SSHDialer(&hosts.Host{Node: n})
+			if err != nil {
+				return err
+			}
+			tunnel, err := dialer.OpenTunnel(true)
+			if err != nil {
+				return err
+			}
+			var (
+				stdout bytes.Buffer
+				stderr bytes.Buffer
+			)
+			tunnel.Writer = p.Logger.Out
+			tunnel.Cmd(fmt.Sprintf("sudo kubectl delete -f %s/ui.yaml", common.K3sManifestsDir))
+			tunnel.Cmd(fmt.Sprintf("sudo rm %s/ui.yaml", common.K3sManifestsDir))
+			tunnel.SetStdio(&stdout, &stderr).Run()
+			tunnel.Close()
+			break
+		}
+	}
 	return nil
 }

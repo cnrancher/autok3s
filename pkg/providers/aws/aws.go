@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
-	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -228,34 +226,17 @@ func (p *Amazon) SetConfig(config []byte) error {
 }
 
 func (p *Amazon) Rollback() error {
-	logFile, err := common.GetLogFile(p.ContextName)
-	if err != nil {
+	return p.RollbackCluster(p.rollbackInstance)
+}
+
+func (p *Amazon) rollbackInstance(ids []string) error {
+	if err := p.terminateInstance(ids); err != nil {
 		return err
 	}
-	defer func() {
-		logFile.Close()
-	}()
-	p.Logger = common.NewLogger(common.Debug, logFile)
-	p.Logger.Infof("[%s] executing rollback logic...", p.GetProviderName())
-	ids := make([]string, 0)
-	p.M.Range(func(key, value interface{}) bool {
-		v := value.(types.Node)
-		if v.RollBack {
-			ids = append(ids, key.(string))
-		}
-		return true
-	})
-
-	p.Logger.Infof("[%s] instances %s will be rollback", p.GetProviderName(), ids)
-
-	if err = p.terminateInstance(ids); err != nil {
-		return err
-	}
-	p.Logger.Infof("[%s] successfully executed rollback logic", p.GetProviderName())
 
 	// cancel unfulfilled spot instance request
 	if len(p.spotInstanceRequestIDs) > 0 {
-		if err = p.cancelSpotInstance(); err != nil {
+		if err := p.cancelSpotInstance(); err != nil {
 			return err
 		}
 	}
@@ -1088,29 +1069,8 @@ func (p *Amazon) deleteInstance(f bool) (string, error) {
 		return p.ContextName, nil
 	}
 	if p.UI && p.CloudControllerManager {
-		// remove ui manifest to release ELB
-		masterIP := p.IP
-		for _, n := range p.Status.MasterNodes {
-			if n.InternalIPAddress[0] == masterIP {
-				dialer, err := hosts.SSHDialer(&hosts.Host{Node: n})
-				if err != nil {
-					return "", err
-				}
-				tunnel, err := dialer.OpenTunnel(true)
-				if err != nil {
-					return "", err
-				}
-				var (
-					stdout bytes.Buffer
-					stderr bytes.Buffer
-				)
-				tunnel.Writer = p.Logger.Out
-				tunnel.Cmd(fmt.Sprintf("sudo kubectl delete -f %s/ui.yaml", common.K3sManifestsDir))
-				tunnel.Cmd(fmt.Sprintf("sudo rm %s/ui.yaml", common.K3sManifestsDir))
-				tunnel.SetStdio(&stdout, &stderr).Run()
-				tunnel.Close()
-				break
-			}
+		if err = p.ReleaseManifests(); err != nil {
+			return "", err
 		}
 	}
 	if err = p.terminateInstance(ids); err != nil {

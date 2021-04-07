@@ -43,7 +43,9 @@ func (p *Native) GetOptionFlags() []types.Flag {
 }
 
 func (p *Native) GetJoinFlags() []types.Flag {
-	return p.sharedFlags()
+	fs := p.sharedFlags()
+	fs = append(fs, p.GetClusterOptions()...)
+	return fs
 }
 
 func (p *Native) GetSSHFlags() []types.Flag {
