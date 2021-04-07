@@ -135,7 +135,7 @@ steps:
         exclude:
           - "refs/tags/*rc*"
     depends_on:
-      - compress
+      - package
 volumes:
   - name: docker
     host:
