@@ -283,15 +283,14 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 	c.Status = p.Status
 
 	// deploy k3s cluster
-	c.Logger = p.Logger
-	if err = InitK3sCluster(c); err != nil {
+	if err = p.InitK3sCluster(c); err != nil {
 		return err
 	}
 
 	// deploy manifests
 	extraManifests := deployPlugins()
 	if extraManifests != nil && len(extraManifests) > 0 {
-		if err = DeployExtraManifest(c, extraManifests); err != nil {
+		if err = p.DeployExtraManifest(c, extraManifests); err != nil {
 			return err
 		}
 		p.Logger.Infof("[%s] successfully deployed manifests", p.Provider)
@@ -362,10 +361,8 @@ func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, e
 		return true
 	})
 
-	c.Logger = p.Logger
-	added.Logger = p.Logger
 	// join K3s node.
-	if err := JoinK3sNode(c, added); err != nil {
+	if err := p.Join(c, added); err != nil {
 		return err
 	}
 
