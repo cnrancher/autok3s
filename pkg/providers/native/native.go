@@ -25,7 +25,6 @@ import (
 const providerName = "native"
 
 var (
-	dockerMirror      = ""
 	defaultUser       = "root"
 	defaultSSHKeyPath = "~/.ssh/id_rsa"
 )
