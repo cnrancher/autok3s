@@ -45,6 +45,12 @@ func (p *Native) GetOptionFlags() []types.Flag {
 func (p *Native) GetJoinFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, p.GetClusterOptions()...)
+	fs = append(fs, types.Flag{
+		Name:  "ip",
+		P:     &p.IP,
+		V:     p.IP,
+		Usage: "IP for an existing k3s server",
+	})
 	return fs
 }
 

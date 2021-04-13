@@ -282,5 +282,17 @@ func (p *Amazon) sharedFlags() []types.Flag {
 			V:     p.CloudControllerManager,
 			Usage: "Enable cloud-controller-manager component, for more information, please check https://github.com/kubernetes/cloud-provider-aws/blob/master/docs/getting_started.md",
 		},
+		{
+			Name:  "master",
+			P:     &p.Master,
+			V:     p.Master,
+			Usage: "Number of master node",
+		},
+		{
+			Name:  "worker",
+			P:     &p.Worker,
+			V:     p.Worker,
+			Usage: "Number of worker node",
+		},
 	}
 }
