@@ -12,7 +12,7 @@ import (
 const (
 	StateFile          = ".state"
 	KubeCfgFile        = ".kube/config"
-	KubeCfgTempName    = "autok3s-temp"
+	KubeCfgTempName    = "autok3s-temp-*"
 	K3sManifestsDir    = "/var/lib/rancher/k3s/server/manifests"
 	MasterInstanceName = "autok3s.%s.master"
 	WorkerInstanceName = "autok3s.%s.worker"
