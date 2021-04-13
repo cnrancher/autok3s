@@ -122,9 +122,8 @@ func (p *Native) CreateK3sCluster() (err error) {
 		return err
 	}
 	c.SSH = p.SSH
-	c.Logger = p.Logger
 	// initialize K3s cluster.
-	if err = cluster.InitK3sCluster(c); err != nil {
+	if err = p.InitK3sCluster(c); err != nil {
 		return
 	}
 	p.Logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
@@ -207,10 +206,8 @@ func (p *Native) JoinK3sNode() (err error) {
 
 	p.Options.MasterIps = strings.Join(masterIps, ",")
 	p.Options.WorkerIps = strings.Join(workerIps, ",")
-	c.Logger = p.Logger
-	added.Logger = p.Logger
 	// join K3s node.
-	if err := cluster.JoinK3sNode(c, added); err != nil {
+	if err := p.Join(c, added); err != nil {
 		return err
 	}
 
@@ -226,7 +223,7 @@ func (p *Native) Rollback() error {
 				nodes = append(nodes, node.(types.Node))
 			}
 		}
-		warnMsg := cluster.UninstallK3sNodes(nodes, p.Logger)
+		warnMsg := p.UninstallK3sNodes(nodes)
 		for _, w := range warnMsg {
 			p.Logger.Warnf("[%s] %s", p.GetProviderName(), w)
 		}
