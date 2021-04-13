@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,12 +26,9 @@ import (
 	yamlv3 "gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/kubectl/pkg/cmd/config"
-	"k8s.io/kubectl/pkg/scheme"
 )
 
 var (
@@ -185,7 +183,7 @@ func InitK3sCluster(cluster *types.Cluster) error {
 	if err := SaveCfg(cfg, publicIP, cluster.ContextName); err != nil {
 		return err
 	}
-
+	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 	cluster.Status.Status = common.StatusRunning
 
 	// write current cluster to state file.
@@ -415,29 +413,19 @@ func SaveCfg(cfg, ip, context string) error {
 		_ = temp.Close()
 	}()
 
-	err = utils.WriteBytesToYaml([]byte(result), tempPath, temp.Name()[strings.Index(temp.Name(), common.KubeCfgTempName):])
-	if err != nil {
-		return fmt.Errorf("[cluster] write content to kubecfg temp file error, msg: %s", err)
+	absPath, _ := filepath.Abs(temp.Name())
+	if err = ioutil.WriteFile(absPath, []byte(result), 0600); err != nil {
+		return fmt.Errorf("[cluster] write content to kubecfg temp file error: %v", err)
 	}
 
 	return mergeCfg(context, temp.Name())
 }
 
 func OverwriteCfg(context string) error {
-	c, err := clientcmd.LoadFromFile(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
-	if err != nil {
-		return err
-	}
-
-	delete(c.Clusters, context)
-	delete(c.Contexts, context)
-	delete(c.AuthInfos, context)
-	// clear current context
-	if c.CurrentContext == context {
-		c.CurrentContext = ""
-	}
-
-	return clientcmd.WriteToFile(*c, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+	path := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
+	fMgr := &common.ConfigFileManager{}
+	return fMgr.OverwriteCfg(path, context, fMgr.RemoveCfg)
 }
 
 func DeployExtraManifest(cluster *types.Cluster, cmds []string) error {
@@ -659,46 +647,18 @@ func terminal(host *hosts.Host) error {
 	return tunnel.Terminal()
 }
 
-func mergeCfg(context, right string) error {
+func mergeCfg(context, tempFile string) error {
 	defer func() {
-		if err := os.Remove(right); err != nil {
+		if err := os.Remove(tempFile); err != nil {
 			logrus.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
 		}
+		os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 	}()
 
-	if err := utils.EnsureFileExist(common.CfgPath, common.KubeCfgFile); err != nil {
-		return fmt.Errorf("[cluster] ensure kubecfg exist error, msg: %s", err)
-	}
-
-	if err := OverwriteCfg(context); err != nil {
-		return fmt.Errorf("[cluster] overwrite kubecfg error, msg: %s", err)
-	}
-
-	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s:%s",
-		fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), right)); err != nil {
-		return fmt.Errorf("[cluster] set env error when merging kubecfg, msg: %s", err)
-	}
-
-	out := &bytes.Buffer{}
-	opt := config.ViewOptions{
-		Flatten:      true,
-		PrintFlags:   genericclioptions.NewPrintFlags("").WithTypeSetter(scheme.Scheme).WithDefaultOutput("yaml"),
-		ConfigAccess: clientcmd.NewDefaultPathOptions(),
-		IOStreams:    genericclioptions.IOStreams{Out: out},
-	}
-	_ = opt.Merge.Set("true")
-
-	printer, err := opt.PrintFlags.ToPrinter()
-	if err != nil {
-		return fmt.Errorf("[cluster] generate view options error, msg: %s", err)
-	}
-	opt.PrintObject = printer.PrintObj
-
-	if err := opt.Run(); err != nil {
-		return fmt.Errorf("[cluster] merging kubecfg error, msg: %s", err)
-	}
-
-	return utils.WriteBytesToYaml(out.Bytes(), common.CfgPath, common.KubeCfgFile)
+	mergeKubeConfigENV := fmt.Sprintf("%s:%s", fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), tempFile)
+	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, mergeKubeConfigENV)
+	fMgr := &common.ConfigFileManager{}
+	return fMgr.OverwriteCfg(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), context, fMgr.MergeCfg)
 }
 
 func genK3sVersion(version, channel string) string {
