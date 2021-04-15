@@ -80,6 +80,11 @@ func joinHandler() http.Handler {
 			return
 		}
 		provider.GenerateClusterName()
+		if err = provider.JoinCheck(); err != nil {
+			rw.WriteHeader(http.StatusUnprocessableEntity)
+			rw.Write([]byte(err.Error()))
+			return
+		}
 
 		go func() {
 			err := provider.JoinK3sNode()
