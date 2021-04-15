@@ -146,6 +146,18 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			V:     p.Token,
 			Usage: "K3s token, if empty will automatically generated, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/#cluster-options",
 		},
+		{
+			Name:  "master",
+			P:     &p.Master,
+			V:     p.Master,
+			Usage: "Number of master node",
+		},
+		{
+			Name:  "worker",
+			P:     &p.Worker,
+			V:     p.Worker,
+			Usage: "Number of worker node",
+		},
 	}
 	fs = append(fs, p.GetSSHOptions()...)
 
