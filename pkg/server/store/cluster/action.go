@@ -52,11 +52,13 @@ func joinHandler() http.Handler {
 		if err != nil || state == nil {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte(fmt.Sprintf("cluster %s is not found", clusterID)))
+			return
 		}
 		provider, err := providers.GetProvider(state.Provider)
 		if err != nil {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte(fmt.Sprintf("provider %s is not found", state.Provider)))
+			return
 		}
 		provider.SetMetadata(&state.Metadata)
 		provider.SetOptions(state.Options)

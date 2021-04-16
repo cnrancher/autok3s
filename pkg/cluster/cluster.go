@@ -641,10 +641,12 @@ func mergeCfg(context, tempFile string) error {
 		}
 		os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 	}()
-
-	mergeKubeConfigENV := fmt.Sprintf("%s:%s", fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), tempFile)
-	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, mergeKubeConfigENV)
+	kubeConfigPath := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeConfigPath)
 	fMgr := &common.ConfigFileManager{}
+	fMgr.OverwriteCfg(kubeConfigPath, context, fMgr.RemoveCfg)
+	mergeKubeConfigENV := fmt.Sprintf("%s:%s", kubeConfigPath, tempFile)
+	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, mergeKubeConfigENV)
 	return fMgr.OverwriteCfg(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), context, fMgr.MergeCfg)
 }
 

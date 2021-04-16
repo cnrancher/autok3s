@@ -58,13 +58,14 @@ const providerName = "alibaba"
 
 var (
 	k3sMirror           = "INSTALL_K3S_MIRROR=cn"
-	deployCCMCommand    = "echo \"%s\" | base64 -d > \"%s/cloud-controller-manager.yaml\""
-	deployTerwayCommand = "echo \"%s\" | base64 -d > \"%s/terway.yaml\""
+	deployCCMCommand    = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
+	deployTerwayCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/terway.yaml\""
 )
 
 type Alibaba struct {
 	*cluster.ProviderBase `json:",inline"`
 	alibaba.Options       `json:",inline"`
+	VpcCIDR               string
 
 	c *ecs.Client
 	v *vpc.Client
@@ -86,7 +87,8 @@ func newProvider() *Alibaba {
 			DiskCategory:            diskCategory,
 			DiskSize:                diskSize,
 			Image:                   imageID,
-			Terway:                  alibaba.Terway{Mode: terway, MaxPoolSize: terwayMaxPoolSize},
+			Terway:                  terway,
+			TerwayMaxPoolSize:       terwayMaxPoolSize,
 			InstanceType:            instanceType,
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
 			Region:                  defaultRegion,
@@ -108,16 +110,16 @@ func (p *Alibaba) GenerateClusterName() string {
 
 func (p *Alibaba) GenerateManifest() []string {
 	extraManifests := make([]string, 0)
-	if strings.EqualFold(p.Terway.Mode, "eni") {
+	if strings.EqualFold(p.Terway, "eni") {
 		// deploy additional Terway manifests.
 		t := &alibaba.Terway{
-			Mode:          p.Terway.Mode,
+			Mode:          p.Terway,
 			AccessKey:     p.AccessKey,
 			AccessSecret:  p.AccessSecret,
-			CIDR:          p.Terway.CIDR,
+			CIDR:          p.VpcCIDR,
 			SecurityGroup: p.SecurityGroup,
 			VSwitches:     fmt.Sprintf(`{"%s":["%s"]}`, p.Region, p.VSwitch),
-			MaxPoolSize:   p.Terway.MaxPoolSize,
+			MaxPoolSize:   p.TerwayMaxPoolSize,
 		}
 		tmpl := fmt.Sprintf(terwayTmpl, t.AccessKey, t.AccessSecret, t.SecurityGroup, t.CIDR,
 			t.VSwitches, t.MaxPoolSize)
@@ -992,14 +994,14 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		p.Logger.Debugf("[%s] launching instance with auto-generated password...", p.GetProviderName())
 	}
 
-	if p.Terway.Mode != "none" {
+	if p.Terway != "none" {
 		vpcCIDR, err := p.getVpcCIDR()
 		if err != nil {
 			return nil, fmt.Errorf("[%s] calling preflight error: vpc %s cidr not be found",
 				p.GetProviderName(), p.Vpc)
 		}
 
-		p.Options.Terway.CIDR = vpcCIDR
+		p.VpcCIDR = vpcCIDR
 	}
 
 	// run ecs master instances.
@@ -1069,7 +1071,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	c.Mirror = k3sMirror
 
 	if option, ok := c.Options.(alibaba.Options); ok {
-		if strings.EqualFold(option.Terway.Mode, "eni") {
+		if strings.EqualFold(option.Terway, "eni") {
 			c.Network = "none"
 		}
 		if p.CloudControllerManager {
