@@ -120,7 +120,7 @@ func (p *Amazon) SSHK3sNode(ip string) error {
 		Options:  p.Options,
 		Status:   p.Status,
 	}
-	return p.Connect(ip, &p.SSH, c, p.getInstanceNodes, p.isInstanceRunning)
+	return p.Connect(ip, &p.SSH, c, p.getInstanceNodes, p.isInstanceRunning, nil)
 }
 
 func (p *Amazon) isInstanceRunning(state string) bool {

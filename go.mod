@@ -38,29 +38,31 @@ require (
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.35.24
-	github.com/briandowns/spinner v1.11.1
 	github.com/creack/pty v1.1.11
-	github.com/docker/docker v20.10.0-beta1.0.20201108103107-c7109494fe65+incompatible
+	github.com/docker/docker v20.10.5+incompatible
+	github.com/docker/go-units v0.4.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/ghodss/yaml v1.0.0
 	github.com/gofrs/flock v0.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hpcloud/tail v1.0.0
+	github.com/moby/term v0.0.0-20201110203204-bea5bbe245bf
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
+	github.com/rancher/k3d/v4 v4.4.1
 	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
 	github.com/rancher/wrangler v0.6.1
-	github.com/sirupsen/logrus v1.7.0
-	github.com/spf13/cobra v1.1.1
+	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.20.12

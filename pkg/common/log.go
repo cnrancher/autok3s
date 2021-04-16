@@ -17,7 +17,7 @@ func NewLogger(debug bool, w *os.File) *logrus.Logger {
 		FullTimestamp: true,
 	})
 	if w != nil {
-		mw := io.MultiWriter(os.Stdout, w)
+		mw := io.MultiWriter(os.Stderr, w)
 		logger.SetOutput(mw)
 	}
 
