@@ -23,6 +23,7 @@ import (
 	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -243,7 +244,8 @@ func (p *ProviderBase) GetCommonConfig(sshFunc func() *types.SSH) (map[string]sc
 	return metaConfig, nil
 }
 
-func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []string, prepare func(ssh *types.SSH) (*types.Cluster, error), rollbackInstance func(ids []string) error) error {
+func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []string,
+	cloudInstanceFunc func(ssh *types.SSH) (*types.Cluster, error), userDefinedKubeCfg func() (string, string, error), rollbackInstance func(ids []string) error) error {
 	logFile, err := common.GetLogFile(p.ContextName)
 	if err != nil {
 		return err
@@ -295,25 +297,44 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 		return err
 	}
 
-	c, err = prepare(&p.SSH)
+	c, err = cloudInstanceFunc(&p.SSH)
 	if err != nil {
 		return err
 	}
 	p.syncExistNodes()
 	c.Status = p.Status
 
-	// deploy k3s cluster.
-	if err = p.InitK3sCluster(c); err != nil {
-		return err
-	}
-
-	// deploy manifests.
-	extraManifests := deployPlugins()
-	if extraManifests != nil && len(extraManifests) > 0 {
-		if err = p.DeployExtraManifest(c, extraManifests); err != nil {
+	if userDefinedKubeCfg == nil {
+		// use install scripts to initialize K3s cluster.
+		if err = p.InitK3sCluster(c); err != nil {
 			return err
 		}
-		p.Logger.Infof("[%s] successfully deployed manifests", p.Provider)
+	} else {
+		// some providers do not need to initialize the K3s cluster with scripts,
+		// so we need to fill in the missing key information.
+		cfg, ip, err := userDefinedKubeCfg()
+		if err != nil {
+			return err
+		}
+		// save current cluster's kubeConfig.
+		if err := SaveCfg(cfg, ip, c.ContextName); err != nil {
+			return err
+		}
+		_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+		// change & save current cluster's status to database.
+		c.Status.Status = common.StatusRunning
+		err = common.DefaultDB.SaveCluster(c)
+	}
+
+	if deployPlugins != nil {
+		// install additional manifests to the current cluster.
+		extraManifests := deployPlugins()
+		if extraManifests != nil && len(extraManifests) > 0 {
+			if err = p.DeployExtraManifest(c, extraManifests); err != nil {
+				return err
+			}
+			p.Logger.Infof("[%s] successfully deployed manifests", p.Provider)
+		}
 	}
 
 	// deploy custom manifests
@@ -331,7 +352,8 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 	return nil
 }
 
-func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, error), syncExistInstance func() error, rollbackInstance func(ids []string) error) error {
+func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.Cluster, error),
+	syncExistInstance func() error, isAutoJoined bool, rollbackInstance func(ids []string) error) error {
 	if p.M == nil {
 		p.M = new(syncmap.Map)
 	}
@@ -375,15 +397,19 @@ func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, e
 		return err
 	}
 
-	c, err := prepare(&p.SSH)
+	c, err := cloudInstanceFunc(&p.SSH)
 	if err != nil {
 		p.Logger.Errorf("[%s] failed to prepare instance, got error %v", p.Provider, err)
 		return err
 	}
-	err = syncExistInstance()
-	if err != nil {
-		return err
+
+	if syncExistInstance != nil {
+		err = syncExistInstance()
+		if err != nil {
+			return err
+		}
 	}
+
 	p.syncExistNodes()
 	c.Status = p.Status
 
@@ -404,9 +430,16 @@ func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, e
 		return true
 	})
 
-	// join K3s node.
-	if err := p.Join(c, added); err != nil {
-		return err
+	if !isAutoJoined {
+		// execute k3s script to join nodes.
+		if err := p.Join(c, added); err != nil {
+			return err
+		}
+	} else {
+		// some providers do not need to execute the K3s join logic,
+		// so we need to fill in the missing key information.
+		state.Status = common.StatusRunning
+		err = common.DefaultDB.SaveClusterState(state)
 	}
 
 	p.Logger.Infof("[%s] successfully executed join logic", p.Provider)
@@ -513,8 +546,9 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 	return nil
 }
 
-func (p *ProviderBase) GetClusterStatus(kubeCfg string, c *types.ClusterInfo, describeInstance func() ([]types.Node, error)) *types.ClusterInfo {
+func (p *ProviderBase) GetClusterStatus(kubeCfg string, c *types.ClusterInfo, describeFunc func() ([]types.Node, error)) *types.ClusterInfo {
 	p.Logger = common.NewLogger(common.Debug, nil)
+
 	client, err := GetClusterConfig(p.ContextName, kubeCfg)
 	if err != nil {
 		p.Logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.Provider, p.ContextName, err)
@@ -522,30 +556,34 @@ func (p *ProviderBase) GetClusterStatus(kubeCfg string, c *types.ClusterInfo, de
 		c.Version = types.ClusterStatusUnknown
 		return c
 	}
+
 	c.Status = GetClusterStatus(client)
 	if c.Status == types.ClusterStatusRunning {
 		c.Version = GetClusterVersion(client)
 	} else {
 		c.Version = types.ClusterStatusUnknown
 	}
-	instanceList, err := describeInstance()
-	if err != nil {
-		p.Logger.Errorf("%v", err)
-		c.Master = "0"
-		c.Worker = "0"
-		return c
-	}
-	masterCount := 0
-	workerCount := 0
-	for _, ins := range instanceList {
-		if ins.Master {
-			masterCount++
-			continue
+
+	if describeFunc != nil {
+		instanceList, err := describeFunc()
+		if err != nil {
+			p.Logger.Errorf("%v", err)
+			c.Master = "0"
+			c.Worker = "0"
+			return c
 		}
-		workerCount++
+		masterCount := 0
+		workerCount := 0
+		for _, ins := range instanceList {
+			if ins.Master {
+				masterCount++
+				continue
+			}
+			workerCount++
+		}
+		c.Master = strconv.Itoa(masterCount)
+		c.Worker = strconv.Itoa(workerCount)
 	}
-	c.Master = strconv.Itoa(masterCount)
-	c.Worker = strconv.Itoa(workerCount)
 
 	return c
 }
@@ -686,46 +724,49 @@ func (p *ProviderBase) Describe(kubeCfg string, c *types.ClusterInfo, describeIn
 		return c
 	}
 	c.Status = GetClusterStatus(client)
-	instanceList, err := describeInstance()
-	if err != nil {
-		p.Logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.Provider, p.Name, err)
-		c.Master = "0"
-		c.Worker = "0"
-		return c
-	}
-	instanceNodes := make([]types.ClusterNode, 0)
-	masterCount := 0
-	workerCount := 0
-	for _, instance := range instanceList {
-		instanceNodes = append(instanceNodes, types.ClusterNode{
-			InstanceID:              instance.InstanceID,
-			InstanceStatus:          instance.InstanceStatus,
-			InternalIP:              instance.InternalIPAddress,
-			ExternalIP:              instance.PublicIPAddress,
-			Status:                  types.ClusterStatusUnknown,
-			ContainerRuntimeVersion: types.ClusterStatusUnknown,
-			Version:                 types.ClusterStatusUnknown,
-		})
-		if instance.Master {
-			masterCount++
-			continue
-		}
-		workerCount++
-	}
-	c.Master = strconv.Itoa(masterCount)
-	c.Worker = strconv.Itoa(workerCount)
-	c.Nodes = instanceNodes
-	if c.Status == types.ClusterStatusRunning {
-		c.Version = GetClusterVersion(client)
-		nodes, err := DescribeClusterNodes(client, instanceNodes)
+	if describeInstance != nil {
+		instanceList, err := describeInstance()
 		if err != nil {
-			p.Logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.Provider, p.Name, err)
+			p.Logger.Errorf("[%s] failed to get instance for cluster %s: %v", p.Provider, p.Name, err)
+			c.Master = "0"
+			c.Worker = "0"
 			return c
 		}
-		c.Nodes = nodes
-	} else {
-		c.Version = types.ClusterStatusUnknown
+		instanceNodes := make([]types.ClusterNode, 0)
+		masterCount := 0
+		workerCount := 0
+		for _, instance := range instanceList {
+			instanceNodes = append(instanceNodes, types.ClusterNode{
+				InstanceID:              instance.InstanceID,
+				InstanceStatus:          instance.InstanceStatus,
+				InternalIP:              instance.InternalIPAddress,
+				ExternalIP:              instance.PublicIPAddress,
+				Status:                  types.ClusterStatusUnknown,
+				ContainerRuntimeVersion: types.ClusterStatusUnknown,
+				Version:                 types.ClusterStatusUnknown,
+			})
+			if instance.Master {
+				masterCount++
+				continue
+			}
+			workerCount++
+		}
+		c.Master = strconv.Itoa(masterCount)
+		c.Worker = strconv.Itoa(workerCount)
+		c.Nodes = instanceNodes
+		if c.Status == types.ClusterStatusRunning {
+			c.Version = GetClusterVersion(client)
+			nodes, err := DescribeClusterNodes(client, instanceNodes)
+			if err != nil {
+				p.Logger.Errorf("[%s] failed to list nodes of cluster %s: %v", p.Provider, p.Name, err)
+				return c
+			}
+			c.Nodes = nodes
+		} else {
+			c.Version = types.ClusterStatusUnknown
+		}
 	}
+
 	return c
 }
 
