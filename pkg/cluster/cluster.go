@@ -156,7 +156,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	// get k3s cluster config.
-	cfg, err := p.execute(&hosts.Host{Node: cluster.MasterNodes[0]}, []string{catCfgCommand})
+	cfg, err := p.execute(&cluster.MasterNodes[0], []string{catCfgCommand})
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 
 	// deploy additional UI manifests.
 	if cluster.UI {
-		if _, err := p.execute(&hosts.Host{Node: cluster.MasterNodes[0]}, []string{fmt.Sprintf(deployUICommand,
+		if _, err := p.execute(&cluster.MasterNodes[0], []string{fmt.Sprintf(deployUICommand,
 			base64.StdEncoding.EncodeToString([]byte(dashboardTmpl)), common.K3sManifestsDir)}); err != nil {
 			return err
 		}
@@ -219,7 +219,7 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 			serverNode = added.WorkerNodes[0]
 		}
 		serverNode.PublicIPAddress = []string{merged.IP}
-		token, err := p.execute(&hosts.Host{Node: serverNode}, []string{getTokenCommand})
+		token, err := p.execute(&serverNode, []string{getTokenCommand})
 		if err != nil {
 			return err
 		}
@@ -307,14 +307,14 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 	var node types.Node
 
 	for _, n := range cluster.Status.MasterNodes {
-		if n.PublicIPAddress[0] == ip {
+		if n.PublicIPAddress[0] == ip || n.InstanceID == ip {
 			node = n
 			break
 		}
 	}
 
 	for _, n := range cluster.Status.WorkerNodes {
-		if n.PublicIPAddress[0] == ip {
+		if n.PublicIPAddress[0] == ip || n.InstanceID == ip {
 			node = n
 			break
 		}
@@ -357,18 +357,18 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 		return fmt.Errorf("couldn't ssh to chosen node with current ssh config: --ssh-user %s --ssh-port %s --ssh-password %s --ssh-key-path %s", node.SSH.SSHUser, node.SSH.SSHPort, node.SSH.SSHPassword, node.SSH.SSHKeyPath)
 	}
 
-	return terminal(&hosts.Host{Node: node})
+	return terminal(&node)
 }
 
 func (p *ProviderBase) UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {
 	for _, node := range nodes {
 		if node.Master {
-			_, e := p.execute(&hosts.Host{Node: node}, []string{masterUninstallCommand})
+			_, e := p.execute(&node, []string{masterUninstallCommand})
 			if e != nil {
 				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on master node %s: %s", node.InstanceID, e.Error()))
 			}
 		} else {
-			_, e := p.execute(&hosts.Host{Node: node}, []string{workerUninstallCommand})
+			_, e := p.execute(&node, []string{workerUninstallCommand})
 			if e != nil {
 				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on worker node %s: %s", node.InstanceID, e.Error()))
 			}
@@ -416,7 +416,7 @@ func OverwriteCfg(context string) error {
 }
 
 func (p *ProviderBase) DeployExtraManifest(cluster *types.Cluster, cmds []string) error {
-	if _, err := p.execute(&hosts.Host{Node: cluster.MasterNodes[0]}, cmds); err != nil {
+	if _, err := p.execute(&cluster.MasterNodes[0], cmds); err != nil {
 		return err
 	}
 	return nil
@@ -425,13 +425,13 @@ func (p *ProviderBase) DeployExtraManifest(cluster *types.Cluster, cmds []string
 func (p *ProviderBase) initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
 	if strings.Contains(extraArgs, "--docker") {
 		p.Logger.Infof("[cluster] install docker command %s", fmt.Sprintf(dockerCommand, dockerMirror))
-		if _, err := p.execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&master, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
 			return err
 		}
 	}
 
 	if cluster.Registry != "" || cluster.RegistryContent != "" {
-		if err := p.handleRegistry(&hosts.Host{Node: master}, cluster); err != nil {
+		if err := p.handleRegistry(&master, cluster); err != nil {
 			return err
 		}
 	}
@@ -439,7 +439,7 @@ func (p *ProviderBase) initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraA
 	p.Logger.Infof("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
 		ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
-	if _, err := p.execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(initCommand, k3sScript, k3sMirror,
+	if _, err := p.execute(&master, []string{fmt.Sprintf(initCommand, k3sScript, k3sMirror,
 		cluster.Token, ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		return err
 	}
@@ -451,13 +451,13 @@ func (p *ProviderBase) initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, 
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&master, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
 			return err
 		}
 	}
 
 	if cluster.Registry != "" || cluster.RegistryContent != "" {
-		if err := p.handleRegistry(&hosts.Host{Node: master}, cluster); err != nil {
+		if err := p.handleRegistry(&master, cluster); err != nil {
 			return err
 		}
 	}
@@ -471,7 +471,7 @@ func (p *ProviderBase) initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, 
 	p.Logger.Infof("[cluster] k3s additional master command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror,
 		ip, cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
-	if _, err := p.execute(&hosts.Host{Node: master}, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, ip,
+	if _, err := p.execute(&master, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, ip,
 		cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		return err
 	}
@@ -484,13 +484,13 @@ func (p *ProviderBase) initWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&hosts.Host{Node: worker}, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&worker, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
 			errChan <- err
 		}
 	}
 
 	if cluster.Registry != "" || cluster.RegistryContent != "" {
-		if err := p.handleRegistry(&hosts.Host{Node: worker}, cluster); err != nil {
+		if err := p.handleRegistry(&worker, cluster); err != nil {
 			errChan <- err
 		}
 	}
@@ -501,7 +501,7 @@ func (p *ProviderBase) initWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 	p.Logger.Infof("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
 		cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
-	if _, err := p.execute(&hosts.Host{Node: worker}, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
+	if _, err := p.execute(&worker, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
 		cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		errChan <- err
 	}
@@ -526,13 +526,13 @@ func (p *ProviderBase) joinMaster(k3sScript, k3sMirror, dockerMirror,
 	}
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&hosts.Host{Node: full}, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&full, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
 			return err
 		}
 	}
 
 	if merged.Registry != "" || merged.RegistryContent != "" {
-		if err := p.handleRegistry(&hosts.Host{Node: full}, merged); err != nil {
+		if err := p.handleRegistry(&full, merged); err != nil {
 			return err
 		}
 	}
@@ -543,7 +543,7 @@ func (p *ProviderBase) joinMaster(k3sScript, k3sMirror, dockerMirror,
 		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
 
 	// for now, use the workerCommand to join the additional master server node.
-	if _, err := p.execute(&hosts.Host{Node: full}, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
+	if _, err := p.execute(&full, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
 		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel))}); err != nil {
 		return err
 	}
@@ -556,13 +556,13 @@ func (p *ProviderBase) joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&hosts.Host{Node: full}, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&full, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
 			errChan <- err
 		}
 	}
 
 	if merged.Registry != "" || merged.RegistryContent != "" {
-		if err := p.handleRegistry(&hosts.Host{Node: full}, merged); err != nil {
+		if err := p.handleRegistry(&full, merged); err != nil {
 			errChan <- err
 		}
 	}
@@ -573,7 +573,7 @@ func (p *ProviderBase) joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 	p.Logger.Infof("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
 		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel)))
 
-	if _, err := p.execute(&hosts.Host{Node: full}, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
+	if _, err := p.execute(&full, []string{fmt.Sprintf(joinCommand, k3sScript, k3sMirror, merged.IP,
 		merged.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(merged.K3sVersion, merged.K3sChannel))}); err != nil {
 		errChan <- err
 	}
@@ -581,57 +581,50 @@ func (p *ProviderBase) joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 	wg.Done()
 }
 
-func (p *ProviderBase) execute(host *hosts.Host, cmds []string) (string, error) {
+func (p *ProviderBase) execute(n *types.Node, cmds []string) (string, error) {
 	if len(cmds) <= 0 {
 		return "", nil
 	}
 
-	dialer, err := hosts.SSHDialer(host)
+	dialer, err := hosts.NewSSHDialer(n, true)
 	if err != nil {
 		return "", err
 	}
 
-	tunnel, err := dialer.OpenTunnel(true)
-	if err != nil {
-		return "", err
-	}
 	defer func() {
-		_ = tunnel.Close()
+		_ = dialer.Close()
 	}()
-	tunnel.Writer = p.Logger.Out
-
-	for _, cmd := range cmds {
-		tunnel.Cmd(cmd)
-	}
 
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
-	tunnel.SetStdio(&stdout, &stderr)
+	dialer.SetStdio(&stdout, &stderr, nil).SetWriter(p.Logger.Out)
 
-	if err := tunnel.Run(); err != nil {
+	for _, cmd := range cmds {
+		dialer.Cmd(cmd)
+	}
+
+	if err := dialer.Run(); err != nil {
 		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
 	return stdout.String(), nil
 }
 
-func terminal(host *hosts.Host) error {
-	dialer, err := hosts.SSHDialer(host)
+func terminal(n *types.Node) error {
+	dialer, err := hosts.NewSSHDialer(n, true)
 	if err != nil {
 		return err
 	}
 
-	tunnel, err := dialer.OpenTunnel(false)
-	if err != nil {
-		return err
-	}
 	defer func() {
-		_ = tunnel.Close()
+		_ = dialer.Close()
 	}()
 
-	return tunnel.Terminal()
+	dialer.SetStdio(os.Stdout, os.Stderr, os.Stdin)
+
+	return dialer.Terminal()
 }
 
 func mergeCfg(context, tempFile string) error {
@@ -657,7 +650,7 @@ func genK3sVersion(version, channel string) string {
 	return fmt.Sprintf("INSTALL_K3S_CHANNEL='%s'", channel)
 }
 
-func (p *ProviderBase) handleRegistry(host *hosts.Host, c *types.Cluster) (err error) {
+func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err error) {
 	cmd := make([]string, 0)
 	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", registryPath))
 	var registry *templates.Registry
@@ -693,7 +686,7 @@ func (p *ProviderBase) handleRegistry(host *hosts.Host, c *types.Cluster) (err e
 
 	cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"/etc/rancher/k3s/registries.yaml\"",
 		base64.StdEncoding.EncodeToString([]byte(registryContent))))
-	_, err = p.execute(host, cmd)
+	_, err = p.execute(n, cmd)
 	return err
 }
 

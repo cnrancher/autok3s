@@ -3,18 +3,15 @@
 package kubectl
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
 
-	websocketutil "github.com/cnrancher/autok3s/pkg/server/store/websocket/utils"
+	"github.com/cnrancher/autok3s/pkg/hosts"
 
-	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/types"
@@ -73,51 +70,25 @@ func ptyHandler(apiOp *types.APIRequest) error {
 		_ = c.Close()
 	}()
 
-	s := &Shell{
-		conn: c,
-	}
-	return s.startTerminal(apiOp.Request.Context(), rows, columns, apiOp.Name)
-}
-
-func (s *Shell) startTerminal(ctx context.Context, rows, cols int, id string) error {
-	kubeBash := exec.CommandContext(ctx, "bash")
-	// Start the command with a pty.
-	p, err := pty.StartWithSize(kubeBash, &pty.Winsize{
-		Cols: uint16(cols),
-		Rows: uint16(rows),
-	})
+	dialer, err := hosts.NewWebSocketDialer(hosts.PtyKind, nil, c, exec.CommandContext(apiOp.Request.Context(), "bash"))
 	if err != nil {
 		return err
 	}
-	s.ptmx = p
-	r := websocketutil.NewReader(s.conn)
-	r.SetResizeFunction(s.ChangeSize)
-	w := websocketutil.NewWriter(s.conn)
-	aliasCmd := fmt.Sprintf("alias kubectl='kubectl --context %s'\n", id)
-	aliasCmd = fmt.Sprintf("%salias k='kubectl --context %s'\n", aliasCmd, id)
-	_, _ = s.ptmx.Write([]byte(aliasCmd))
-	go func() {
-		_, _ = io.Copy(s.ptmx, r)
-	}()
-	go func() {
-		_, _ = io.Copy(w, s.ptmx)
-	}()
-	return websocketutil.ReadMessage(ctx, s.conn, s.Close, kubeBash.Wait, r.ClosedCh)
-}
 
-func (s *Shell) Close() {
-	if s.ptmx != nil {
-		_ = s.ptmx.Close()
+	dialer.SetDefaultSize(rows, columns)
+
+	err = dialer.Terminal()
+	if err != nil {
+		return err
 	}
-}
 
-func (s *Shell) ChangeSize(win *websocketutil.WindowSize) {
-	_ = pty.Setsize(s.ptmx, &pty.Winsize{
-		Rows: uint16(win.Height),
-		Cols: uint16(win.Width),
-	})
-}
+	aliasCmd := fmt.Sprintf("alias kubectl='kubectl --context %s'\n", apiOp.Name)
+	aliasCmd = fmt.Sprintf("%salias k='kubectl --context %s'\n", aliasCmd, apiOp.Name)
 
-func (s *Shell) WriteToShell(data []byte) {
-	_, _ = s.ptmx.Write(data)
+	err = dialer.Write([]byte(aliasCmd))
+	if err != nil {
+		return err
+	}
+
+	return dialer.ReadMessage(apiOp.Context())
 }

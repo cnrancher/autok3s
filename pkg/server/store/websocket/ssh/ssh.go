@@ -1,10 +1,15 @@
 package ssh
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/hosts"
+	autok3stypes "github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/gorilla/websocket"
 	"github.com/rancher/apiserver/pkg/apierror"
@@ -64,19 +69,60 @@ func handler(apiOp *types.APIRequest) error {
 		_ = c.Close()
 	}()
 
-	tunnel, err := NewSSHClient(id, node)
+	dialer, err := newDialer(id, node, c)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = tunnel.Close()
-	}()
+	defer dialer.Close()
 
-	terminal := NewTerminal(c)
-	err = terminal.StartTerminal(tunnel, rows, columns)
+	dialer.SetDefaultSize(rows, columns)
+
+	err = dialer.Terminal()
 	if err != nil {
 		return err
 	}
 
-	return terminal.ReadMessage(apiOp.Context())
+	return dialer.ReadMessage(apiOp.Context())
+}
+
+func newDialer(id, node string, conn *websocket.Conn) (*hosts.WebSocketDialer, error) {
+	// get exist cluster's state from database.
+	state, err := common.DefaultDB.GetClusterByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if state == nil {
+		return nil, fmt.Errorf("cluster %s is not exist", id)
+	}
+
+	// aggregate exist cluster's nodes.
+	allNodes := make([]autok3stypes.Node, 0)
+	err = json.Unmarshal(state.MasterNodes, &allNodes)
+	if err != nil {
+		return nil, err
+	}
+	nodes := make([]autok3stypes.Node, 0)
+	err = json.Unmarshal(state.WorkerNodes, &nodes)
+	if err != nil {
+		return nil, err
+	}
+	allNodes = append(allNodes, nodes...)
+
+	var dialer *hosts.WebSocketDialer
+
+	// find the matching node and open dialer.
+	for _, n := range allNodes {
+		if n.InstanceID == node {
+			if state.Provider == "k3d" {
+				dialer, err = hosts.NewWebSocketDialer(hosts.DockerKind, &n, conn, nil)
+			} else {
+				dialer, err = hosts.NewWebSocketDialer(hosts.SSHKind, &n, conn, nil)
+			}
+			if err != nil {
+				return nil, err
+			}
+			return dialer, nil
+		}
+	}
+	return nil, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("node %s is not found for cluster [%s]", node, id))
 }
