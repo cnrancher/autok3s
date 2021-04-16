@@ -159,13 +159,13 @@ func (t *Tunnel) executeCommand(cmd string) error {
 
 	wg.Add(1)
 	go func() {
-		io.Copy(outWriter, stdoutPipe)
+		_, _ = io.Copy(outWriter, stdoutPipe)
 		wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
-		io.Copy(errWriter, stderrPipe)
+		_, _ = io.Copy(errWriter, stderrPipe)
 		wg.Done()
 	}()
 

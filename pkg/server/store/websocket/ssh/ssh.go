@@ -60,13 +60,17 @@ func handler(apiOp *types.APIRequest) error {
 	if err != nil {
 		return err
 	}
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	tunnel, err := NewSSHClient(id, node)
 	if err != nil {
 		return err
 	}
-	defer tunnel.Close()
+	defer func() {
+		_ = tunnel.Close()
+	}()
 
 	terminal := NewTerminal(c)
 	err = terminal.StartTerminal(tunnel, rows, columns)

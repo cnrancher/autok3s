@@ -20,7 +20,7 @@ const passwordLen = 16
 
 func RandomPassword() string {
 	var bytes = make([]byte, passwordLen)
-	rand.Read(bytes)
+	_, _ = rand.Read(bytes)
 	for k, v := range bytes {
 		var ch byte
 

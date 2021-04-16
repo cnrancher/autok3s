@@ -69,7 +69,9 @@ func ptyHandler(apiOp *types.APIRequest) error {
 	if err != nil {
 		return err
 	}
-	defer c.Close()
+	defer func() {
+		_ = c.Close()
+	}()
 
 	s := &Shell{
 		conn: c,
@@ -93,25 +95,29 @@ func (s *Shell) startTerminal(ctx context.Context, rows, cols int, id string) er
 	w := websocketutil.NewWriter(s.conn)
 	aliasCmd := fmt.Sprintf("alias kubectl='kubectl --context %s'\n", id)
 	aliasCmd = fmt.Sprintf("%salias k='kubectl --context %s'\n", aliasCmd, id)
-	s.ptmx.Write([]byte(aliasCmd))
-	go io.Copy(s.ptmx, r)
-	go io.Copy(w, s.ptmx)
+	_, _ = s.ptmx.Write([]byte(aliasCmd))
+	go func() {
+		_, _ = io.Copy(s.ptmx, r)
+	}()
+	go func() {
+		_, _ = io.Copy(w, s.ptmx)
+	}()
 	return websocketutil.ReadMessage(ctx, s.conn, s.Close, kubeBash.Wait, r.ClosedCh)
 }
 
 func (s *Shell) Close() {
 	if s.ptmx != nil {
-		s.ptmx.Close()
+		_ = s.ptmx.Close()
 	}
 }
 
 func (s *Shell) ChangeSize(win *websocketutil.WindowSize) {
-	pty.Setsize(s.ptmx, &pty.Winsize{
+	_ = pty.Setsize(s.ptmx, &pty.Winsize{
 		Rows: uint16(win.Height),
 		Cols: uint16(win.Width),
 	})
 }
 
 func (s *Shell) WriteToShell(data []byte) {
-	s.ptmx.Write(data)
+	_, _ = s.ptmx.Write(data)
 }

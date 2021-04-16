@@ -387,7 +387,7 @@ func (p *Amazon) runInstances(num int, master bool, ssh *types.SSH) error {
 				return err
 			}
 			if spotInstance != nil && spotInstance.SpotInstanceRequests != nil {
-				instanceIDs := []*string{}
+				instanceIDs := make([]*string, 0)
 				for _, spotIns := range spotInstance.SpotInstanceRequests {
 					instanceIDs = append(instanceIDs, spotIns.InstanceId)
 				}
@@ -426,7 +426,7 @@ func (p *Amazon) runInstances(num int, master bool, ssh *types.SSH) error {
 		instanceList = inst.Instances
 	}
 
-	ids := []*string{}
+	ids := make([]*string, 0)
 	for _, ins := range instanceList {
 		ids = append(ids, ins.InstanceId)
 		p.M.Store(aws.StringValue(ins.InstanceId),
@@ -541,7 +541,7 @@ func (p *Amazon) getInstanceNodes() ([]types.Node, error) {
 	if err != nil || len(output) == 0 {
 		return nil, fmt.Errorf("[%s] there's no instance for cluster %s: %v", p.GetProviderName(), p.ContextName, err)
 	}
-	nodes := []types.Node{}
+	nodes := make([]types.Node, 0)
 	for _, instance := range output {
 		if aws.StringValue(instance.State.Name) == ec2.InstanceStateNameTerminated {
 			continue
@@ -614,7 +614,7 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 		MaxResults: aws.Int64(int64(50)),
 	}
 
-	instanceList := []*ec2.Instance{}
+	instanceList := make([]*ec2.Instance, 0)
 	for {
 		output, err := p.client.DescribeInstances(describeInput)
 		if output == nil || err != nil {
@@ -984,7 +984,7 @@ func (p *Amazon) getSecurityGroup(id *string) (*ec2.SecurityGroup, error) {
 }
 
 func (p *Amazon) configPermission(group *ec2.SecurityGroup) []*ec2.IpPermission {
-	perms := []*ec2.IpPermission{}
+	perms := make([]*ec2.IpPermission, 0)
 	hasPorts := make(map[string]bool)
 	for _, p := range group.IpPermissions {
 		if p.FromPort != nil {

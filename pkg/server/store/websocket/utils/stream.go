@@ -25,7 +25,9 @@ func (s *BinaryWriter) Write(p []byte) (int, error) {
 	if err != nil {
 		return 0, convert(err)
 	}
-	defer w.Close()
+	defer func() {
+		_ = w.Close()
+	}()
 	n, err := w.Write(p)
 	return n, err
 }
@@ -117,7 +119,7 @@ func ReadMessage(ctx context.Context, con *websocket.Conn, closeSession func(), 
 		case <-sessionClosed:
 			closeSession()
 			close(sessionClosed)
-			con.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "EOF"))
+			_ = con.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "EOF"))
 			return nil
 		case isStop := <-stop:
 			// check stop from client

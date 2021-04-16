@@ -17,12 +17,12 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
-// This file Borrowed from https://github.com/docker/machine/blob/master/libmachine/ssh/keys.go
+// This file Borrowed from https://github.com/docker/machine/blob/master/libmachine/ssh/keys.go.
 var (
-	ErrKeyGeneration     = errors.New("Unable to generate key")
-	ErrValidation        = errors.New("Unable to validate key")
-	ErrPublicKey         = errors.New("Unable to convert public key")
-	ErrUnableToWriteFile = errors.New("Unable to write file")
+	ErrKeyGeneration     = errors.New("unable to generate key")
+	ErrValidation        = errors.New("unable to validate key")
+	ErrPublicKey         = errors.New("unable to convert public key")
+	ErrUnableToWriteFile = errors.New("unable to write file")
 )
 
 type KeyPair struct {
@@ -55,7 +55,7 @@ func NewKeyPair() (keyPair *KeyPair, err error) {
 	}, nil
 }
 
-// WriteToFile writes keypair to files
+// WriteToFile writes keypair to files.
 func (kp *KeyPair) WriteToFile(privateKeyPath string, publicKeyPath string) error {
 	files := []struct {
 		File  string
@@ -73,7 +73,7 @@ func (kp *KeyPair) WriteToFile(privateKeyPath string, publicKeyPath string) erro
 	}
 
 	for _, v := range files {
-		// ensure folder exist
+		// ensure folder exist.
 		baseDir := path.Dir(v.File)
 		if _, err := os.Stat(baseDir); err != nil {
 			if os.IsNotExist(err) {
@@ -103,31 +103,31 @@ func (kp *KeyPair) WriteToFile(privateKeyPath string, publicKeyPath string) erro
 	return nil
 }
 
-// Fingerprint calculates the fingerprint of the public key
+// Fingerprint calculates the fingerprint of the public key.
 func (kp *KeyPair) Fingerprint() string {
 	b, _ := base64.StdEncoding.DecodeString(string(kp.PublicKey))
 	h := md5.New()
 
-	io.WriteString(h, string(b))
+	_, _ = io.WriteString(h, string(b))
 
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 // GenerateSSHKey generates SSH keypair based on path of the private key
-// The public key would be generated to the same path with ".pub" added
+// The public key would be generated to the same path with ".pub" added.
 func GenerateSSHKey(path string) error {
 	if _, err := os.Stat(path); err != nil {
 		if !os.IsNotExist(err) {
-			return fmt.Errorf("Desired directory for SSH keys does not exist: %s", err)
+			return fmt.Errorf("desired directory for SSH keys does not exist: %s", err)
 		}
 
 		kp, err := NewKeyPair()
 		if err != nil {
-			return fmt.Errorf("Error generating key pair: %s", err)
+			return fmt.Errorf("error generating key pair: %s", err)
 		}
 
 		if err := kp.WriteToFile(path, fmt.Sprintf("%s.pub", path)); err != nil {
-			return fmt.Errorf("Error writing keys to file(s): %s", err)
+			return fmt.Errorf("error writing keys to file(s): %s", err)
 		}
 	}
 

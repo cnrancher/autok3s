@@ -14,14 +14,14 @@ import (
 
 func TestMergeConfig(t *testing.T) {
 	path := "./test.lock"
-	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
 	_, err := os.Create(path)
 	assert.Nil(t, err)
 	defer func() {
 		c, err := clientcmd.LoadFromFile(path)
 		assert.Nil(t, err)
 		assert.Len(t, c.Clusters, 0)
-		os.Remove(path)
+		_ = os.Remove(path)
 	}()
 
 	config := api.Config{
@@ -29,7 +29,7 @@ func TestMergeConfig(t *testing.T) {
 	}
 	config.Clusters["test1"] = &api.Cluster{}
 	config.Clusters["test2"] = &api.Cluster{}
-	clientcmd.WriteToFile(config, path)
+	_ = clientcmd.WriteToFile(config, path)
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {

@@ -18,12 +18,12 @@ var (
 	providers      = make(map[string]Factory)
 )
 
-// Provider is an abstract, pluggable interface for k3s provider
+// Provider is an abstract, pluggable interface for k3s provider.
 type Provider interface {
 	GetProviderName() string
 	// Get command usage example.
 	GetUsageExample(action string) string
-	// create flags
+	// create flags.
 	GetCreateFlags() []types.Flag
 	// Create flags of provider options.
 	GetOptionFlags() []types.Flag
@@ -37,9 +37,9 @@ type Provider interface {
 	GetCredentialFlags() []types.Flag
 	// Generate cluster name.
 	GenerateClusterName() string
-	// create/join extra master args for different provider
+	// create/join extra master args for different provider.
 	GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string
-	// create/join extra worker args for different provider
+	// create/join extra worker args for different provider.
 	GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string
 	// K3s create cluster interface.
 	CreateK3sCluster() error
@@ -53,29 +53,29 @@ type Provider interface {
 	IsClusterExist() (bool, []string, error)
 	// merge exist cluster options
 	MergeClusterOptions() error
-	// describe detailed cluster information
+	// describe detailed cluster information.
 	DescribeCluster(kubecfg string) *types.ClusterInfo
-	// get cluster simple information
+	// get cluster simple information.
 	GetCluster(kubecfg string) *types.ClusterInfo
-	// get default ssh config for provider
+	// get default ssh config for provider.
 	GetSSHConfig() *types.SSH
-	// set cluster configuration of provider
+	// set cluster configuration of provider.
 	SetConfig(config []byte) error
-	// validate create flags
+	// validate create flags.
 	CreateCheck() error
-	// merge metadata configs for provider
+	// merge metadata configs for provider.
 	SetMetadata(config *types.Metadata)
-	// merge provider options
+	// merge provider options.
 	SetOptions(opt []byte) error
-	// validate join flags
+	// validate join flags.
 	JoinCheck() error
-	// get cluster config options
+	// get cluster config options.
 	GetClusterOptions() []types.Flag
-	// get create command options
+	// get create command options.
 	GetCreateOptions() []types.Flag
-	// convert options to specified provider option interface
+	// convert options to specified provider option interface.
 	GetProviderOptions(opt []byte) (interface{}, error)
-	// persistent credential from flags to db
+	// persistent credential from flags to db.
 	BindCredential() error
 	// callback functions used for execute logic after create/join
 	RegisterCallbacks(name, event string, fn func(interface{}))

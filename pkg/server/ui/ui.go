@@ -40,8 +40,8 @@ func ServeAssetNotFound(next http.Handler) http.Handler {
 		_, err := assets.Open(path.Join(localUI, p))
 		if err != nil && os.IsNotExist(err) {
 			f, _ := assets.Open(path.Join(localUI, "index.html"))
-			io.Copy(rw, f)
-			f.Close()
+			_, _ = io.Copy(rw, f)
+			_ = f.Close()
 			return
 		}
 		next.ServeHTTP(rw, req)

@@ -45,46 +45,46 @@ func joinHandler() http.Handler {
 		clusterID := vars["name"]
 		if clusterID == "" {
 			rw.WriteHeader(http.StatusUnprocessableEntity)
-			rw.Write([]byte("clusterID cannot be empty"))
+			_, _ = rw.Write([]byte("clusterID cannot be empty"))
 			return
 		}
 		state, err := common.DefaultDB.GetClusterByID(clusterID)
 		if err != nil || state == nil {
 			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte(fmt.Sprintf("cluster %s is not found", clusterID)))
+			_, _ = rw.Write([]byte(fmt.Sprintf("cluster %s is not found", clusterID)))
 			return
 		}
 		provider, err := providers.GetProvider(state.Provider)
 		if err != nil {
 			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte(fmt.Sprintf("provider %s is not found", state.Provider)))
+			_, _ = rw.Write([]byte(fmt.Sprintf("provider %s is not found", state.Provider)))
 			return
 		}
 		provider.SetMetadata(&state.Metadata)
-		provider.SetOptions(state.Options)
+		_ = provider.SetOptions(state.Options)
 
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte(err.Error()))
+			_, _ = rw.Write([]byte(err.Error()))
 			return
 		}
 		err = provider.SetConfig(body)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte(err.Error()))
+			_, _ = rw.Write([]byte(err.Error()))
 			return
 		}
 		err = provider.MergeClusterOptions()
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte(err.Error()))
+			_, _ = rw.Write([]byte(err.Error()))
 			return
 		}
 		id := provider.GenerateClusterName()
 		if err = provider.JoinCheck(); err != nil {
 			rw.WriteHeader(http.StatusUnprocessableEntity)
-			rw.Write([]byte(err.Error()))
+			_, _ = rw.Write([]byte(err.Error()))
 			return
 		}
 
@@ -103,7 +103,7 @@ func joinHandler() http.Handler {
 func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	state, err := common.DefaultDB.GetClusterByID(id)
 	if err != nil || state == nil {
-		// find from failed cluster
+		// find from failed cluster.
 		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found, got error: %v", id, err))
 	}
 	provider, err := providers.GetProvider(state.Provider)
@@ -111,7 +111,7 @@ func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (
 		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, err.Error())
 	}
 	provider.SetMetadata(&state.Metadata)
-	provider.SetOptions(state.Options)
+	_ = provider.SetOptions(state.Options)
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
 	if state.Status == common.StatusMissing {
 		kubeCfg = ""

@@ -68,8 +68,8 @@ func NewClusterDB(ctx context.Context) (*Store, error) {
 }
 
 func (d *Store) Register() {
-	d.DB.Callback().Create().After("gorm:create").Register("gorm:autok3s_create", d.createHandler)
-	d.DB.Callback().Update().After("gorm:update").Register("gorm:autok3s_update", d.updateHandler)
+	_ = d.DB.Callback().Create().After("gorm:create").Register("gorm:autok3s_create", d.createHandler)
+	_ = d.DB.Callback().Update().After("gorm:update").Register("gorm:autok3s_update", d.updateHandler)
 }
 
 func (d *Store) createHandler(db *gorm.DB) {
@@ -284,7 +284,7 @@ func (d *Store) DeleteCluster(name, provider string) error {
 }
 
 func (d *Store) ListCluster() ([]*ClusterState, error) {
-	clusterList := []*ClusterState{}
+	clusterList := make([]*ClusterState, 0)
 	result := d.DB.Find(&clusterList)
 	return clusterList, result.Error
 }
@@ -314,7 +314,7 @@ func (d *Store) GetClusterByID(contextName string) (*ClusterState, error) {
 }
 
 func (d *Store) FindCluster(name, provider string) ([]*ClusterState, error) {
-	clusterList := []*ClusterState{}
+	clusterList := make([]*ClusterState, 0)
 	db := d.DB.Where("name = ?", name)
 	if provider != "" {
 		db = db.Where("provider = ?", provider)
@@ -353,7 +353,7 @@ func (d *Store) DeleteTemplate(name, provider string) error {
 }
 
 func (d *Store) ListTemplates() ([]*Template, error) {
-	list := []*Template{}
+	list := make([]*Template, 0)
 	result := d.DB.Find(&list)
 	return list, result.Error
 }
@@ -428,13 +428,13 @@ func toTemplate(temp *Template) *apis.ClusterTemplate {
 }
 
 func (d *Store) CreateCredential(cred *Credential) error {
-	// find exist provider credential
+	// find exist provider credential.
 	list, err := d.GetCredentialByProvider(cred.Provider)
 	if err != nil {
 		return err
 	}
 	if len(list) > 0 {
-		// TODO: need to support multiple credentials for each provider
+		// TODO: need to support multiple credentials for each provider.
 		logrus.Warnf("only support one credential for provider %s, will update with the new one.", cred.Provider)
 		credential := list[0]
 		credential.Secrets = cred.Secrets
@@ -453,13 +453,13 @@ func (d *Store) UpdateCredential(cred *Credential) error {
 }
 
 func (d *Store) ListCredential() ([]*Credential, error) {
-	list := []*Credential{}
+	list := make([]*Credential, 0)
 	result := d.DB.Find(&list)
 	return list, result.Error
 }
 
 func (d *Store) GetCredentialByProvider(provider string) ([]*Credential, error) {
-	list := []*Credential{}
+	list := make([]*Credential, 0)
 	result := d.DB.Where("provider = ? ", provider).Find(&list)
 	return list, result.Error
 }

@@ -25,7 +25,7 @@ func Main() {
 	defer logs.FlushLogs()
 
 	if err := EmbedCommand().Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }

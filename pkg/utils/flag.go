@@ -26,7 +26,7 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 					continue
 				}
 				if f.Required {
-					cobra.MarkFlagRequired(pf, f.Name)
+					_ = cobra.MarkFlagRequired(pf, f.Name)
 				}
 			}
 		} else {
@@ -43,13 +43,13 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 					continue
 				}
 				if f.Required {
-					cobra.MarkFlagRequired(pf, f.Name)
+					_ = cobra.MarkFlagRequired(pf, f.Name)
 				}
 			}
 		}
 
 		if f.EnvVar != "" {
-			cmd.Flags().SetAnnotation(f.Name, BashCompEnvVarFlag, []string{f.EnvVar})
+			_ = cmd.Flags().SetAnnotation(f.Name, BashCompEnvVarFlag, []string{f.EnvVar})
 		}
 	}
 

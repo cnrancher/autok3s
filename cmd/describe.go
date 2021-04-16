@@ -57,7 +57,7 @@ func describeCluster() {
 			continue
 		}
 		provider.SetMetadata(&state.Metadata)
-		provider.SetOptions(state.Options)
+		_ = provider.SetOptions(state.Options)
 		isExist, _, err := provider.IsClusterExist()
 		if err != nil {
 			logrus.Errorf("failed to check cluster %s exist, got error: %v ", state.Name, err)
@@ -68,29 +68,29 @@ func describeCluster() {
 			continue
 		}
 		info := provider.DescribeCluster(kubeCfg)
-		fmt.Fprintf(out, "Name: %s\n", name)
-		fmt.Fprintf(out, "Provider: %s\n", info.Provider)
-		fmt.Fprintf(out, "Region: %s\n", info.Region)
-		fmt.Fprintf(out, "Zone: %s\n", info.Zone)
-		fmt.Fprintf(out, "Master: %s\n", info.Master)
-		fmt.Fprintf(out, "Worker: %s\n", info.Worker)
-		fmt.Fprintf(out, "Status: %s\n", info.Status)
-		fmt.Fprintf(out, "Version: %s\n", info.Version)
-		fmt.Fprintf(out, "Nodes:%s\n", "")
+		_, _ = fmt.Fprintf(out, "Name: %s\n", name)
+		_, _ = fmt.Fprintf(out, "Provider: %s\n", info.Provider)
+		_, _ = fmt.Fprintf(out, "Region: %s\n", info.Region)
+		_, _ = fmt.Fprintf(out, "Zone: %s\n", info.Zone)
+		_, _ = fmt.Fprintf(out, "Master: %s\n", info.Master)
+		_, _ = fmt.Fprintf(out, "Worker: %s\n", info.Worker)
+		_, _ = fmt.Fprintf(out, "Status: %s\n", info.Status)
+		_, _ = fmt.Fprintf(out, "Version: %s\n", info.Version)
+		_, _ = fmt.Fprintf(out, "Nodes:%s\n", "")
 		for _, node := range info.Nodes {
-			fmt.Fprintf(out, "  - internal-ip: %s\n", node.InternalIP)
-			fmt.Fprintf(out, "    external-ip: %s\n", node.ExternalIP)
-			fmt.Fprintf(out, "    instance-status: %s\n", node.InstanceStatus)
-			fmt.Fprintf(out, "    instance-id: %s\n", node.InstanceID)
-			fmt.Fprintf(out, "    roles: %s\n", node.Roles)
-			fmt.Fprintf(out, "    status: %s\n", node.Status)
-			fmt.Fprintf(out, "    hostname: %s\n", node.HostName)
-			fmt.Fprintf(out, "    container-runtime: %s\n", node.ContainerRuntimeVersion)
-			fmt.Fprintf(out, "    version: %s\n", node.Version)
+			_, _ = fmt.Fprintf(out, "  - internal-ip: %s\n", node.InternalIP)
+			_, _ = fmt.Fprintf(out, "    external-ip: %s\n", node.ExternalIP)
+			_, _ = fmt.Fprintf(out, "    instance-status: %s\n", node.InstanceStatus)
+			_, _ = fmt.Fprintf(out, "    instance-id: %s\n", node.InstanceID)
+			_, _ = fmt.Fprintf(out, "    roles: %s\n", node.Roles)
+			_, _ = fmt.Fprintf(out, "    status: %s\n", node.Status)
+			_, _ = fmt.Fprintf(out, "    hostname: %s\n", node.HostName)
+			_, _ = fmt.Fprintf(out, "    container-runtime: %s\n", node.ContainerRuntimeVersion)
+			_, _ = fmt.Fprintf(out, "    version: %s\n", node.Version)
 		}
 	}
 	for _, e := range allErr {
-		fmt.Fprintf(out, "%s\n", e)
+		_, _ = fmt.Fprintf(out, "%s\n", e)
 	}
-	out.Flush()
+	_ = out.Flush()
 }

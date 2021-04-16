@@ -92,7 +92,7 @@ func (p *Native) CreateK3sCluster() (err error) {
 			p.Logger.Infof(common.UsageContext, p.Name)
 			p.Logger.Info(common.UsagePods)
 		}
-		logFile.Close()
+		_ = logFile.Close()
 		if p.Callbacks != nil {
 			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "create" {
 				logEvent := &common.LogEvent{
@@ -143,9 +143,9 @@ func (p *Native) JoinK3sNode() (err error) {
 
 	defer func() {
 		if err != nil {
-			p.RollbackCluster(p.rollbackInstance)
+			_ = p.RollbackCluster(p.rollbackInstance)
 		}
-		logFile.Close()
+		_ = logFile.Close()
 		if p.Callbacks != nil {
 			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "update" {
 				logEvent := &common.LogEvent{
@@ -220,7 +220,7 @@ func (p *Native) JoinK3sNode() (err error) {
 
 func (p *Native) Rollback() error {
 	return p.RollbackCluster(func(ids []string) error {
-		nodes := []types.Node{}
+		nodes := make([]types.Node, 0)
 		for _, id := range ids {
 			if node, ok := p.M.Load(id); ok {
 				nodes = append(nodes, node.(types.Node))
