@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,6 +68,12 @@ func (c *ConfigFileManager) RemoveCfg(context string, configAccess clientcmd.Con
 	delete(config.Contexts, context)
 	delete(config.Clusters, context)
 	delete(config.AuthInfos, context)
+	// the auth info entry associated with the context needs to be deleted.
+	for key := range config.AuthInfos {
+		if strings.Contains(key, fmt.Sprintf("@%s", context)) {
+			delete(config.AuthInfos, key)
+		}
+	}
 	return config, nil
 }
 
