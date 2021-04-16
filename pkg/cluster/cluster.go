@@ -865,6 +865,11 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 					break
 				}
 			}
+			if !isCurrentInstance {
+				if n.InstanceID == node.Name {
+					isCurrentInstance = true
+				}
+			}
 			if isCurrentInstance {
 				n.HostName = hostName
 				n.Version = node.Status.NodeInfo.KubeletVersion
