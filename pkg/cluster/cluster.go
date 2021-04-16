@@ -99,7 +99,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		master0ExtraArgs += " --cluster-init"
 	}
 
-	// add docker script for different provider
+	// add docker script for different provider.
 	if cluster.DockerScript != "" {
 		dockerCommand = cluster.DockerScript
 	}
@@ -109,7 +109,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	p.Logger.Infof("[%s] successfully created k3s master-%d", p.Provider, 1)
 
 	for i, master := range cluster.MasterNodes {
-		// skip first master nodes
+		// skip first master nodes.
 		if i == 0 {
 			continue
 		}
@@ -177,7 +177,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	if err := SaveCfg(cfg, publicIP, cluster.ContextName); err != nil {
 		return err
 	}
-	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 	cluster.Status.Status = common.StatusRunning
 
 	// write current cluster to state file.
@@ -410,7 +410,7 @@ func SaveCfg(cfg, ip, context string) error {
 
 func OverwriteCfg(context string) error {
 	path := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
-	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
 	fMgr := &common.ConfigFileManager{}
 	return fMgr.OverwriteCfg(path, context, fMgr.RemoveCfg)
 }
@@ -639,14 +639,14 @@ func mergeCfg(context, tempFile string) error {
 		if err := os.Remove(tempFile); err != nil {
 			logrus.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
 		}
-		os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+		_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
 	}()
 	kubeConfigPath := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
-	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeConfigPath)
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeConfigPath)
 	fMgr := &common.ConfigFileManager{}
-	fMgr.OverwriteCfg(kubeConfigPath, context, fMgr.RemoveCfg)
+	_ = fMgr.OverwriteCfg(kubeConfigPath, context, fMgr.RemoveCfg)
 	mergeKubeConfigENV := fmt.Sprintf("%s:%s", kubeConfigPath, tempFile)
-	os.Setenv(clientcmd.RecommendedConfigPathEnvVar, mergeKubeConfigENV)
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, mergeKubeConfigENV)
 	return fMgr.OverwriteCfg(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), context, fMgr.MergeCfg)
 }
 
@@ -767,12 +767,12 @@ func saveRegistryTLS(registry *templates.Registry, m map[string]map[string][]byt
 				return nil, cmd, fmt.Errorf("registry map is not match the struct: %s", r)
 			}
 
-			// i.e /etc/rancher/k3s/mycustomreg:5000/
+			// i.e /etc/rancher/k3s/mycustomreg:5000/.
 			path := fmt.Sprintf("/etc/rancher/k3s/%s", r)
 			cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", path))
 
 			for f, b := range c {
-				// i.e /etc/rancher/k3s/mycustomreg:5000/{ca,key,cert}
+				// i.e /etc/rancher/k3s/mycustomreg:5000/{ca,key,cert}.
 				file := fmt.Sprintf("%s/%s", path, f)
 				cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s\"", base64.StdEncoding.EncodeToString(b), file))
 				cmd = append(cmd, fmt.Sprintf("sudo chmod 755 %s", file))
@@ -838,7 +838,7 @@ func GetClusterVersion(c *kubernetes.Clientset) string {
 }
 
 func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.ClusterNode) ([]types.ClusterNode, error) {
-	// list cluster nodes
+	// list cluster nodes.
 	timeout := int64(5 * time.Second)
 	nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{TimeoutSeconds: &timeout})
 	if err != nil || nodeList == nil {
@@ -869,9 +869,9 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 				n.HostName = hostName
 				n.Version = node.Status.NodeInfo.KubeletVersion
 				n.ContainerRuntimeVersion = node.Status.NodeInfo.ContainerRuntimeVersion
-				// get roles
+				// get roles.
 				labels := node.Labels
-				roles := []string{}
+				roles := make([]string, 0)
 				for role := range labels {
 					if strings.HasPrefix(role, "node-role.kubernetes.io") {
 						roleArray := strings.Split(role, "/")
@@ -885,7 +885,7 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 				}
 				sort.Strings(roles)
 				n.Roles = strings.Join(roles, ",")
-				// get status
+				// get status.
 				conditions := node.Status.Conditions
 				for _, c := range conditions {
 					if c.Type == v1.NodeReady {

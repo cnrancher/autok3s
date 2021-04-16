@@ -31,7 +31,9 @@ func (c *ConfigFileManager) OverwriteCfg(path string, context string, cfg func(s
 		return err
 	}
 	c.mutex.Unlock()
-	defer fileLock.Unlock()
+	defer func() {
+		_ = fileLock.Unlock()
+	}()
 	for i := time.Duration(0); i < maxWait; i += pollInterval {
 		if locked {
 			config, err := cfg(context, paOpt)

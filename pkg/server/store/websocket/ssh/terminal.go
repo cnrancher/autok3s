@@ -69,12 +69,12 @@ func (t *Terminal) StartTerminal(sshClient *hosts.Tunnel, rows, cols int) error 
 
 func (t *Terminal) Close() {
 	if t.session != nil {
-		t.session.Close()
+		_ = t.session.Close()
 	}
 }
 
 func (t *Terminal) WriteToTerminal(data []byte) {
-	t.sshStdinPipe.Write(data)
+	_, _ = t.sshStdinPipe.Write(data)
 }
 
 func (t *Terminal) ChangeWindowSize(win *websocketutils.WindowSize) {
@@ -96,12 +96,12 @@ func getTunnel(id, node string) (*hosts.Tunnel, error) {
 	if state == nil {
 		return nil, fmt.Errorf("cluster %s is not exist", id)
 	}
-	allNodes := []autok3stypes.Node{}
+	allNodes := make([]autok3stypes.Node, 0)
 	err = json.Unmarshal(state.MasterNodes, &allNodes)
 	if err != nil {
 		return nil, err
 	}
-	nodes := []autok3stypes.Node{}
+	nodes := make([]autok3stypes.Node, 0)
 	err = json.Unmarshal(state.WorkerNodes, &nodes)
 	if err != nil {
 		return nil, err

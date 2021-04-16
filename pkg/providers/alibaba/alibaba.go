@@ -496,7 +496,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 
 	for _, status := range instanceList {
 		publicIPAddress := status.PublicIpAddress.IpAddress
-		eip := []string{}
+		eip := make([]string, 0)
 		if p.EIP {
 			publicIPAddress = []string{status.EipAddress.IpAddress}
 			eip = []string{status.EipAddress.AllocationId}
@@ -1123,7 +1123,7 @@ func (p *Alibaba) getInstanceNodes() ([]types.Node, error) {
 	if err != nil || len(output) == 0 {
 		return nil, fmt.Errorf("[%s] there's no instance for cluster %s: %v", p.GetProviderName(), p.ContextName, err)
 	}
-	nodes := []types.Node{}
+	nodes := make([]types.Node, 0)
 	for _, instance := range output {
 		// sync all instance that belongs to current clusters
 		master := false

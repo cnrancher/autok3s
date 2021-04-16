@@ -3,7 +3,6 @@ package tencent
 const (
 	StatusPending = "PENDING"
 	StatusRunning = "RUNNING"
-	StatusStopped = "STOPPED"
 
 	// task result
 	Success = "SUCCESS"

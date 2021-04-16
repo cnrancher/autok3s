@@ -59,7 +59,7 @@ func JoinCommand() *cobra.Command {
 	}
 
 	joinCmd.Run = func(cmd *cobra.Command, args []string) {
-		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou"
+		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou".
 		jp.GenerateClusterName()
 		if err := jp.JoinCheck(); err != nil {
 			logrus.Fatalln(err)

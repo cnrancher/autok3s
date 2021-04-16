@@ -230,7 +230,7 @@ func (p *Tencent) getInstanceNodes() ([]types.Node, error) {
 		return nil, fmt.Errorf("[%s] failed to list instance for cluster %s, region: %s, zone: %s: %v",
 			p.GetProviderName(), p.Name, p.Region, p.Zone, err)
 	}
-	nodes := []types.Node{}
+	nodes := make([]types.Node, 0)
 	for _, instance := range instanceList {
 		instanceID := *instance.InstanceId
 		instanceState := *instance.InstanceState
@@ -1264,7 +1264,7 @@ func (p *Tencent) configDefaultSecurityPermission() error {
 		}
 	}
 
-	perms := []*vpc.SecurityGroupPolicy{}
+	perms := make([]*vpc.SecurityGroupPolicy, 0)
 
 	if !hasSSHPort {
 		perms = append(perms, &vpc.SecurityGroupPolicy{
@@ -1277,7 +1277,7 @@ func (p *Tencent) configDefaultSecurityPermission() error {
 	}
 
 	if (p.Network == "" || p.Network == "vxlan") && !hasVXlanPort {
-		// udp 8472 for flannel vxlan
+		// udp 8472 for flannel vxLan.
 		perms = append(perms, &vpc.SecurityGroupPolicy{
 			Protocol:          tencentCommon.StringPtr("UDP"),
 			Port:              tencentCommon.StringPtr("8472"),
@@ -1363,7 +1363,7 @@ func (p *Tencent) configDefaultSecurityPermission() error {
 }
 
 func (p *Tencent) allocateEIPForInstance(num int, master bool) ([]uint64, error) {
-	eipIds := []uint64{}
+	eipIds := make([]uint64, 0)
 	eips, taskID, err := p.allocateAddresses(num)
 	if err != nil {
 		return nil, err

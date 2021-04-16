@@ -7,7 +7,7 @@ type (
 	subscriberFunc func(v interface{}) bool
 )
 
-// Broadcaster sends events to multiple subscribers
+// Broadcaster sends events to multiple subscribers.
 type Broadcaster struct {
 	subs map[Subscriber]subscriberFunc
 	m    sync.RWMutex
@@ -19,7 +19,7 @@ func NewBroadcaster() *Broadcaster {
 	}
 }
 
-// Register helps init subscriber with specified subscribe function
+// Register helps init subscriber with specified subscribe function.
 func (b *Broadcaster) Register(sf subscriberFunc) Subscriber {
 	ch := make(Subscriber)
 	b.m.Lock()
@@ -29,7 +29,7 @@ func (b *Broadcaster) Register(sf subscriberFunc) Subscriber {
 	return ch
 }
 
-// Evict specified subscriber
+// Evict specified subscriber.
 func (b *Broadcaster) Evict(s Subscriber) {
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -38,7 +38,7 @@ func (b *Broadcaster) Evict(s Subscriber) {
 	close(s)
 }
 
-// Broadcast events to each subscriber
+// Broadcast events to each subscriber.
 func (b *Broadcaster) Broadcast(v interface{}) {
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -51,7 +51,7 @@ func (b *Broadcaster) Broadcast(v interface{}) {
 	wg.Wait()
 }
 
-// publish event message (which is filtered by subscribe function) to subscriber
+// publish event message (which is filtered by subscribe function) to subscriber.
 func (b *Broadcaster) publish(s Subscriber, sf subscriberFunc, v interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -64,7 +64,7 @@ func (b *Broadcaster) publish(s Subscriber, sf subscriberFunc, v interface{}, wg
 	}
 }
 
-// Close all subscribers
+// Close all subscribers.
 func (b *Broadcaster) Close() {
 	b.m.Lock()
 	defer b.m.Unlock()

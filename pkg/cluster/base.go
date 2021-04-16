@@ -267,15 +267,15 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 				}
 			}
 			c.Status.Status = common.StatusFailed
-			common.DefaultDB.SaveCluster(c)
-			p.RollbackCluster(rollbackInstance)
+			_ = common.DefaultDB.SaveCluster(c)
+			_ = p.RollbackCluster(rollbackInstance)
 		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			p.Logger.Info(common.UsageInfoTitle)
 			p.Logger.Infof(common.UsageContext, p.ContextName)
 			p.Logger.Info(common.UsagePods)
 		}
-		logFile.Close()
+		_ = logFile.Close()
 		if p.Callbacks != nil {
 			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "create" {
 				logEvent := &common.LogEvent{
@@ -289,7 +289,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing create logic...", p.Provider)
 	c.Status.Status = common.StatusCreating
-	// save cluster
+	// save cluster.
 	err = common.DefaultDB.SaveCluster(c)
 	if err != nil {
 		return err
@@ -302,12 +302,12 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 	p.syncExistNodes()
 	c.Status = p.Status
 
-	// deploy k3s cluster
+	// deploy k3s cluster.
 	if err = p.InitK3sCluster(c); err != nil {
 		return err
 	}
 
-	// deploy manifests
+	// deploy manifests.
 	extraManifests := deployPlugins()
 	if extraManifests != nil && len(extraManifests) > 0 {
 		if err = p.DeployExtraManifest(c, extraManifests); err != nil {
@@ -348,14 +348,14 @@ func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, e
 	}
 	defer func() {
 		if err != nil {
-			// join failed
+			// join failed.
 			state.Status = common.StatusRunning
-			common.DefaultDB.SaveClusterState(state)
+			_ = common.DefaultDB.SaveClusterState(state)
 			// rollback instance
-			p.RollbackCluster(rollbackInstance)
+			_ = p.RollbackCluster(rollbackInstance)
 		}
 		// remove join state file and save running state
-		logFile.Close()
+		_ = logFile.Close()
 		if p.Callbacks != nil {
 			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "update" {
 				logEvent := &common.LogEvent{
@@ -425,12 +425,12 @@ func (p *ProviderBase) MergeConfig() ([]byte, error) {
 	p.Status = types.Status{
 		Status: state.Status,
 	}
-	masterNodes := []types.Node{}
+	masterNodes := make([]types.Node, 0)
 	err = json.Unmarshal(state.MasterNodes, &masterNodes)
 	if err != nil {
 		return nil, err
 	}
-	workerNodes := []types.Node{}
+	workerNodes := make([]types.Node, 0)
 	err = json.Unmarshal(state.WorkerNodes, &workerNodes)
 	if err != nil {
 		return nil, err
@@ -489,9 +489,9 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 			return err
 		}
 		defer func() {
-			logFile.Close()
-			// remove log file
-			os.Remove(filepath.Join(common.GetLogPath(), p.ContextName))
+			_ = logFile.Close()
+			// remove log file.
+			_ = os.Remove(filepath.Join(common.GetLogPath(), p.ContextName))
 		}()
 		p.Logger = common.NewLogger(common.Debug, logFile)
 		p.Logger.Infof("[%s] executing delete cluster logic...", p.Provider)
@@ -573,11 +573,11 @@ func (p *ProviderBase) SetClusterConfig(config []byte) (*types.Cluster, error) {
 }
 
 func (p *ProviderBase) SaveCredential(secrets map[string]string) error {
-	creds, err := common.DefaultDB.GetCredentialByProvider(p.Provider)
+	cs, err := common.DefaultDB.GetCredentialByProvider(p.Provider)
 	if err != nil {
 		return err
 	}
-	if len(creds) == 0 {
+	if len(cs) == 0 {
 		s, err := json.Marshal(secrets)
 		if err != nil {
 			return err
@@ -600,7 +600,7 @@ func ListClusters() ([]*types.ClusterInfo, error) {
 		return nil, err
 	}
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
-	clusterList := []*types.ClusterInfo{}
+	clusterList := make([]*types.ClusterInfo, 0)
 	for _, state := range stateList {
 		provider, err := providers.GetProvider(state.Provider)
 		if err != nil {
@@ -608,7 +608,7 @@ func ListClusters() ([]*types.ClusterInfo, error) {
 			continue
 		}
 		provider.SetMetadata(&state.Metadata)
-		provider.SetOptions(state.Options)
+		_ = provider.SetOptions(state.Options)
 		contextName := provider.GenerateClusterName()
 		if state.Status != common.StatusRunning {
 			info := provider.GetCluster("")
@@ -670,15 +670,15 @@ func (p *ProviderBase) syncExistNodes() {
 	})
 }
 
-func (p *ProviderBase) Describe(kubecfg string, c *types.ClusterInfo, describeInstance func() ([]types.Node, error)) *types.ClusterInfo {
-	if kubecfg == "" {
+func (p *ProviderBase) Describe(kubeCfg string, c *types.ClusterInfo, describeInstance func() ([]types.Node, error)) *types.ClusterInfo {
+	if kubeCfg == "" {
 		c.Status = common.StatusMissing
 		c.Master = p.Master
 		c.Worker = p.Worker
 		return c
 	}
 	p.Logger = common.NewLogger(common.Debug, nil)
-	client, err := GetClusterConfig(p.ContextName, kubecfg)
+	client, err := GetClusterConfig(p.ContextName, kubeCfg)
 	if err != nil {
 		p.Logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.Provider, p.Name, err)
 		c.Status = types.ClusterStatusUnknown
@@ -742,7 +742,7 @@ func (p *ProviderBase) Connect(ip string, ssh *types.SSH, c *types.Cluster, desc
 	}
 	ids := make(map[string]string, len(instanceList))
 	if ip == "" {
-		// generate node name
+		// generate node name.
 		for _, instance := range instanceList {
 			instanceInfo := instance.PublicIPAddress[0]
 			if instance.Master {
@@ -803,7 +803,7 @@ func (p *ProviderBase) RollbackCluster(rollbackInstance func(ids []string) error
 }
 
 func (p *ProviderBase) ReleaseManifests() error {
-	// remove ui manifest to release ELB
+	// remove ui manifest to release ELB.
 	masterIP := p.IP
 	for _, n := range p.Status.MasterNodes {
 		if n.InternalIPAddress[0] == masterIP {
@@ -822,8 +822,8 @@ func (p *ProviderBase) ReleaseManifests() error {
 			tunnel.Writer = p.Logger.Out
 			tunnel.Cmd(fmt.Sprintf("sudo kubectl delete -f %s/ui.yaml", common.K3sManifestsDir))
 			tunnel.Cmd(fmt.Sprintf("sudo rm %s/ui.yaml", common.K3sManifestsDir))
-			tunnel.SetStdio(&stdout, &stderr).Run()
-			tunnel.Close()
+			_ = tunnel.SetStdio(&stdout, &stderr).Run()
+			_ = tunnel.Close()
 			break
 		}
 	}

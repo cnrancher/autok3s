@@ -55,7 +55,7 @@ func CreateCommand() *cobra.Command {
 	}
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
-		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>"
+		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>".
 		cp.GenerateClusterName()
 		if err := cp.BindCredential(); err != nil {
 			logrus.Fatalln(err)
