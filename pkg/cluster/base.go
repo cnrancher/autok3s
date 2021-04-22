@@ -2,8 +2,10 @@ package cluster
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,14 +26,15 @@ import (
 )
 
 const (
-	k3sVersion       = ""
-	k3sChannel       = "stable"
-	k3sInstallScript = "https://get.k3s.io"
-	master           = "0"
-	worker           = "0"
-	ui               = false
-	embedEtcd        = false
-	defaultCidr      = "10.42.0.0/16"
+	k3sVersion        = ""
+	k3sChannel        = "stable"
+	k3sInstallScript  = "https://get.k3s.io"
+	master            = "0"
+	worker            = "0"
+	ui                = false
+	embedEtcd         = false
+	defaultCidr       = "10.42.0.0/16"
+	uploadManifestCmd = "echo \"%s\" | base64 -d | sudo tee \"%s/%s\""
 )
 
 type ProviderBase struct {
@@ -78,6 +81,12 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			P:     &p.Cluster,
 			V:     p.Cluster,
 			Usage: "Form k3s cluster using embedded etcd (requires K8s >= 1.19), see: https://rancher.com/docs/k3s/latest/en/installation/ha-embedded/",
+		},
+		{
+			Name:  "manifests",
+			P:     &p.Manifests,
+			V:     p.Manifests,
+			Usage: "A folder path for multiple manifest files(only support one directory) or a manifest file path. Auto-deploying manifests to K3s which is a manner similar to `kubectl apply`",
 		},
 	}
 }
@@ -288,6 +297,18 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 			return err
 		}
 		p.Logger.Infof("[%s] successfully deployed manifests", p.Provider)
+	}
+
+	// deploy custom manifests
+	if p.Manifests != "" {
+		deployCmd, err := p.getCustomManifests()
+		if err != nil {
+			return err
+		}
+		if err = p.DeployExtraManifest(c, deployCmd); err != nil {
+			return err
+		}
+		p.Logger.Infof("[%s] successfully deployed custom manifests", p.Provider)
 	}
 
 	return nil
@@ -787,4 +808,41 @@ func (p *ProviderBase) ReleaseManifests() error {
 		}
 	}
 	return nil
+}
+
+func (p *ProviderBase) getCustomManifests() ([]string, error) {
+	// check is folder or file.
+	info, err := os.Stat(p.Manifests)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		cmd, err := prepareManifestFile(p.Manifests, info.Name())
+		return []string{cmd}, err
+	}
+	// upload all files under directory, not include recursive folders.
+	deployCmd := []string{}
+	files, err := ioutil.ReadDir(p.Manifests)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		cmd, err := prepareManifestFile(filepath.Join(p.Manifests, f.Name()), f.Name())
+		if err != nil {
+			return nil, err
+		}
+		deployCmd = append(deployCmd, cmd)
+	}
+	return deployCmd, nil
+}
+
+func prepareManifestFile(path, name string) (string, error) {
+	manifestContent, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf(uploadManifestCmd, base64.StdEncoding.EncodeToString(manifestContent), common.K3sManifestsDir, name), nil
 }

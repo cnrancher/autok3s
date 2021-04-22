@@ -35,6 +35,7 @@ type Metadata struct {
 	Cluster         bool   `json:"cluster" yaml:"cluster"`
 	ContextName     string `json:"context-name" yaml:"context-name"`
 	RegistryContent string `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
+	Manifests       string `json:"manifests,omitempty" yaml:"manifests,omitempty"`
 }
 
 type Status struct {
