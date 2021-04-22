@@ -47,6 +47,7 @@ var (
 				ssh_cert_path            TEXT,
 				ssh_key_passphrase       TEXT,
 				ssh_agent_auth           bool,
+				manifests                TEXT,
 				unique (name, provider)
 			);`,
 		`CREATE TABLE IF NOT EXISTS templates
@@ -82,6 +83,7 @@ var (
 				ssh_cert_path            TEXT,
 				ssh_key_passphrase       TEXT,
 				ssh_agent_auth           bool,
+				manifests                TEXT,
 				is_default               bool,
 				unique (name, provider)
 			);`,
@@ -104,7 +106,7 @@ func InitStorage() error {
 		return err
 	}
 	setup(db)
-	return nil
+	return db.AutoMigrate(&ClusterState{}, &Template{})
 }
 
 func setup(db *gorm.DB) {
