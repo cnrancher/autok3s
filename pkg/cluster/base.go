@@ -43,6 +43,13 @@ type ProviderBase struct {
 	types.SSH      `json:",inline"`
 	M              *sync.Map
 	Logger         *logrus.Logger
+	Callbacks      map[string]*providerProcess
+}
+
+type providerProcess struct {
+	ContextName string
+	Event       string
+	Fn          func(interface{})
 }
 
 func NewBaseProvider() *ProviderBase {
@@ -236,7 +243,7 @@ func (p *ProviderBase) GetCommonConfig(sshFunc func() *types.SSH) (map[string]sc
 	return metaConfig, nil
 }
 
-func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []string, prepare func(ssh *types.SSH) (*types.Cluster, error)) error {
+func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []string, prepare func(ssh *types.SSH) (*types.Cluster, error), rollbackInstance func(ids []string) error) error {
 	logFile, err := common.GetLogFile(p.ContextName)
 	if err != nil {
 		return err
@@ -261,6 +268,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 			}
 			c.Status.Status = common.StatusFailed
 			common.DefaultDB.SaveCluster(c)
+			p.RollbackCluster(rollbackInstance)
 		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			p.Logger.Info(common.UsageInfoTitle)
@@ -268,6 +276,15 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 			p.Logger.Info(common.UsagePods)
 		}
 		logFile.Close()
+		if p.Callbacks != nil {
+			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "create" {
+				logEvent := &common.LogEvent{
+					Name:        process.Event,
+					ContextName: p.ContextName,
+				}
+				process.Fn(logEvent)
+			}
+		}
 	}()
 	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing create logic...", p.Provider)
@@ -314,7 +331,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 	return nil
 }
 
-func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, error), syncExistInstance func() error) error {
+func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, error), syncExistInstance func() error, rollbackInstance func(ids []string) error) error {
 	if p.M == nil {
 		p.M = new(syncmap.Map)
 	}
@@ -334,9 +351,20 @@ func (p *ProviderBase) JoinNodes(prepare func(ssh *types.SSH) (*types.Cluster, e
 			// join failed
 			state.Status = common.StatusRunning
 			common.DefaultDB.SaveClusterState(state)
+			// rollback instance
+			p.RollbackCluster(rollbackInstance)
 		}
 		// remove join state file and save running state
 		logFile.Close()
+		if p.Callbacks != nil {
+			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "update" {
+				logEvent := &common.LogEvent{
+					Name:        process.Event,
+					ContextName: p.ContextName,
+				}
+				process.Fn(logEvent)
+			}
+		}
 	}()
 
 	p.Logger = common.NewLogger(common.Debug, logFile)
@@ -747,14 +775,6 @@ func (p *ProviderBase) Connect(ip string, ssh *types.SSH, c *types.Cluster, desc
 }
 
 func (p *ProviderBase) RollbackCluster(rollbackInstance func(ids []string) error) error {
-	logFile, err := common.GetLogFile(p.ContextName)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		logFile.Close()
-	}()
-	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing rollback logic...", p.Provider)
 	if rollbackInstance != nil {
 		ids := make([]string, 0)
@@ -769,11 +789,11 @@ func (p *ProviderBase) RollbackCluster(rollbackInstance func(ids []string) error
 		p.Logger.Infof("[%s] instances %s will be rollback", p.Provider, ids)
 
 		// remove instance
-		if err = rollbackInstance(ids); err != nil {
+		if err := rollbackInstance(ids); err != nil {
 			return err
 		}
 		// remove context
-		if err = OverwriteCfg(p.ContextName); err != nil {
+		if err := OverwriteCfg(p.ContextName); err != nil {
 			logrus.Errorf("failed to remove cluster context %s from kube config", p.ContextName)
 		}
 		p.Logger.Infof("[%s] successfully executed rollback logic", p.Provider)
@@ -845,4 +865,15 @@ func prepareManifestFile(path, name string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf(uploadManifestCmd, base64.StdEncoding.EncodeToString(manifestContent), common.K3sManifestsDir, name), nil
+}
+
+func (p *ProviderBase) RegisterCallbacks(name, event string, fn func(interface{})) {
+	if p.Callbacks == nil {
+		p.Callbacks = map[string]*providerProcess{}
+	}
+	p.Callbacks[name] = &providerProcess{
+		ContextName: name,
+		Event:       event,
+		Fn:          fn,
+	}
 }

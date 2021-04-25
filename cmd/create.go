@@ -66,10 +66,7 @@ func CreateCommand() *cobra.Command {
 
 		// create k3s cluster with generated cluster name.
 		if err := cp.CreateK3sCluster(); err != nil {
-			logrus.Errorln(err)
-			if rErr := cp.Rollback(); rErr != nil {
-				logrus.Fatalln(rErr)
-			}
+			logrus.Fatalln(err)
 		}
 	}
 

@@ -100,14 +100,14 @@ func (p *Amazon) CreateK3sCluster() (err error) {
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
 	}
-	return p.InitCluster(p.Options, p.GenerateManifest, p.generateInstance)
+	return p.InitCluster(p.Options, p.GenerateManifest, p.generateInstance, p.rollbackInstance)
 }
 
 func (p *Amazon) JoinK3sNode() (err error) {
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
 	}
-	return p.JoinNodes(p.generateInstance, p.syncInstances)
+	return p.JoinNodes(p.generateInstance, p.syncInstances, p.rollbackInstance)
 }
 
 func (p *Amazon) DeleteK3sCluster(f bool) (err error) {

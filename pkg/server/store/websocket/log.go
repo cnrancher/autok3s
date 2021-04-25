@@ -37,33 +37,32 @@ func logHandler(apiOp *types.APIRequest) error {
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	if provider == "native" {
-		return nativeLogHandler(apiOp.Context(), w, f, cluster, provider)
-	}
-
-	state, err := common.DefaultDB.GetClusterByID(cluster)
-	if err != nil {
-		return err
-	}
-	if state == nil {
-		return apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
-	}
 	logFilePath := filepath.Join(common.GetLogPath(), cluster)
-	// show all logs if cluster is running
-	if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
-		// show all logs from file
-		logFile, err := os.Open(logFilePath)
+	if provider != "native" {
+		state, err := common.DefaultDB.GetClusterByID(cluster)
 		if err != nil {
 			return err
 		}
-		scanner := bufio.NewScanner(logFile)
-		for scanner.Scan() {
-			var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
-			w.Write(bs.Bytes())
-			f.Flush()
+		if state == nil {
+			return apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
 		}
-		w.Write([]byte("event: close\ndata: close\n\n"))
-		return logFile.Close()
+
+		// show all logs if cluster is running
+		if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
+			// show all logs from file
+			logFile, err := os.Open(logFilePath)
+			if err != nil {
+				return err
+			}
+			scanner := bufio.NewScanner(logFile)
+			for scanner.Scan() {
+				var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
+				w.Write(bs.Bytes())
+				f.Flush()
+			}
+			w.Write([]byte("event: close\ndata: close\n\n"))
+			return logFile.Close()
+		}
 	}
 
 	t, err := NewTailLog(logFilePath)
@@ -71,7 +70,7 @@ func logHandler(apiOp *types.APIRequest) error {
 		return err
 	}
 
-	result := make(chan *common.ClusterState)
+	result := make(chan *common.LogEvent)
 	go common.DefaultDB.Log(apiOp, result)
 
 	for {

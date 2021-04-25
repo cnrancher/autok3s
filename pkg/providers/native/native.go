@@ -85,29 +85,27 @@ func (p *Native) CreateK3sCluster() (err error) {
 	defer func() {
 		if err != nil {
 			p.Logger.Errorf("[%s] failed to create cluster: %v", p.GetProviderName(), err)
-			if c == nil {
-				c = &types.Cluster{
-					Metadata: p.Metadata,
-					Options:  p.Options,
-					Status:   p.Status,
-				}
-			}
+			p.RollbackCluster(p.rollbackInstance)
 		}
 		if err == nil && len(p.Status.MasterNodes) > 0 {
 			p.Logger.Info(common.UsageInfoTitle)
 			p.Logger.Infof(common.UsageContext, p.Name)
 			p.Logger.Info(common.UsagePods)
 		}
-		os.Remove(filepath.Join(p.getStatePath(), fmt.Sprintf("%s_%s", c.Name, common.StatusCreating)))
 		logFile.Close()
+		if p.Callbacks != nil {
+			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "create" {
+				logEvent := &common.LogEvent{
+					Name:        "create",
+					ContextName: p.ContextName,
+				}
+				process.Fn(logEvent)
+			}
+		}
 	}()
 
 	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing create logic...", p.GetProviderName())
-	err = p.saveState(c, common.StatusCreating)
-	if err != nil {
-		return err
-	}
 
 	// set ssh default value
 	if p.SSHUser == "" {
@@ -144,8 +142,19 @@ func (p *Native) JoinK3sNode() (err error) {
 	}
 
 	defer func() {
-		os.Remove(filepath.Join(p.getStatePath(), fmt.Sprintf("%s_%s", c.Name, common.StatusUpgrading)))
+		if err != nil {
+			p.RollbackCluster(p.rollbackInstance)
+		}
 		logFile.Close()
+		if p.Callbacks != nil {
+			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "update" {
+				logEvent := &common.LogEvent{
+					Name:        "change",
+					ContextName: p.ContextName,
+				}
+				process.Fn(logEvent)
+			}
+		}
 	}()
 
 	p.Logger = common.NewLogger(common.Debug, logFile)
@@ -156,11 +165,6 @@ func (p *Native) JoinK3sNode() (err error) {
 	}
 	if p.SSHPassword == "" && p.SSHKeyPath == "" {
 		p.SSHKeyPath = defaultSSHKeyPath
-	}
-
-	err = p.saveState(c, common.StatusUpgrading)
-	if err != nil {
-		return err
 	}
 
 	// assemble node status.
@@ -228,6 +232,20 @@ func (p *Native) Rollback() error {
 		}
 		return nil
 	})
+}
+
+func (p *Native) rollbackInstance(ids []string) error {
+	nodes := []types.Node{}
+	for _, id := range ids {
+		if node, ok := p.M.Load(id); ok {
+			nodes = append(nodes, node.(types.Node))
+		}
+	}
+	warnMsg := p.UninstallK3sNodes(nodes)
+	for _, w := range warnMsg {
+		p.Logger.Warnf("[%s] %s", p.GetProviderName(), w)
+	}
+	return nil
 }
 
 func (p *Native) CreateCheck() error {
@@ -393,17 +411,4 @@ func (p *Native) syncNodesMap(ipList []string, master bool, ssh *types.SSH) {
 			SSH:               *ssh,
 		})
 	}
-}
-
-func (p *Native) getStatePath() string {
-	return filepath.Join(common.GetLogPath(), p.GetProviderName())
-}
-
-func (p *Native) saveState(c *types.Cluster, status string) error {
-	statePath := p.getStatePath()
-	err := utils.EnsureFolderExist(statePath)
-	if err != nil {
-		return err
-	}
-	return utils.WriteYaml(c, statePath, fmt.Sprintf("%s_%s", c.Name, status))
 }

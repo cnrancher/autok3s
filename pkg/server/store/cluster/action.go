@@ -81,18 +81,18 @@ func joinHandler() http.Handler {
 			rw.Write([]byte(err.Error()))
 			return
 		}
-		provider.GenerateClusterName()
+		id := provider.GenerateClusterName()
 		if err = provider.JoinCheck(); err != nil {
 			rw.WriteHeader(http.StatusUnprocessableEntity)
 			rw.Write([]byte(err.Error()))
 			return
 		}
 
+		provider.RegisterCallbacks(id, "update", common.DefaultDB.BroadcastObject)
 		go func() {
 			err := provider.JoinK3sNode()
 			if err != nil {
 				logrus.Errorf("join cluster error: %v", err)
-				provider.Rollback()
 			}
 		}()
 

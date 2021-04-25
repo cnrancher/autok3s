@@ -46,11 +46,12 @@ func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	if err := p.CreateCheck(); err != nil {
 		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, err.Error())
 	}
+	// register log callbacks
+	p.RegisterCallbacks(id, "create", common.DefaultDB.BroadcastObject)
 	go func() {
 		err = p.CreateK3sCluster()
 		if err != nil {
 			logrus.Errorf("create cluster error: %v", err)
-			p.Rollback()
 		}
 	}()
 
