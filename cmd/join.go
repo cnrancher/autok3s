@@ -66,10 +66,7 @@ func JoinCommand() *cobra.Command {
 		}
 		// join k3s node to the cluster which named with generated cluster name.
 		if err := jp.JoinK3sNode(); err != nil {
-			logrus.Errorln(err)
-			if rErr := jp.Rollback(); rErr != nil {
-				logrus.Fatalln(rErr)
-			}
+			logrus.Fatalln(err)
 		}
 	}
 

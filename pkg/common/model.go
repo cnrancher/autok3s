@@ -45,6 +45,11 @@ type clusterEvent struct {
 	Object *ClusterState
 }
 
+type LogEvent struct {
+	Name        string
+	ContextName string
+}
+
 type Store struct {
 	*gorm.DB
 	broadcaster *Broadcaster
@@ -97,6 +102,10 @@ func (d *Store) hook(db *gorm.DB, event string) {
 	}
 }
 
+func (d *Store) BroadcastObject(obj interface{}) {
+	d.broadcaster.Broadcast(obj)
+}
+
 func (d *Store) WatchCluster(apiOp *apitypes.APIRequest, schema *apitypes.APISchema, input chan apitypes.APIEvent) {
 	// new subscribe
 	sub := d.broadcaster.Register(func(v interface{}) bool {
@@ -121,14 +130,11 @@ func (d *Store) WatchCluster(apiOp *apitypes.APIRequest, schema *apitypes.APISch
 	}
 }
 
-func (d *Store) Log(apiOp *apitypes.APIRequest, input chan *ClusterState) {
+func (d *Store) Log(apiOp *apitypes.APIRequest, input chan *LogEvent) {
 	// new subscribe for cluster logs
 	sub := d.broadcaster.Register(func(v interface{}) bool {
-		event, ok := v.(*clusterEvent)
-		if !ok {
-			return false
-		}
-		return event.Object.Status == StatusRunning || event.Object.Status == StatusFailed
+		_, ok := v.(*LogEvent)
+		return ok
 	})
 	for {
 		select {
@@ -136,11 +142,11 @@ func (d *Store) Log(apiOp *apitypes.APIRequest, input chan *ClusterState) {
 			if !ok {
 				continue
 			}
-			state, isCluster := v.(*clusterEvent)
-			if !isCluster {
+			state, isLog := v.(*LogEvent)
+			if !isLog {
 				continue
 			}
-			input <- state.Object
+			input <- state
 		case <-apiOp.Context().Done():
 			d.broadcaster.Evict(sub)
 			return

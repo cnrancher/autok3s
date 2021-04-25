@@ -51,8 +51,6 @@ type Provider interface {
 	SSHK3sNode(node string) error
 	// K3s check cluster exist.
 	IsClusterExist() (bool, []string, error)
-	// Rollback when error occurs.
-	Rollback() error
 	// merge exist cluster options
 	MergeClusterOptions() error
 	// describe detailed cluster information
@@ -79,6 +77,8 @@ type Provider interface {
 	GetProviderOptions(opt []byte) (interface{}, error)
 	// persistent credential from flags to db
 	BindCredential() error
+	// callback functions used for execute logic after create/join
+	RegisterCallbacks(name, event string, fn func(interface{}))
 }
 
 // RegisterProvider registers a provider.Factory by name.
