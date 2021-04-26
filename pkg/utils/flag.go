@@ -22,6 +22,8 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 					pf.StringVar(f.P.(*string), f.Name, t, f.Usage)
 				case map[string]string:
 					pf.StringToStringVar(f.P.(*map[string]string), f.Name, t, f.Usage)
+				case []string:
+					pf.StringArrayVar(f.P.(*[]string), f.Name, t, f.Usage)
 				default:
 					continue
 				}
@@ -39,6 +41,8 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 					pf.StringVarP(f.P.(*string), f.Name, f.ShortHand, t, f.Usage)
 				case map[string]string:
 					pf.StringToStringVarP(f.P.(*map[string]string), f.Name, f.ShortHand, t, f.Usage)
+				case []string:
+					pf.StringArrayVarP(f.P.(*[]string), f.Name, f.ShortHand, t, f.Usage)
 				default:
 					continue
 				}

@@ -364,20 +364,30 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 		request.Password = password
 	}
 
-	tag := []ecs.RunInstancesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.ContextName}}
+	tags := []ecs.RunInstancesTag{
+		{Key: "autok3s", Value: "true"},
+		{Key: "cluster", Value: common.TagClusterPrefix + p.ContextName},
+	}
 
-	for k, v := range p.Tags {
-		tag = append(tag, ecs.RunInstancesTag{Key: k, Value: v})
+	for _, v := range p.Tags {
+		ss := strings.Split(v, "=")
+		if len(ss) != 2 {
+			return fmt.Errorf("tags %s invalid", v)
+		}
+		tags = append(tags, ecs.RunInstancesTag{
+			Key:   ss[0],
+			Value: ss[1],
+		})
 	}
 
 	if master {
 		request.InstanceName = fmt.Sprintf(common.MasterInstanceName, p.ContextName)
-		tag = append(tag, ecs.RunInstancesTag{Key: "master", Value: "true"})
+		tags = append(tags, ecs.RunInstancesTag{Key: "master", Value: "true"})
 	} else {
 		request.InstanceName = fmt.Sprintf(common.WorkerInstanceName, p.ContextName)
-		tag = append(tag, ecs.RunInstancesTag{Key: "worker", Value: "true"})
+		tags = append(tags, ecs.RunInstancesTag{Key: "worker", Value: "true"})
 	}
-	request.Tag = &tag
+	request.Tag = &tags
 
 	response, err := p.c.RunInstances(request)
 	if err != nil || len(response.InstanceIdSets.InstanceIdSet) != num {

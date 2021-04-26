@@ -762,8 +762,12 @@ func (p *Tencent) runInstances(num int, master bool, password string) error {
 		{Key: tencentCommon.StringPtr("cluster"), Value: tencentCommon.StringPtr(common.TagClusterPrefix + p.ContextName)},
 	}
 
-	for k, v := range p.Tags {
-		tags = append(tags, &cvm.Tag{Key: tencentCommon.StringPtr(k), Value: tencentCommon.StringPtr(v)})
+	for _, v := range p.Tags {
+		ss := strings.Split(v, "=")
+		if len(ss) != 2 {
+			return fmt.Errorf("tags %s invalid", v)
+		}
+		tags = append(tags, &cvm.Tag{Key: tencentCommon.StringPtr(ss[0]), Value: tencentCommon.StringPtr(ss[1])})
 	}
 
 	if master {
