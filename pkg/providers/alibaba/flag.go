@@ -254,7 +254,7 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Name:  "tags",
 			P:     &p.Tags,
 			V:     p.Tags,
-			Usage: "Set instance additional tags, i.e.(--tags a=b,b=c), see: https://help.aliyun.com/document_detail/25477.html?spm=a2c4g.11186623.6.1053.5fb621c6ENd1Hp",
+			Usage: "Set instance additional tags, i.e.(--tags a=b --tags b=c), see: https://help.aliyun.com/document_detail/25477.html?spm=a2c4g.11186623.6.1053.5fb621c6ENd1Hp",
 		},
 		{
 			Name:  "cloud-controller-manager",

@@ -274,7 +274,7 @@ func (p *Amazon) sharedFlags() []types.Flag {
 			Name:  "tags",
 			P:     &p.Tags,
 			V:     p.Tags,
-			Usage: "Set instance additional tags, i.e.(--tags a=b,b=c), see: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html",
+			Usage: "Set instance additional tags, i.e.(--tags a=b --tags b=c), see: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html",
 		},
 		{
 			Name:  "cloud-controller-manager",

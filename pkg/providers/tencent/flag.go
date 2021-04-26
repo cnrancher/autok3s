@@ -254,7 +254,7 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			Name:  "tags",
 			P:     &p.Tags,
 			V:     p.Tags,
-			Usage: "Set instance additional tags, i.e.(--tags a=b,b=c), see: https://cloud.tencent.com/document/product/213/17131",
+			Usage: "Set instance additional tags, i.e.(--tags a=b --tags b=c), see: https://cloud.tencent.com/document/product/213/17131",
 		},
 		{
 			Name:  "router",
