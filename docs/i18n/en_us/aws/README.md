@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This article provides users with the instructions to create and launch a K3s cluster on an AWS EC2 instance, and to add nodes for an existing K3s cluster on AWS EC2 instance. In additon, this article provides guidance of advanced usages of running K3s on AWS EC2, such as setting up private registry, enabling AWS CCM, and enabling UI components.
+This article provides users with the instructions to create and launch a K3s cluster on an AWS EC2 instance, and to add nodes for an existing K3s cluster on AWS EC2 instance. In addition, this article provides guidance of advanced usages of running K3s on AWS EC2, such as setting up private registry, enabling AWS CCM, and enabling UI components.
 
 ## Prerequisites
 
@@ -104,14 +104,14 @@ autok3s -d create -p aws --name myk3s --master 3 --cluster
 
 #### External Database
 
-The following requirements must be met before creating an HA K3s cluster with external database:
+The following requirements must be met before creating an HA K3s cluster with an external database:
 
 - The number of master nodes in this cluster must be greater or equal to 1.
 - The external database information must be specified within `--datastore "PATH"` parameter.
 
 In the example below, `--master 2` specifies the number of master nodes to be 2, `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
 
-Run the command below and create an HA K3s cluster with external database:
+Run the command below and create an HA K3s cluster with an external database:
 
 ```bash
 autok3s -d create -p aws --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
@@ -160,13 +160,13 @@ myk3s    ap-southeast-2  aws   Running  1        0        v1.20.2+k3s1
 
 ## Describe k3s cluster
 
-This command will show detail information of specified cluster, such as instance status, node IP, kubelet version, etc.
+This command will show detail information of a specified cluster, such as instance status, node IP, kubelet version, etc.
 
 ```bash
 autok3s describe -n <clusterName> -p aws
 ```
 
-> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider>` to choose specified cluster. i.e. `autok3s describe cluster myk3s -p aws`
+> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider>` to choose a specified cluster. i.e. `autok3s describe cluster myk3s -p aws`
 
 ```bash
 Name: myk3s
@@ -207,7 +207,7 @@ autok3s kubectl config use-context <context>
 
 ## SSH K3s Cluster's Node
 
-Login to a specific k3s cluster node via ssh, i.e myk3s.
+Login to a specific k3s cluster node via ssh, i.e. myk3s.
 
 ```bash
 autok3s ssh --provider aws --name myk3s
