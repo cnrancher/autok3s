@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This article provides users with the instructions to create and launch a K3s cluster on a virtual machine(VM), and to add nodes for an existing K3s cluster on the VM. In additon, this article provides guidance of advanced usages of running K3s on VM, such as setting up private registry, and enabling UI components.
+This article provides users with the instructions to create and launch a K3s cluster on a virtual machine(VM), and to add nodes for an existing K3s cluster on the VM. In addition, this article provides guidance of advanced usages of running K3s on VM, such as setting up private registry, and enabling UI components.
 
 ## Prerequisites
 
@@ -65,14 +65,14 @@ autok3s -d create \
 
 #### External Database
 
-The following requirements must be met before creating an HA K3s cluster with external database:
+The following requirements must be met before creating an HA K3s cluster with an external database:
 
 - The number of master nodes in this cluster must be greater or equal to 1.
 - The external database information must be specified within `--datastore "PATH"` parameter.
 
 In the example below, `--master-ips <master-ip-1,master-ip-2>` specifies the number of master nodes to be 2, `--datastore "PATH"` specifies the external database information. As a result, requirements listed above are met.
 
-Run the command below and create an HA K3s cluster with external database:
+Run the command below and create an HA K3s cluster with an external database:
 
 ```bash
 autok3s -d create \
@@ -157,7 +157,7 @@ We integrate some advanced components such as private registries and UI related 
 
 ### Setting up Private Registry
 
-When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, i.e:
+When running `autok3s create` or `autok3s join` command, it takes effect with the`--registry /etc/autok3s/registries.yaml` flag, i.e.:
 
 ```bash
 autok3s -d create \

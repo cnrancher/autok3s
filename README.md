@@ -45,6 +45,7 @@ Autok3s can support the following providers, we are happy to add more if you nee
 - [aws](docs/i18n/en_us/aws/README.md) - Bootstrap K3s onto Amazon EC2
 - [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap K3s onto Alibaba ECS
 - [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap K3s onto Tencent CVM
+- [k3d [RC Release]](docs/i18n/en_us/k3d/README.md) - Bootstrap K3d onto Local Machine
 - [native](docs/i18n/en_us/native/README.md) - Bootstrap K3s onto any VM
 
 ## Quick Start (tl;dr)
@@ -70,6 +71,15 @@ export AWS_ACCESS_KEY_ID='<Your access key ID>'
 export AWS_SECRET_ACCESS_KEY='<Your secret access key>'
 
 autok3s -d create -p aws --name myk3s --master 1 --worker 1
+```
+
+Scenario 3 - Use Docker (K3d):
+
+```bash
+# The commands will start autok3s daemon with an interactionable UI which support K3d provider.
+# Highly recommend run this command on Linux/Unix.
+
+docker run -itd --restart=unless-stopped --net host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.3-rc1
 ```
 
 ## User Guide
