@@ -1,15 +1,14 @@
-// +build darwin linux
+// +build windows
 
 package hosts
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
-
-	"github.com/creack/pty"
 )
 
 type PtyDialer struct {
@@ -63,31 +62,10 @@ func (d *PtyDialer) SetDefaultSize(height, weight int) *PtyDialer {
 
 // WebSocketTerminal open pty websocket terminal.
 func (d *PtyDialer) WebSocketTerminal() error {
-	p, err := pty.StartWithSize(d.cmd, &pty.Winsize{
-		Rows: uint16(d.Height),
-		Cols: uint16(d.Weight),
-	})
-	if err != nil {
-		return err
-	}
-
-	d.conn = p
-
-	go func() {
-		_, _ = io.Copy(d.conn, d.Stdin)
-	}()
-
-	go func() {
-		_, _ = io.Copy(d.Stderr, d.conn)
-	}()
-
-	return nil
+	return fmt.Errorf("not support windows")
 }
 
 // ChangeSize changes to the current win size.
 func (d *PtyDialer) ChangeSize(win *WindowSize) error {
-	return pty.Setsize(d.conn, &pty.Winsize{
-		Rows: uint16(win.Height),
-		Cols: uint16(win.Width),
-	})
+	return nil
 }
