@@ -46,7 +46,23 @@ func (p *K3d) GetUsageExample(action string) string {
 }
 
 func (p *K3d) GetCreateFlags() []types.Flag {
-	return p.sharedFlags()
+	fs := p.sharedFlags()
+	fs = append(fs, []types.Flag{
+		{
+			Name:  "token",
+			P:     &p.Token,
+			V:     p.Token,
+			Usage: "K3s token, if empty will automatically generated, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/#cluster-options",
+		},
+		{
+			Name:     "network",
+			P:        &p.Network,
+			V:        p.Network,
+			Usage:    "Join an existing network, see: https://k3d.io/internals/networking",
+			Required: false,
+		},
+	}...)
+	return fs
 }
 
 func (p *K3d) GetSSHConfig() *types.SSH {
@@ -56,23 +72,10 @@ func (p *K3d) GetSSHConfig() *types.SSH {
 func (p *K3d) GetOptionFlags() []types.Flag {
 	fs := []types.Flag{
 		{
-			Name:  "token",
-			P:     &p.Token,
-			V:     p.Token,
-			Usage: "K3s token, if empty will automatically generated, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/#cluster-options",
-		},
-		{
 			Name:     "api-port",
 			P:        &p.APIPort,
 			V:        p.APIPort,
 			Usage:    "Specify the Kubernetes API server port exposed on the LoadBalancer, e.g.(--api-port 0.0.0.0:6550)",
-			Required: false,
-		},
-		{
-			Name:     "network",
-			P:        &p.Network,
-			V:        p.Network,
-			Usage:    "Join an existing network",
 			Required: false,
 		},
 		{
@@ -129,6 +132,27 @@ func (p *K3d) GetOptionFlags() []types.Flag {
 			P:        &p.NoImageVolume,
 			V:        p.NoImageVolume,
 			Usage:    "Disable the creation of a volume for importing images",
+			Required: false,
+		},
+		{
+			Name:     "masters-memory",
+			P:        &p.MastersMemory,
+			V:        p.MastersMemory,
+			Usage:    "Memory limit imposed on the server nodes [From docker]",
+			Required: false,
+		},
+		{
+			Name:     "workers-memory",
+			P:        &p.WorkersMemory,
+			V:        p.WorkersMemory,
+			Usage:    "Memory limit imposed on the agents nodes [From docker]",
+			Required: false,
+		},
+		{
+			Name:     "image",
+			P:        &p.Image,
+			V:        p.Image,
+			Usage:    "Specify k3s image used for the node(s)",
 			Required: false,
 		},
 	}
