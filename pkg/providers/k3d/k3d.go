@@ -41,7 +41,6 @@ const (
 	k3dConfigKind    = "Simple"
 	k3dImage         = "rancher/k3s:v1.20.5-k3s1"
 	k3dAPIPort       = "0.0.0.0:0"
-	k3dMaster        = "1"
 )
 
 type K3d struct {
@@ -58,7 +57,6 @@ func init() {
 func newProvider() *K3d {
 	base := cluster.NewBaseProvider()
 	base.Provider = providerName
-	base.Master = k3dMaster
 	return &K3d{
 		ProviderBase: base,
 		Options: typesk3d.Options{
