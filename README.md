@@ -50,7 +50,7 @@ Autok3s can support the following providers, we are happy to add more if you nee
 
 ## Quick Start (tl;dr)
 
-Scenario 1 - Use Docker:
+Scenario 1 - Run with Docker:
 
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
@@ -58,7 +58,7 @@ Scenario 1 - Use Docker:
 docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.4.2
 ```
 
-Scenario 2 - Use CLI:
+Scenario 2 - Run with CLI:
 
 ```bash
 # The command use the shell script on MacOS and Linux, or visit the Releases page to download the executable for Windows.
@@ -73,13 +73,13 @@ export AWS_SECRET_ACCESS_KEY='<Your secret access key>'
 autok3s -d create -p aws --name myk3s --master 1 --worker 1
 ```
 
-Scenario 3 - Use Docker (K3d):
+Scenario 3 - Run with Docker (Compatible K3d Provider):
 
 ```bash
 # The commands will start autok3s daemon with an interactionable UI which support K3d provider.
 # Highly recommend run this command on Linux/Unix.
 
-docker run -itd --restart=unless-stopped --net host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.3-rc1
+docker run -itd --restart=unless-stopped --net host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.3-rc2
 ```
 
 ## User Guide
