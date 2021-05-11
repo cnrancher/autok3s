@@ -89,7 +89,7 @@ func (p *K3d) GetOptionFlags() []types.Flag {
 			Name:     "envs",
 			P:        &p.Envs,
 			V:        p.Envs,
-			Usage:    "Add environment variables to nodes, e.g.(--envs HTTP_PROXY=my.proxy.com --envs SOME_KEY=SOME_VAL@server[0])",
+			Usage:    "Add environment variables to nodes, e.g.(--envs HTTP_PROXY=my.proxy.com@server[0] --envs SOME_KEY=SOME_VAL@server[0])",
 			Required: false,
 		},
 		{
