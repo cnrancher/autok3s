@@ -108,20 +108,25 @@ func newDialer(id, node string, conn *websocket.Conn) (*hosts.WebSocketDialer, e
 	}
 	allNodes = append(allNodes, nodes...)
 
-	var dialer *hosts.WebSocketDialer
+	var wsDialer *hosts.WebSocketDialer
 
 	// find the matching node and open dialer.
 	for _, n := range allNodes {
 		if n.InstanceID == node {
 			if state.Provider == "k3d" {
-				dialer, err = hosts.NewWebSocketDialer(hosts.DockerKind, &n, conn, nil)
-			} else {
-				dialer, err = hosts.NewWebSocketDialer(hosts.SSHKind, &n, conn, nil)
+				dialer, err := hosts.NewDockerDialer(&n)
+				if err != nil {
+					return nil, err
+				}
+				wsDialer = hosts.NewWebSocketDialer(conn, dialer)
+				return wsDialer, nil
 			}
+			dialer, err := hosts.NewSSHDialer(&n, true)
 			if err != nil {
 				return nil, err
 			}
-			return dialer, nil
+			wsDialer = hosts.NewWebSocketDialer(conn, dialer)
+			return wsDialer, nil
 		}
 	}
 	return nil, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("node %s is not found for cluster [%s]", node, id))

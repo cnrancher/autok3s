@@ -40,9 +40,10 @@ type SSHDialer struct {
 	Term  string
 	Modes ssh.TerminalModes
 
-	ctx  context.Context
-	conn *ssh.Client
-	cmd  *bytes.Buffer
+	ctx     context.Context
+	conn    *ssh.Client
+	session *ssh.Session
+	cmd     *bytes.Buffer
 
 	err error
 }
@@ -114,8 +115,30 @@ func (d *SSHDialer) Dial(t bool) (*ssh.Client, error) {
 	return ssh.Dial("tcp", d.sshAddress, cfg)
 }
 
+func (d *SSHDialer) NewSession() error {
+	session, err := d.conn.NewSession()
+	if err != nil {
+		return err
+	}
+	d.session = session
+	return nil
+}
+
+// Wait waits for the remote command to exit.
+func (d *SSHDialer) Wait() error {
+	if d.session != nil {
+		return d.session.Wait()
+	}
+	return nil
+}
+
 // Close close the SSH connection.
 func (d *SSHDialer) Close() error {
+	if d.session != nil {
+		if err := d.session.Close(); err != nil {
+			return err
+		}
+	}
 	if d.conn != nil {
 		if err := d.conn.Close(); err != nil {
 			return err
@@ -126,17 +149,26 @@ func (d *SSHDialer) Close() error {
 
 // SetStdio set dialer's reader and writer.
 func (d *SSHDialer) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *SSHDialer {
-	d.Stdout = stdout
-	d.Stderr = stderr
-	d.Stdin = stdin
+	d.SetIO(stdout, stderr, stdin)
 	return d
 }
 
-// SetDefaultSize set dialer's default win size.
-func (d *SSHDialer) SetDefaultSize(height, weight int) *SSHDialer {
+// SetStdio set dialer's reader and writer.
+func (d *SSHDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
+	d.Stdout = stdout
+	d.Stderr = stderr
+	d.Stdin = stdin
+}
+
+// SetDefaultSize set dialer's default window size.
+func (d *SSHDialer) SetWindowSize(height, weight int) {
 	d.Height = height
 	d.Weight = weight
-	return d
+}
+
+// ChangeWindowSize change the window size for current session.
+func (d *SSHDialer) ChangeWindowSize(win *WindowSize) error {
+	return d.session.WindowChange(win.Height, win.Width)
 }
 
 // SetWriter set dialer's logs writer.
@@ -160,7 +192,7 @@ func (d *SSHDialer) Cmd(cmd string) *SSHDialer {
 	return d
 }
 
-// Run run commands in remote server via SSH tunnel.
+// Run commands in remote server via SSH tunnel.
 func (d *SSHDialer) Run() error {
 	if d.err != nil {
 		return d.err
@@ -169,26 +201,8 @@ func (d *SSHDialer) Run() error {
 	return d.executeCommands()
 }
 
-// Terminal open ssh terminal.
+// Terminal starts a login shell on the remote host for CLI.
 func (d *SSHDialer) Terminal() error {
-	session, err := d.conn.NewSession()
-	defer func() {
-		_ = session.Close()
-	}()
-	if err != nil {
-		return err
-	}
-
-	d.Term = os.Getenv("TERM")
-	if d.Term == "" {
-		d.Term = "xterm"
-	}
-	d.Modes = ssh.TerminalModes{
-		ssh.ECHO:          1,
-		ssh.TTY_OP_ISPEED: 14400,
-		ssh.TTY_OP_OSPEED: 14400,
-	}
-
 	fdInfo, _ := term.GetFdInfo(d.Stdout)
 	fd := int(fdInfo)
 
@@ -205,27 +219,22 @@ func (d *SSHDialer) Terminal() error {
 		return err
 	}
 
-	session.Stdin = d.Stdin
-	session.Stdout = d.Stdout
-	session.Stderr = d.Stderr
-
-	if err := session.RequestPty(d.Term, d.Height, d.Weight, d.Modes); err != nil {
+	if err := d.OpenTerminal(); err != nil {
 		return err
 	}
 
-	if err := session.Shell(); err != nil {
-		return err
-	}
-
-	if err := session.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return d.session.Wait()
 }
 
-// WebSocketTerminal open websocket terminal.
-func (d *SSHDialer) WebSocketTerminal(session *ssh.Session) error {
+// OpenTerminal starts a login shell on the remote host.
+func (d *SSHDialer) OpenTerminal() error {
+	if d.session == nil {
+		session, err := d.conn.NewSession()
+		if err != nil {
+			return err
+		}
+		d.session = session
+	}
 	d.Term = os.Getenv("TERM")
 	if d.Term == "" {
 		d.Term = "xterm"
@@ -235,20 +244,15 @@ func (d *SSHDialer) WebSocketTerminal(session *ssh.Session) error {
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
+	d.session.Stdin = d.Stdin
+	d.session.Stdout = d.Stdout
+	d.session.Stderr = d.Stderr
 
-	session.Stdin = d.Stdin
-	session.Stdout = d.Stdout
-	session.Stderr = d.Stderr
-
-	if err := session.RequestPty(d.Term, d.Height, d.Weight, d.Modes); err != nil {
+	if err := d.session.RequestPty(d.Term, d.Height, d.Weight, d.Modes); err != nil {
 		return err
 	}
 
-	if err := session.Shell(); err != nil {
-		return err
-	}
-
-	return nil
+	return d.session.Shell()
 }
 
 func (d *SSHDialer) executeCommands() error {
@@ -316,4 +320,8 @@ func (d *SSHDialer) executeCommand(cmd string) error {
 	wg.Wait()
 
 	return err
+}
+
+func (d *SSHDialer) Write(b []byte) error {
+	return nil
 }

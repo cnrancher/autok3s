@@ -70,14 +70,14 @@ func ptyHandler(apiOp *types.APIRequest) error {
 		_ = c.Close()
 	}()
 
-	dialer, err := hosts.NewWebSocketDialer(hosts.PtyKind, nil, c, exec.CommandContext(apiOp.Request.Context(), "bash"))
+	dialer, err := hosts.NewPtyDialer(exec.CommandContext(apiOp.Request.Context(), "bash"))
 	if err != nil {
 		return err
 	}
+	wsDialer := hosts.NewWebSocketDialer(c, dialer)
+	wsDialer.SetDefaultSize(rows, columns)
 
-	dialer.SetDefaultSize(rows, columns)
-
-	err = dialer.Terminal()
+	err = wsDialer.Terminal()
 	if err != nil {
 		return err
 	}
@@ -85,10 +85,10 @@ func ptyHandler(apiOp *types.APIRequest) error {
 	aliasCmd := fmt.Sprintf("alias kubectl='kubectl --context %s'\n", apiOp.Name)
 	aliasCmd = fmt.Sprintf("%salias k='kubectl --context %s'\n", aliasCmd, apiOp.Name)
 
-	err = dialer.Write([]byte(aliasCmd))
+	err = wsDialer.Write([]byte(aliasCmd))
 	if err != nil {
 		return err
 	}
 
-	return dialer.ReadMessage(apiOp.Context())
+	return wsDialer.ReadMessage(apiOp.Context())
 }

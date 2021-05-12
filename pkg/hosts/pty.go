@@ -24,8 +24,6 @@ type PtyDialer struct {
 	ctx  context.Context
 	conn *os.File
 	cmd  *exec.Cmd
-
-	err error
 }
 
 func NewPtyDialer(cmd *exec.Cmd) (*PtyDialer, error) {
@@ -46,23 +44,21 @@ func (d *PtyDialer) Close() error {
 	return nil
 }
 
-// SetStdio set dialer's reader and writer.
-func (d *PtyDialer) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *PtyDialer {
+// SetIO set dialer's reader and writer.
+func (d *PtyDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
 	d.Stdout = stdout
 	d.Stderr = stderr
 	d.Stdin = stdin
-	return d
 }
 
-// SetDefaultSize set dialer's default win size.
-func (d *PtyDialer) SetDefaultSize(height, weight int) *PtyDialer {
+// SetWindowSize set tty window size size.
+func (d *PtyDialer) SetWindowSize(height, weight int) {
 	d.Height = height
 	d.Weight = weight
-	return d
 }
 
-// WebSocketTerminal open pty websocket terminal.
-func (d *PtyDialer) WebSocketTerminal() error {
+// OpenTerminal open pty websocket terminal.
+func (d *PtyDialer) OpenTerminal() error {
 	p, err := pty.StartWithSize(d.cmd, &pty.Winsize{
 		Rows: uint16(d.Height),
 		Cols: uint16(d.Weight),
@@ -84,10 +80,20 @@ func (d *PtyDialer) WebSocketTerminal() error {
 	return nil
 }
 
-// ChangeSize changes to the current win size.
-func (d *PtyDialer) ChangeSize(win *WindowSize) error {
+// ChangeWindowSize changes to the current window size.
+func (d *PtyDialer) ChangeWindowSize(win *WindowSize) error {
 	return pty.Setsize(d.conn, &pty.Winsize{
 		Rows: uint16(win.Height),
 		Cols: uint16(win.Width),
 	})
+}
+
+// Wait waits for the command to exit.
+func (d *PtyDialer) Wait() error {
+	return d.cmd.Wait()
+}
+
+func (d *PtyDialer) Write(b []byte) error {
+	_, err := d.conn.Write(b)
+	return err
 }
