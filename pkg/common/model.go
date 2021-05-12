@@ -173,6 +173,7 @@ func toCluster(state *ClusterState) types.Cluster {
 			Status: state.Status,
 		},
 	}
+
 	p, err := providers.GetProvider(state.Provider)
 	if err != nil {
 		logrus.Errorf("failed to get provider by name %s", state.Provider)
