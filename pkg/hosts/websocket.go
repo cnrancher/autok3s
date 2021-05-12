@@ -4,41 +4,33 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
-	"os/exec"
-
-	"github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh"
 )
 
-const (
-	SSHKind    = "ssh"
-	DockerKind = "docker"
-	PtyKind    = "pty"
-)
-
-type WebSocketDialer struct {
-	kind         string
-	sshDialer    *SSHDialer
-	dockerDialer *DockerDialer
-	ptyDialer    *PtyDialer
-
-	conn    *websocket.Conn
-	session *ssh.Session
-	reader  *TerminalReader
-
-	err error
+type Dialer interface {
+	SetIO(stdout, stderr io.Writer, stdin io.ReadCloser)
+	SetWindowSize(height, weight int)
+	ChangeWindowSize(win *WindowSize) error
+	OpenTerminal() error
+	Wait() error
+	Write(b []byte) error
+	Close() error
 }
 
-func NewWebSocketDialer(kind string, n *types.Node, conn *websocket.Conn, cmd *exec.Cmd) (*WebSocketDialer, error) {
+type WebSocketDialer struct {
+	dialer Dialer
+	conn   *websocket.Conn
+	reader *TerminalReader
+}
+
+func NewWebSocketDialer(conn *websocket.Conn, dialer Dialer) *WebSocketDialer {
 	d := &WebSocketDialer{
-		kind: kind,
-		conn: conn,
+		conn:   conn,
+		dialer: dialer,
 	}
 
 	r := NewTerminalReader(d.conn)
@@ -46,131 +38,41 @@ func NewWebSocketDialer(kind string, n *types.Node, conn *websocket.Conn, cmd *e
 	w := NewBinaryWriter(d.conn)
 
 	d.reader = r
-
-	switch kind {
-	case SSHKind:
-		sshDialer, err := NewSSHDialer(n, true)
-		if err != nil {
-			return nil, err
-		}
-
-		sshDialer.SetStdio(w, w, r)
-
-		session, err := sshDialer.conn.NewSession()
-		if err != nil {
-			return nil, err
-		}
-
-		d.session = session
-		d.sshDialer = sshDialer
-	case DockerKind:
-		dockerDialer, err := NewDockerDialer(n)
-		if err != nil {
-			return nil, err
-		}
-
-		dockerDialer.SetStdio(w, w, r)
-		d.dockerDialer = dockerDialer
-	case PtyKind:
-		ptyDialer, err := NewPtyDialer(cmd)
-		if err != nil {
-			return nil, err
-		}
-
-		ptyDialer.SetStdio(w, w, r)
-
-		d.ptyDialer = ptyDialer
-	default:
-		return nil, fmt.Errorf("[websocket-dialer] dialer type is invalid")
-	}
-
-	return d, nil
+	d.dialer.SetIO(w, w, r)
+	return d
 }
 
 // Close close the WebSocket connection.
 func (d *WebSocketDialer) Close() {
-	var err error
-
-	if d.sshDialer != nil {
-		err = d.sshDialer.Close()
-	}
-
-	if d.dockerDialer != nil {
-		err = d.dockerDialer.Close()
-	}
-
-	if d.ptyDialer != nil {
-		err = d.ptyDialer.Close()
-	}
-
+	err := d.dialer.Close()
 	if err != nil && !errors.Is(err, io.EOF) {
 		logrus.Errorf("[websocket-dialer] dialer closed error: %s", err.Error())
 	}
 }
 
-// SetDefaultSize set dialer's default win size.
-func (d *WebSocketDialer) SetDefaultSize(height, weight int) *WebSocketDialer {
-	switch d.kind {
-	case SSHKind:
-		d.sshDialer = d.sshDialer.SetDefaultSize(height, weight)
-	case DockerKind:
-		d.dockerDialer = d.dockerDialer.SetDefaultSize(height, weight)
-	case PtyKind:
-		d.ptyDialer = d.ptyDialer.SetDefaultSize(height, weight)
-	}
-	return d
+// SetDefaultSize set dialer's default window size.
+func (d *WebSocketDialer) SetDefaultSize(height, weight int) {
+	d.dialer.SetWindowSize(height, weight)
 }
 
 // Write write bytes to the websocket connection.
 func (d *WebSocketDialer) Write(bytes []byte) error {
-	var err error
-
-	switch d.kind {
-	case PtyKind:
-		_, err = d.ptyDialer.conn.Write(bytes)
-	}
-
-	return err
+	return d.dialer.Write(bytes)
 }
 
 // Terminal open websocket terminal.
 func (d *WebSocketDialer) Terminal() error {
-	switch d.kind {
-	case SSHKind:
-		return d.sshDialer.WebSocketTerminal(d.session)
-	case DockerKind:
-		return d.dockerDialer.WebSocketTerminal()
-	case PtyKind:
-		return d.ptyDialer.WebSocketTerminal()
-	}
-	return nil
+	return d.dialer.OpenTerminal()
 }
 
 // ReadMessage read websocket message.
 func (d *WebSocketDialer) ReadMessage(ctx context.Context) error {
-	switch d.kind {
-	case SSHKind:
-		return readMessage(ctx, d.conn, d.Close, d.session.Wait, d.reader.ClosedCh)
-	case DockerKind:
-		return readMessage(ctx, d.conn, d.Close, d.dockerDialer.TerminalWait, d.reader.ClosedCh)
-	case PtyKind:
-		return readMessage(ctx, d.conn, d.Close, d.ptyDialer.cmd.Wait, d.reader.ClosedCh)
-	}
-	return nil
+	return readMessage(ctx, d.conn, d.Close, d.dialer.Wait, d.reader.ClosedCh)
 }
 
 // ChangeWindowSize change websocket win size.
 func (d *WebSocketDialer) ChangeWindowSize(win *WindowSize) {
-	var err error
-	switch d.kind {
-	case SSHKind:
-		err = d.session.WindowChange(win.Height, win.Width)
-	//case DockerKind:
-	//	err = d.dockerDialer.ResizeTtyTo(d.dockerDialer.ctx, uint(win.Height), uint(win.Width))
-	case PtyKind:
-		err = d.ptyDialer.ChangeSize(win)
-	}
-
+	err := d.dialer.ChangeWindowSize(win)
 	if err != nil {
 		logrus.Errorf("[websocket-dialer] failed to change window size: %s", err.Error())
 	}

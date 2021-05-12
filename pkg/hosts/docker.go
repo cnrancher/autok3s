@@ -43,8 +43,6 @@ type DockerDialer struct {
 	ctx      context.Context
 	client   *client.Client
 	response *dockertypes.HijackedResponse
-
-	err error
 }
 
 func NewDockerDialer(n *types.Node) (*DockerDialer, error) {
@@ -139,17 +137,21 @@ func (d *DockerDialer) Close() error {
 
 // SetStdio set dialer's reader and writer.
 func (d *DockerDialer) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *DockerDialer {
-	d.Stdout = stdout
-	d.Stderr = stderr
-	d.Stdin = stdin
+	d.SetIO(stdout, stderr, stdin)
 	return d
 }
 
-// SetDefaultSize set dialer's default win size.
-func (d *DockerDialer) SetDefaultSize(height, weight int) *DockerDialer {
+// SetIO set dialer's reader and writer.
+func (d *DockerDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
+	d.Stdout = stdout
+	d.Stderr = stderr
+	d.Stdin = stdin
+}
+
+// SetWindowSize set dialer's default win size.
+func (d *DockerDialer) SetWindowSize(height, weight int) {
 	d.Height = height
 	d.Weight = weight
-	return d
 }
 
 // SetWriter set dialer's logs writer.
@@ -175,7 +177,7 @@ func (d *DockerDialer) Terminal() error {
 		}
 	}
 
-	if err := d.TerminalWait(); err != nil {
+	if err := d.Wait(); err != nil {
 		if !errors.Is(err, io.EOF) {
 			return err
 		}
@@ -185,7 +187,7 @@ func (d *DockerDialer) Terminal() error {
 }
 
 // WebSocketTerminal open docker websocket terminal.
-func (d *DockerDialer) WebSocketTerminal() error {
+func (d *DockerDialer) OpenTerminal() error {
 	return d.ExecStart(false)
 }
 
@@ -243,7 +245,7 @@ func (d *DockerDialer) ExecStart(needRestore bool) error {
 }
 
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/exec.go#L180.
-func (d *DockerDialer) TerminalWait() error {
+func (d *DockerDialer) Wait() error {
 	resp, err := d.client.ContainerExecInspect(d.ctx, d.execID)
 	if err != nil {
 		// if we can't connect, then the daemon probably died.
@@ -436,4 +438,13 @@ func (d *DockerDialer) beginInputStream(restoreInput func()) (doneC <-chan struc
 	}()
 
 	return inputDone, detached
+}
+
+// ChangeWindowSize change tty window size for websocket.
+func (d *DockerDialer) ChangeWindowSize(win *WindowSize) error {
+	return d.ResizeTtyTo(d.ctx, uint(win.Height), uint(win.Width))
+}
+
+func (d *DockerDialer) Write(b []byte) error {
+	return nil
 }

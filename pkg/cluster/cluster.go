@@ -673,6 +673,9 @@ func genK3sVersion(version, channel string) string {
 }
 
 func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err error) {
+	if c.Registry == "" && c.RegistryContent == "" {
+		return nil
+	}
 	cmd := make([]string, 0)
 	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", registryPath))
 	var registry *templates.Registry
