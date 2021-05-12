@@ -1,5 +1,11 @@
 package types
 
+import (
+	"database/sql/driver"
+	"fmt"
+	"strings"
+)
+
 type AutoK3s struct {
 	Clusters []Cluster `json:"clusters" yaml:"clusters"`
 }
@@ -13,29 +19,30 @@ type Cluster struct {
 }
 
 type Metadata struct {
-	Name            string `json:"name" yaml:"name"`
-	Provider        string `json:"provider" yaml:"provider"`
-	Master          string `json:"master" yaml:"master"`
-	Worker          string `json:"worker" yaml:"worker"`
-	Token           string `json:"token,omitempty" yaml:"token,omitempty"`
-	IP              string `json:"ip,omitempty" yaml:"ip,omitempty"`
-	ClusterCidr     string `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
-	MasterExtraArgs string `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
-	WorkerExtraArgs string `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
-	Registry        string `json:"registry,omitempty" yaml:"registry,omitempty"`
-	DataStore       string `json:"datastore,omitempty" yaml:"datastore,omitempty"`
-	K3sVersion      string `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
-	K3sChannel      string `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`
-	InstallScript   string `json:"k3s-install-script,omitempty" yaml:"k3s-install-script,omitempty"`
-	Mirror          string `json:"k3s-install-mirror,omitempty" yaml:"k3s-install-mirror,omitempty"`
-	DockerMirror    string `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
-	DockerScript    string `json:"dockerScript,omitempty" yaml:"dockerScript,omitempty"`
-	Network         string `json:"network,omitempty" yaml:"network,omitempty"`
-	UI              bool   `json:"ui" yaml:"ui"`
-	Cluster         bool   `json:"cluster" yaml:"cluster"`
-	ContextName     string `json:"context-name" yaml:"context-name"`
-	RegistryContent string `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
-	Manifests       string `json:"manifests,omitempty" yaml:"manifests,omitempty"`
+	Name            string      `json:"name" yaml:"name"`
+	Provider        string      `json:"provider" yaml:"provider"`
+	Master          string      `json:"master" yaml:"master"`
+	Worker          string      `json:"worker" yaml:"worker"`
+	Token           string      `json:"token,omitempty" yaml:"token,omitempty"`
+	IP              string      `json:"ip,omitempty" yaml:"ip,omitempty"`
+	TLSSans         StringArray `json:"tls-sans,omitempty" yaml:"tls-sans,omitempty" gorm:"type:stringArray"`
+	ClusterCidr     string      `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
+	MasterExtraArgs string      `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
+	WorkerExtraArgs string      `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
+	Registry        string      `json:"registry,omitempty" yaml:"registry,omitempty"`
+	DataStore       string      `json:"datastore,omitempty" yaml:"datastore,omitempty"`
+	K3sVersion      string      `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
+	K3sChannel      string      `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`
+	InstallScript   string      `json:"k3s-install-script,omitempty" yaml:"k3s-install-script,omitempty"`
+	Mirror          string      `json:"k3s-install-mirror,omitempty" yaml:"k3s-install-mirror,omitempty"`
+	DockerMirror    string      `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
+	DockerScript    string      `json:"dockerScript,omitempty" yaml:"dockerScript,omitempty"`
+	Network         string      `json:"network,omitempty" yaml:"network,omitempty"`
+	UI              bool        `json:"ui" yaml:"ui"`
+	Cluster         bool        `json:"cluster" yaml:"cluster"`
+	ContextName     string      `json:"context-name" yaml:"context-name"`
+	RegistryContent string      `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
+	Manifests       string      `json:"manifests,omitempty" yaml:"manifests,omitempty"`
 }
 
 type Status struct {
@@ -108,4 +115,27 @@ type ClusterNode struct {
 	ContainerRuntimeVersion string   `json:"containerRuntimeVersion,omitempty"`
 	Version                 string   `json:"version,omitempty"`
 	Master                  bool     `json:"-"`
+}
+
+type StringArray []string
+
+func (a *StringArray) Scan(value interface{}) (err error) {
+	switch v := value.(type) {
+	case string:
+		*a = strings.Split(v, ",")
+	default:
+		return fmt.Errorf("failed to scan array value %v", value)
+	}
+	return nil
+}
+
+func (a StringArray) Value() (driver.Value, error) {
+	if a == nil {
+		return nil, nil
+	}
+	return strings.Join(a, ","), nil
+}
+
+func (a StringArray) GormDataType() string {
+	return "stringArray"
 }

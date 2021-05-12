@@ -2,6 +2,7 @@ package apis
 
 import (
 	"github.com/cnrancher/autok3s/pkg/types"
+
 	"github.com/rancher/wrangler/pkg/schemas"
 )
 

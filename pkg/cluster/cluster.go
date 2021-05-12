@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server --tls-san %s --node-external-ip %s %s' %s sh -"
+	initCommand            = "curl -sLS %s | %s K3S_TOKEN='%s' INSTALL_K3S_EXEC='server %s --node-external-ip %s %s' %s sh -"
 	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
@@ -73,6 +73,22 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		publicIP = cluster.MasterNodes[0].PublicIPAddress[0]
 	}
 
+	// append tls-sans to k3s install script:
+	// 1. appends from --tls-sans flags.
+	// 2. appends all master nodes' first public address.
+	var tlsSans string
+	p.TLSSans = append(p.TLSSans, publicIP)
+	for _, master := range cluster.MasterNodes {
+		if master.PublicIPAddress[0] != "" && master.PublicIPAddress[0] != publicIP {
+			p.TLSSans = append(p.TLSSans, master.PublicIPAddress[0])
+		}
+	}
+	for _, tlsSan := range p.TLSSans {
+		tlsSans = tlsSans + fmt.Sprintf(" --tls-san %s", tlsSan)
+	}
+	// save p.TlsSans to db.
+	cluster.TLSSans = p.TLSSans
+
 	masterExtraArgs := cluster.MasterExtraArgs
 	workerExtraArgs := cluster.WorkerExtraArgs
 
@@ -103,7 +119,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	if cluster.DockerScript != "" {
 		dockerCommand = cluster.DockerScript
 	}
-	if err := p.initMaster(k3sScript, k3sMirror, dockerMirror, publicIP, master0ExtraArgs, cluster, cluster.MasterNodes[0]); err != nil {
+	if err := p.initMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, publicIP, master0ExtraArgs, cluster, cluster.MasterNodes[0]); err != nil {
 		return err
 	}
 	p.Logger.Infof("[%s] successfully created k3s master-%d", p.Provider, 1)
@@ -119,7 +135,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		if providerExtraArgs != "" {
 			masterNExtraArgs += providerExtraArgs
 		}
-		if err := p.initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, publicIP, masterNExtraArgs, cluster, master); err != nil {
+		if err := p.initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, publicIP, masterNExtraArgs, cluster, master); err != nil {
 			return err
 		}
 		p.Logger.Infof("[%s] successfully created k3s master-%d", p.Provider, i+1)
@@ -233,6 +249,20 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 	if merged.DockerScript != "" {
 		dockerCommand = merged.DockerScript
 	}
+
+	// append tls-sans to k3s install script:
+	// 1. appends from --tls-sans flags.
+	// 2. appends all master nodes' first public address.
+	var tlsSans string
+	for _, master := range added.MasterNodes {
+		if master.PublicIPAddress[0] != "" {
+			merged.TLSSans = append(merged.TLSSans, master.PublicIPAddress[0])
+		}
+	}
+	for _, tlsSan := range merged.TLSSans {
+		tlsSans = tlsSans + fmt.Sprintf(" --tls-san %s", tlsSan)
+	}
+
 	errChan := make(chan error)
 	waitGroupDone := make(chan bool)
 	waitGroup := &sync.WaitGroup{}
@@ -247,7 +277,7 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 				if additionalExtraArgs != "" {
 					extraArgs += additionalExtraArgs
 				}
-				if err := p.joinMaster(k3sScript, k3sMirror, dockerMirror, extraArgs, merged, full); err != nil {
+				if err := p.joinMaster(k3sScript, k3sMirror, dockerMirror, extraArgs, tlsSans, merged, full); err != nil {
 					return err
 				}
 				p.Logger.Infof("[%s] successfully joined k3s master-%d", merged.Provider, i+1)
@@ -422,7 +452,7 @@ func (p *ProviderBase) DeployExtraManifest(cluster *types.Cluster, cmds []string
 	return nil
 }
 
-func (p *ProviderBase) initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
+func (p *ProviderBase) initMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
 	if strings.Contains(extraArgs, "--docker") {
 		p.Logger.Infof("[cluster] install docker command %s", fmt.Sprintf(dockerCommand, dockerMirror))
 		if _, err := p.execute(&master, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
@@ -437,17 +467,17 @@ func (p *ProviderBase) initMaster(k3sScript, k3sMirror, dockerMirror, ip, extraA
 	}
 
 	p.Logger.Infof("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
-		ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+		tlsSans, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
 	if _, err := p.execute(&master, []string{fmt.Sprintf(initCommand, k3sScript, k3sMirror,
-		cluster.Token, ip, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
+		cluster.Token, tlsSans, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *ProviderBase) initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
+func (p *ProviderBase) initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
@@ -463,7 +493,7 @@ func (p *ProviderBase) initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, 
 	}
 
 	if !strings.Contains(extraArgs, "server --server") {
-		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s --node-external-ip %s", fmt.Sprintf("https://%s:6443", ip), master.PublicIPAddress[0], master.PublicIPAddress[0])
+		sortedExtraArgs += fmt.Sprintf(" server --server %s %s --node-external-ip %s", fmt.Sprintf("https://%s:6443", ip), tlsSans, master.PublicIPAddress[0])
 	}
 
 	sortedExtraArgs += " " + extraArgs
@@ -510,11 +540,11 @@ func (p *ProviderBase) initWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 }
 
 func (p *ProviderBase) joinMaster(k3sScript, k3sMirror, dockerMirror,
-	extraArgs string, merged *types.Cluster, full types.Node) error {
+	extraArgs, tlsSans string, merged *types.Cluster, full types.Node) error {
 	sortedExtraArgs := ""
 
 	if !strings.Contains(extraArgs, "server --server") {
-		sortedExtraArgs += fmt.Sprintf(" server --server %s --tls-san %s --node-external-ip %s", fmt.Sprintf("https://%s:6443", merged.IP), full.PublicIPAddress[0], full.PublicIPAddress[0])
+		sortedExtraArgs += fmt.Sprintf(" server --server %s %s --node-external-ip %s", fmt.Sprintf("https://%s:6443", merged.IP), tlsSans, full.PublicIPAddress[0])
 	}
 
 	if merged.DataStore != "" {
