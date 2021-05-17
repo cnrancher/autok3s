@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"crypto/tls"
 	"embed"
 	"io"
 	"io/fs"
@@ -13,7 +14,18 @@ import (
 //go:embed static
 var assets embed.FS
 
-var localUI = "./static"
+var (
+	localUI        = "./static"
+	uiIndex        = "https://autok3s-ui.s3-ap-southeast-2.amazonaws.com/static/index.html"
+	insecureClient = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+)
 
 type fsFunc func(name string) (fs.File, error)
 
@@ -46,4 +58,39 @@ func ServeAssetNotFound(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(rw, req)
 	})
+}
+
+func Serve() http.Handler {
+	mode := os.Getenv("AUTOK3S_UI_MODE")
+	if mode == "dev" {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			_ = serveIndex(writer)
+		})
+	}
+	return ServeAsset()
+}
+
+func ServeNotFound(next http.Handler) http.Handler {
+	mode := os.Getenv("AUTOK3S_UI_MODE")
+	if mode == "dev" {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			_ = serveIndex(writer)
+		})
+	}
+	return ServeAssetNotFound(next)
+}
+
+func serveIndex(resp io.Writer) error {
+	uiPath := os.Getenv("AUTOK3S_UI_INDEX")
+	if uiPath != "" {
+		uiIndex = uiPath
+	}
+	r, err := insecureClient.Get(uiIndex)
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+
+	_, err = io.Copy(resp, r.Body)
+	return err
 }

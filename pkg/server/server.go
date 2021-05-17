@@ -32,12 +32,11 @@ func Start() http.Handler {
 
 	middleware := responsewriter.Chain{
 		responsewriter.Gzip,
-		responsewriter.NoCache,
 		responsewriter.DenyFrameOptions,
-		responsewriter.ContentType,
-		ui.ServeAssetNotFound,
+		responsewriter.CacheMiddleware("json", "js", "css", "svg", "png", "woff", "woff2"),
+		ui.ServeNotFound,
 	}
-	router.PathPrefix("/ui/").Handler(middleware.Handler(http.StripPrefix("/ui/", ui.ServeAsset())))
+	router.PathPrefix("/ui/").Handler(middleware.Handler(http.StripPrefix("/ui/", ui.Serve())))
 
 	router.Path("/").HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		http.Redirect(rw, req, "/ui/", http.StatusFound)
