@@ -36,7 +36,7 @@ var (
 	joinCommand            = "curl -sLS %s | %s K3S_URL='https://%s:6443' K3S_TOKEN='%s' INSTALL_K3S_EXEC='%s' %s sh -"
 	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
-	dockerCommand          = "curl -sSL https://get.docker.com | sh - %s"
+	dockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"
 	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
@@ -115,10 +115,6 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		master0ExtraArgs += " --cluster-init"
 	}
 
-	// add docker script for different provider.
-	if cluster.DockerScript != "" {
-		dockerCommand = cluster.DockerScript
-	}
 	if err := p.initMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, publicIP, master0ExtraArgs, cluster, cluster.MasterNodes[0]); err != nil {
 		return err
 	}
@@ -244,10 +240,6 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 
 	if merged.Token == "" {
 		return errors.New("[cluster] k3s token can not be empty")
-	}
-
-	if merged.DockerScript != "" {
-		dockerCommand = merged.DockerScript
 	}
 
 	// append tls-sans to k3s install script:
@@ -454,8 +446,8 @@ func (p *ProviderBase) DeployExtraManifest(cluster *types.Cluster, cmds []string
 
 func (p *ProviderBase) initMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, ip, extraArgs string, cluster *types.Cluster, master types.Node) error {
 	if strings.Contains(extraArgs, "--docker") {
-		p.Logger.Infof("[cluster] install docker command %s", fmt.Sprintf(dockerCommand, dockerMirror))
-		if _, err := p.execute(&master, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		p.Logger.Infof("[cluster] install docker command %s", fmt.Sprintf(dockerCommand, cluster.DockerScript, dockerMirror))
+		if _, err := p.execute(&master, []string{fmt.Sprintf(dockerCommand, cluster.DockerScript, dockerMirror)}); err != nil {
 			return err
 		}
 	}
@@ -481,7 +473,7 @@ func (p *ProviderBase) initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, 
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&master, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&master, []string{fmt.Sprintf(dockerCommand, cluster.DockerScript, dockerMirror)}); err != nil {
 			return err
 		}
 	}
@@ -514,7 +506,7 @@ func (p *ProviderBase) initWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&worker, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&worker, []string{fmt.Sprintf(dockerCommand, cluster.DockerScript, dockerMirror)}); err != nil {
 			errChan <- err
 		}
 	}
@@ -556,7 +548,7 @@ func (p *ProviderBase) joinMaster(k3sScript, k3sMirror, dockerMirror,
 	}
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&full, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&full, []string{fmt.Sprintf(dockerCommand, merged.DockerScript, dockerMirror)}); err != nil {
 			return err
 		}
 	}
@@ -586,7 +578,7 @@ func (p *ProviderBase) joinWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 	sortedExtraArgs := ""
 
 	if strings.Contains(extraArgs, "--docker") {
-		if _, err := p.execute(&full, []string{fmt.Sprintf(dockerCommand, dockerMirror)}); err != nil {
+		if _, err := p.execute(&full, []string{fmt.Sprintf(dockerCommand, merged.DockerScript, dockerMirror)}); err != nil {
 			errChan <- err
 		}
 	}

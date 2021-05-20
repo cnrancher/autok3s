@@ -27,15 +27,16 @@ import (
 )
 
 const (
-	k3sVersion        = ""
-	k3sChannel        = "stable"
-	k3sInstallScript  = "https://get.k3s.io"
-	master            = "0"
-	worker            = "0"
-	ui                = false
-	embedEtcd         = false
-	defaultCidr       = "10.42.0.0/16"
-	uploadManifestCmd = "echo \"%s\" | base64 -d | sudo tee \"%s/%s\""
+	k3sVersion          = ""
+	k3sChannel          = "stable"
+	k3sInstallScript    = "https://get.k3s.io"
+	master              = "0"
+	worker              = "0"
+	ui                  = false
+	embedEtcd           = false
+	defaultCidr         = "10.42.0.0/16"
+	uploadManifestCmd   = "echo \"%s\" | base64 -d | sudo tee \"%s/%s\""
+	dockerInstallScript = "https://get.docker.com"
 )
 
 type ProviderBase struct {
@@ -64,6 +65,7 @@ func NewBaseProvider() *ProviderBase {
 			Master:        master,
 			Worker:        worker,
 			ClusterCidr:   defaultCidr,
+			DockerScript:  dockerInstallScript,
 		},
 		Status: types.Status{
 			MasterNodes: make([]types.Node, 0),
