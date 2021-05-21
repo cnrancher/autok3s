@@ -183,6 +183,12 @@ func (p *K3d) SetConfig(config []byte) error {
 }
 
 func (p *K3d) CreateCheck() error {
+	masterNum, err := strconv.Atoi(p.Master)
+	if masterNum < 1 || err != nil {
+		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
+			p.GetProviderName())
+	}
+
 	exist, _, err := p.IsClusterExist()
 	if err != nil && !errors.Is(err, client.ClusterGetNoNodesFoundError) {
 		return err
