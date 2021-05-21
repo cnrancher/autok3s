@@ -30,7 +30,7 @@ Please use one of the following commands to create an HA cluster.
 The following command uses K3d as provider, creates an HA K3d cluster named "myk3s", and assigns it with 3 master nodes.
 
 ```bash
-autok3s -d create -p k3d --name myk3s --master 3 --cluster
+autok3s -d create -p k3d --name myk3s --master 3
 ```
 
 ## Join K3d Nodes
