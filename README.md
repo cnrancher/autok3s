@@ -45,7 +45,7 @@ Autok3s can support the following providers, we are happy to add more if you nee
 - [aws](docs/i18n/en_us/aws/README.md) - Bootstrap K3s onto Amazon EC2
 - [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap K3s onto Alibaba ECS
 - [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap K3s onto Tencent CVM
-- [k3d [RC Release]](docs/i18n/en_us/k3d/README.md) - Bootstrap K3d onto Local Machine
+- [k3d](docs/i18n/en_us/k3d/README.md) - Bootstrap K3d onto Local Machine
 - [native](docs/i18n/en_us/native/README.md) - Bootstrap K3s onto any VM
 
 ## Quick Start (tl;dr)
@@ -55,7 +55,7 @@ Scenario 1 - Run with Docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 
-docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.4.2
+docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.4.3
 ```
 
 Scenario 2 - Run with CLI:
@@ -79,7 +79,7 @@ Scenario 3 - Run with Docker (Compatible K3d Provider):
 # The commands will start autok3s daemon with an interactionable UI which support K3d provider.
 # Highly recommend run this command on Linux/Unix.
 
-docker run -itd --restart=unless-stopped --net host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.3-rc2
+docker run -itd --restart=unless-stopped --net host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.3
 ```
 
 ## User Guide
