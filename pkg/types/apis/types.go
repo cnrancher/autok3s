@@ -45,4 +45,5 @@ type ClusterTemplate struct {
 	types.SSH      `json:",inline"`
 	Options        interface{} `json:"options,omitempty"`
 	IsDefault      bool        `json:"is-default"`
+	Status         string      `json:"status"`
 }

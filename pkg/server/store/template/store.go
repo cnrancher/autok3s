@@ -72,8 +72,14 @@ func (t *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 		}
 		opt, err := provider.GetProviderOptions(template.Options)
 		if err != nil {
-			logrus.Errorf("failed to get convert options by provider %s: %v", template.Provider, err)
-			continue
+			var status string
+			if e, ok := err.(*json.UnmarshalTypeError); ok {
+				status = fmt.Sprintf("field %s.%s is no longer %s but is %s type, please change the config", e.Struct, e.Field, e.Value, e.Type.String())
+			} else {
+				status = fmt.Sprintf("convert %s.Options error: %v", template.Name, err)
+			}
+			logrus.Errorf("failed to get convert template %s options by provider %s: %v", template.Name, template.Provider, err)
+			temp.Status = status
 		}
 		temp.Options = opt
 		result.Objects = append(result.Objects, types.APIObject{
