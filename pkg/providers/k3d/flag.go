@@ -270,12 +270,5 @@ func (p *K3d) sharedFlags() []types.Flag {
 			Usage:    "Memory limit imposed on the agents nodes [From docker]",
 			Required: false,
 		},
-		{
-			Name:     "image",
-			P:        &p.Image,
-			V:        p.Image,
-			Usage:    "Specify k3s image used for the node(s)",
-			Required: false,
-		},
 	}
 }

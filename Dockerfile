@@ -6,7 +6,7 @@ ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN apk add -U --no-cache bash bash-completion
+RUN apk add -U --no-cache bash bash-completion curl
 RUN mkdir /home/shell && \
     echo '. /etc/profile.d/bash_completion.sh' >> /home/shell/.bashrc && \
     echo 'alias k="kubectl"' >> /home/shell/.bashrc && \

@@ -41,7 +41,6 @@ require (
 	github.com/creack/pty v1.1.11
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-units v0.4.0
-	github.com/fsnotify/fsnotify v1.4.9
 	github.com/ghodss/yaml v1.0.0
 	github.com/gofrs/flock v0.7.1
 	github.com/gorilla/mux v1.8.0

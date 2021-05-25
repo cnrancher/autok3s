@@ -123,6 +123,18 @@ func (p *Native) CreateK3sCluster() (err error) {
 	if err = p.InitK3sCluster(c); err != nil {
 		return
 	}
+
+	// deploy custom manifests
+	if p.Manifests != "" {
+		deployCmd, err := p.GetCustomManifests()
+		if err != nil {
+			return err
+		}
+		if err = p.DeployExtraManifest(c, deployCmd); err != nil {
+			return err
+		}
+		p.Logger.Infof("[%s] successfully deployed custom manifests", p.Provider)
+	}
 	p.Logger.Infof("[%s] successfully executed create logic", p.GetProviderName())
 	return nil
 }
