@@ -351,7 +351,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 
 	// deploy custom manifests
 	if p.Manifests != "" {
-		deployCmd, err := p.getCustomManifests()
+		deployCmd, err := p.GetCustomManifests()
 		if err != nil {
 			return err
 		}
@@ -903,7 +903,7 @@ func (p *ProviderBase) ReleaseManifests() error {
 	return nil
 }
 
-func (p *ProviderBase) getCustomManifests() ([]string, error) {
+func (p *ProviderBase) GetCustomManifests() ([]string, error) {
 	// check is folder or file.
 	info, err := os.Stat(p.Manifests)
 	if err != nil {
