@@ -84,7 +84,7 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			Name:  "ui",
 			P:     &p.UI,
 			V:     p.UI,
-			Usage: "Enable K3s UI(kubernetes/dashboard). For how to login to UI, please see: https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md",
+			Usage: "(deprecated) Enable K3s UI(kubernetes/dashboard). Will remove at v0.5.0. For how to login to UI, please see: https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md",
 		},
 		{
 			Name:  "cluster",
@@ -97,6 +97,12 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			P:     &p.Manifests,
 			V:     p.Manifests,
 			Usage: "A folder path for multiple manifest files(only support one directory) or a manifest file path. Auto-deploying manifests to K3s which is a manner similar to `kubectl apply`",
+		},
+		{
+			Name:  "enable",
+			P:     &p.Enable,
+			V:     p.Enable,
+			Usage: "(ui-components) Deploy packaged components (valid items: \"explorer, dashboard\"), explorer is simplify UI for K3s(cnrnacher/kube-explorer); dashboard is kubernetes/dashboard",
 		},
 	}
 }

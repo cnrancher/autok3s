@@ -38,11 +38,12 @@ type Metadata struct {
 	DockerMirror    string      `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
 	DockerScript    string      `json:"dockerScript,omitempty" yaml:"dockerScript,omitempty"`
 	Network         string      `json:"network,omitempty" yaml:"network,omitempty"`
-	UI              bool        `json:"ui" yaml:"ui"`
+	UI              bool        `json:"ui" yaml:"ui"` // Deprecated
 	Cluster         bool        `json:"cluster" yaml:"cluster"`
 	ContextName     string      `json:"context-name" yaml:"context-name"`
 	RegistryContent string      `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
 	Manifests       string      `json:"manifests,omitempty" yaml:"manifests,omitempty"`
+	Enable          StringArray `json:"enable,omitempty" yaml:"enable,omitempty"`
 }
 
 type Status struct {

@@ -49,6 +49,7 @@ var (
 				ssh_key_passphrase       TEXT,
 				ssh_agent_auth           bool,
 				manifests                TEXT,
+				enable                   TEXT,
 				unique (name, provider)
 			);`,
 		`CREATE TABLE IF NOT EXISTS templates
@@ -86,6 +87,7 @@ var (
 				ssh_key_passphrase       TEXT,
 				ssh_agent_auth           bool,
 				manifests                TEXT,
+				enable                   TEXT,
 				is_default               bool,
 				unique (name, provider)
 			);`,
