@@ -160,11 +160,6 @@ func (p *Alibaba) JoinK3sNode() (err error) {
 	return p.JoinNodes(p.generateInstance, func() error { return nil }, false, p.rollbackInstance)
 }
 
-// Rollback rollback operate.
-func (p *Alibaba) Rollback() error {
-	return p.RollbackCluster(p.rollbackInstance)
-}
-
 func (p *Alibaba) rollbackInstance(ids []string) error {
 	if len(ids) > 0 {
 		p.releaseEipAddresses(true)

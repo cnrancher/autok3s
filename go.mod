@@ -65,7 +65,9 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	google.golang.org/api v0.44.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.20.12

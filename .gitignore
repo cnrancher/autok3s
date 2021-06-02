@@ -17,6 +17,7 @@ vendor/
 # Third-party directories
 .idea/
 .DS_Store
+.vscode/
 
 # Compile the resulting file
 dist/

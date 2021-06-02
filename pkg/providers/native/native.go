@@ -238,23 +238,6 @@ func (p *Native) JoinK3sNode() (err error) {
 	return nil
 }
 
-// Rollback rollback operate.
-func (p *Native) Rollback() error {
-	return p.RollbackCluster(func(ids []string) error {
-		nodes := make([]types.Node, 0)
-		for _, id := range ids {
-			if node, ok := p.M.Load(id); ok {
-				nodes = append(nodes, node.(types.Node))
-			}
-		}
-		warnMsg := p.UninstallK3sNodes(nodes)
-		for _, w := range warnMsg {
-			p.Logger.Warnf("[%s] %s", p.GetProviderName(), w)
-		}
-		return nil
-	})
-}
-
 func (p *Native) rollbackInstance(ids []string) error {
 	nodes := make([]types.Node, 0)
 	for _, id := range ids {

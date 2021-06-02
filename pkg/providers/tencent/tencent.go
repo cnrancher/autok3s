@@ -150,11 +150,6 @@ func (p *Tencent) JoinK3sNode() (err error) {
 	return p.JoinNodes(p.generateInstance, func() error { return nil }, false, p.rollbackInstance)
 }
 
-// Rollback rollback operate.
-func (p *Tencent) Rollback() error {
-	return p.RollbackCluster(p.rollbackInstance)
-}
-
 func (p *Tencent) rollbackInstance(ids []string) error {
 	if len(ids) > 0 {
 		if p.PublicIPAssignedEIP {
