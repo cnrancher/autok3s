@@ -237,11 +237,6 @@ func (p *Amazon) SetConfig(config []byte) error {
 	return nil
 }
 
-// Rollback rollback operate.
-func (p *Amazon) Rollback() error {
-	return p.RollbackCluster(p.rollbackInstance)
-}
-
 func (p *Amazon) rollbackInstance(ids []string) error {
 	if err := p.terminateInstance(ids); err != nil {
 		return err

@@ -138,8 +138,8 @@ func (c *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 		return types.APIObject{}, err
 	}
 	provider.GenerateClusterName()
-	err = provider.DeleteK3sCluster(true)
-	return types.APIObject{}, err
+	go provider.DeleteK3sCluster(true)
+	return types.APIObject{}, nil
 }
 
 // Watch watches template.
