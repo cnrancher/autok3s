@@ -18,10 +18,12 @@ var (
 	maxWait      = 10 * time.Second
 )
 
+// ConfigFileManager struct for config file manager.
 type ConfigFileManager struct {
 	mutex sync.RWMutex
 }
 
+// OverwriteCfg overwrites kubectl config file.
 func (c *ConfigFileManager) OverwriteCfg(path string, context string, cfg func(string, clientcmd.ConfigAccess) (*api.Config, error)) error {
 	paOpt := clientcmd.NewDefaultPathOptions()
 
@@ -55,6 +57,7 @@ func (c *ConfigFileManager) OverwriteCfg(path string, context string, cfg func(s
 	return fmt.Errorf("timeout for wait config file %v unlock", path)
 }
 
+// RemoveCfg removes kubectl config file.
 func (c *ConfigFileManager) RemoveCfg(context string, configAccess clientcmd.ConfigAccess) (*api.Config, error) {
 	config, err := configAccess.GetStartingConfig()
 	if err != nil {
@@ -77,6 +80,7 @@ func (c *ConfigFileManager) RemoveCfg(context string, configAccess clientcmd.Con
 	return config, nil
 }
 
+// MergeCfg merges kubectl config file.
 func (c *ConfigFileManager) MergeCfg(context string, configAccess clientcmd.ConfigAccess) (*api.Config, error) {
 	// check context exists
 	oldConfig, err := clientcmd.LoadFromFile(fmt.Sprintf("%s/%s", CfgPath, KubeCfgFile))

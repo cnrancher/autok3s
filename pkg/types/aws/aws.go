@@ -1,5 +1,6 @@
 package aws
 
+// Options aws provider's custom parameters.
 type Options struct {
 	AccessKey                    string   `json:"access-key,omitempty" yaml:"access-key,omitempty"`
 	SecretKey                    string   `json:"secret-key,omitempty" yaml:"secret-key,omitempty"`

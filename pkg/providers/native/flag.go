@@ -19,6 +19,7 @@ const joinUsageExample = `  autok3s -d join \
     --worker-ips <worker-ips>
 `
 
+// GetUsageExample returns native usage example prompt.
 func (p *Native) GetUsageExample(action string) string {
 	switch action {
 	case "create":
@@ -30,6 +31,7 @@ func (p *Native) GetUsageExample(action string) string {
 	}
 }
 
+// GetCreateFlags returns native create flags.
 func (p *Native) GetCreateFlags() []types.Flag {
 	cSSH := p.GetSSHConfig()
 	p.SSH = *cSSH
@@ -38,10 +40,12 @@ func (p *Native) GetCreateFlags() []types.Flag {
 	return fs
 }
 
+// GetOptionFlags returns native option flags.
 func (p *Native) GetOptionFlags() []types.Flag {
 	return p.sharedFlags()
 }
 
+// GetJoinFlags returns native join flags.
 func (p *Native) GetJoinFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, p.GetClusterOptions()...)
@@ -54,18 +58,22 @@ func (p *Native) GetJoinFlags() []types.Flag {
 	return fs
 }
 
+// GetSSHFlags returns native ssh flags.
 func (p *Native) GetSSHFlags() []types.Flag {
 	return []types.Flag{}
 }
 
+// GetDeleteFlags return native delete flags.
 func (p *Native) GetDeleteFlags() []types.Flag {
 	return []types.Flag{}
 }
 
+// GetCredentialFlags return native credential flags.
 func (p *Native) GetCredentialFlags() []types.Flag {
 	return []types.Flag{}
 }
 
+// GetSSHConfig return native ssh config.
 func (p *Native) GetSSHConfig() *types.SSH {
 	ssh := &types.SSH{
 		SSHUser:    defaultUser,
@@ -75,10 +83,12 @@ func (p *Native) GetSSHConfig() *types.SSH {
 	return ssh
 }
 
+// BindCredential bind native credential.
 func (p *Native) BindCredential() error {
 	return nil
 }
 
+// MergeClusterOptions merge native cluster options.
 func (p *Native) MergeClusterOptions() error {
 	return nil
 }

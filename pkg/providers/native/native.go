@@ -29,6 +29,7 @@ var (
 	defaultSSHKeyPath = "~/.ssh/id_rsa"
 )
 
+// Native provider native struct.
 type Native struct {
 	*cluster.ProviderBase `json:",inline"`
 	native.Options        `json:",inline"`
@@ -48,30 +49,36 @@ func newProvider() *Native {
 	}
 }
 
+// GetProviderName returns provider name.
 func (p *Native) GetProviderName() string {
 	return "native"
 }
 
+// GenerateClusterName generates and returns cluster name.
 func (p *Native) GenerateClusterName() string {
 	p.ContextName = p.Name
 	return p.ContextName
 }
 
+// GenerateManifest generates manifest deploy command.
 func (p *Native) GenerateManifest() []string {
-	// no need to support
+	// no need to support.
 	return nil
 }
 
+// GenerateMasterExtraArgs generates K3S master extra args.
 func (p *Native) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	// no need to support.
 	return ""
 }
 
+// GenerateWorkerExtraArgs generates K3S worker extra args.
 func (p *Native) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
 	// no need to support.
 	return ""
 }
 
+// CreateK3sCluster create K3S cluster.
 func (p *Native) CreateK3sCluster() (err error) {
 	logFile, err := common.GetLogFile(p.Name)
 	if err != nil {
@@ -107,7 +114,7 @@ func (p *Native) CreateK3sCluster() (err error) {
 	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing create logic...", p.GetProviderName())
 
-	// set ssh default value
+	// set ssh default value.
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
 	}
@@ -124,7 +131,7 @@ func (p *Native) CreateK3sCluster() (err error) {
 		return
 	}
 
-	// deploy custom manifests
+	// deploy custom manifests.
 	if p.Manifests != "" {
 		deployCmd, err := p.GetCustomManifests()
 		if err != nil {
@@ -139,6 +146,7 @@ func (p *Native) CreateK3sCluster() (err error) {
 	return nil
 }
 
+// JoinK3sNode join K3S node.
 func (p *Native) JoinK3sNode() (err error) {
 	if p.M == nil {
 		p.M = new(syncmap.Map)
@@ -171,7 +179,7 @@ func (p *Native) JoinK3sNode() (err error) {
 
 	p.Logger = common.NewLogger(common.Debug, logFile)
 	p.Logger.Infof("[%s] executing join logic...", p.GetProviderName())
-	// set ssh default value
+	// set ssh default value.
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
 	}
@@ -200,7 +208,7 @@ func (p *Native) JoinK3sNode() (err error) {
 			} else {
 				added.Status.WorkerNodes = append(added.Status.WorkerNodes, v)
 			}
-			// for rollback
+			// for rollback.
 			p.M.Store(v.InstanceID, types.Node{Master: v.Master, RollBack: true, InstanceID: v.InstanceID, InstanceStatus: v.InstanceStatus, PublicIPAddress: v.PublicIPAddress, InternalIPAddress: v.InternalIPAddress, SSH: v.SSH})
 		}
 		return true
@@ -230,6 +238,7 @@ func (p *Native) JoinK3sNode() (err error) {
 	return nil
 }
 
+// Rollback rollback operate.
 func (p *Native) Rollback() error {
 	return p.RollbackCluster(func(ids []string) error {
 		nodes := make([]types.Node, 0)
@@ -247,7 +256,7 @@ func (p *Native) Rollback() error {
 }
 
 func (p *Native) rollbackInstance(ids []string) error {
-	nodes := []types.Node{}
+	nodes := make([]types.Node, 0)
 	for _, id := range ids {
 		if node, ok := p.M.Load(id); ok {
 			nodes = append(nodes, node.(types.Node))
@@ -260,11 +269,12 @@ func (p *Native) rollbackInstance(ids []string) error {
 	return nil
 }
 
+// CreateCheck check create command and flags.
 func (p *Native) CreateCheck() error {
 	if p.MasterIps == "" {
 		return fmt.Errorf("[%s] cluster must have one master when create", p.GetProviderName())
 	}
-	// check file exists
+	// check file exists.
 	if p.SSHKeyPath != "" {
 		sshPrivateKey := p.SSHKeyPath
 		if strings.HasPrefix(sshPrivateKey, "~/") {
@@ -281,11 +291,12 @@ func (p *Native) CreateCheck() error {
 	return nil
 }
 
+// JoinCheck check join command and flags.
 func (p *Native) JoinCheck() error {
 	if p.MasterIps == "" && p.WorkerIps == "" {
 		return fmt.Errorf("[%s] cluster must have one node when join", p.GetProviderName())
 	}
-	// check file exists
+	// check file exists.
 	if p.SSHKeyPath != "" {
 		sshPrivateKey := p.SSHKeyPath
 		if strings.HasPrefix(sshPrivateKey, "~/") {
@@ -302,30 +313,37 @@ func (p *Native) JoinCheck() error {
 	return nil
 }
 
+// DeleteK3sCluster delete K3S cluster.
 func (p *Native) DeleteK3sCluster(f bool) error {
 	return p.CommandNotSupport("delete")
 }
 
+// SSHK3sNode ssh K3s node.
 func (p *Native) SSHK3sNode(ip string) error {
 	return p.CommandNotSupport("ssh")
 }
 
+// CommandNotSupport returns command not support error.
 func (p *Native) CommandNotSupport(commandName string) error {
 	return fmt.Errorf("[%s] dose not support command: [%s]", p.GetProviderName(), commandName)
 }
 
+// DescribeCluster describe cluster info.
 func (p *Native) DescribeCluster(kubecfg string) *types.ClusterInfo {
 	return &types.ClusterInfo{}
 }
 
+// GetCluster returns cluster status.
 func (p *Native) GetCluster(kubecfg string) *types.ClusterInfo {
 	return &types.ClusterInfo{}
 }
 
+// IsClusterExist determine if the cluster exists.
 func (p *Native) IsClusterExist() (bool, []string, error) {
 	return false, []string{}, nil
 }
 
+// SetConfig set cluster config.
 func (p *Native) SetConfig(config []byte) error {
 	c, err := p.SetClusterConfig(config)
 	if err != nil {
@@ -346,6 +364,7 @@ func (p *Native) SetConfig(config []byte) error {
 	return nil
 }
 
+// SetOptions set options.
 func (p *Native) SetOptions(opt []byte) error {
 	sourceOption := reflect.ValueOf(&p.Options).Elem()
 	option := &native.Options{}
@@ -358,6 +377,7 @@ func (p *Native) SetOptions(opt []byte) error {
 	return nil
 }
 
+// GetProviderOptions get provider options.
 func (p *Native) GetProviderOptions(opt []byte) (interface{}, error) {
 	options := &native.Options{}
 	err := json.Unmarshal(opt, options)

@@ -25,6 +25,7 @@ func init() {
 	joinCmd.Flags().StringVarP(&jProvider, "provider", "p", jProvider, "Provider is a module which provides an interface for managing cloud resources")
 }
 
+// JoinCommand join command.
 func JoinCommand() *cobra.Command {
 	// load dynamic provider flags.
 	pStr := common.FlagHackLookup("--provider")

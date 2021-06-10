@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// BindEnvFlags used for bind env to flag.
 func BindEnvFlags(cmd *cobra.Command) {
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		envAnnotation := f.Annotations[utils.BashCompEnvVarFlag]
@@ -28,6 +29,7 @@ func BindEnvFlags(cmd *cobra.Command) {
 	})
 }
 
+// FlagHackLookup hack lookup function.
 // Borrowed from https://github.com/docker/machine/blob/master/commands/create.go#L267.
 func FlagHackLookup(flagName string) string {
 	// i.e. "-d" for "--driver"
@@ -53,17 +55,7 @@ func FlagHackLookup(flagName string) string {
 	return ""
 }
 
-func isCredentialFlag(s string, p providers.Provider) bool {
-	found := false
-	credFlags := p.GetCredentialFlags()
-	for _, flag := range credFlags {
-		if strings.EqualFold(s, flag.Name) {
-			found = true
-		}
-	}
-	return found
-}
-
+// MakeSureCredentialFlag ensure credential is provided.
 func MakeSureCredentialFlag(flags *pflag.FlagSet, p providers.Provider) error {
 	flags.VisitAll(func(flag *pflag.Flag) {
 		if isCredentialFlag(flag.Name, p) {
@@ -88,4 +80,15 @@ func MakeSureCredentialFlag(flags *pflag.FlagSet, p providers.Provider) error {
 		}
 	})
 	return nil
+}
+
+func isCredentialFlag(s string, p providers.Provider) bool {
+	found := false
+	credFlags := p.GetCredentialFlags()
+	for _, flag := range credFlags {
+		if strings.EqualFold(s, flag.Name) {
+			found = true
+		}
+	}
+	return found
 }

@@ -43,6 +43,7 @@ var (
 	registryPath           = "/etc/rancher/k3s"
 )
 
+// InitK3sCluster initial K3S cluster.
 func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	p.Logger.Infof("[%s] executing init k3s cluster logic...", p.Provider)
 
@@ -217,6 +218,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	return nil
 }
 
+// Join join K3S nodes to exist K3S cluster.
 func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 	p.Logger.Infof("[%s] executing join k3s node logic", merged.Provider)
 
@@ -338,6 +340,7 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 	return nil
 }
 
+// SSHK3sNode ssh to K3S node.
 func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 	var node types.Node
 
@@ -395,6 +398,7 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 	return terminal(&node)
 }
 
+// UninstallK3sNodes uninstall K3S on the given nodes.
 func (p *ProviderBase) UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {
 	for _, node := range nodes {
 		if node.Master {
@@ -413,6 +417,7 @@ func (p *ProviderBase) UninstallK3sNodes(nodes []types.Node) (warnMsg []string) 
 	return
 }
 
+// SaveCfg save kube config file.
 func SaveCfg(cfg, ip, context string) error {
 	replacer := strings.NewReplacer(
 		"127.0.0.1", ip,
@@ -443,6 +448,7 @@ func SaveCfg(cfg, ip, context string) error {
 	return mergeCfg(context, temp.Name())
 }
 
+// OverwriteCfg overwrite kube config file.
 func OverwriteCfg(context string) error {
 	path := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
 	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
@@ -450,6 +456,7 @@ func OverwriteCfg(context string) error {
 	return fMgr.OverwriteCfg(path, context, fMgr.RemoveCfg)
 }
 
+// DeployExtraManifest deploy extra K3S manifest.
 func (p *ProviderBase) DeployExtraManifest(cluster *types.Cluster, cmds []string) error {
 	if _, err := p.execute(&cluster.MasterNodes[0], cmds); err != nil {
 		return err
@@ -842,6 +849,7 @@ func buildConfigFromFlags(context, kubeconfigPath string) (*rest.Config, error) 
 		}).ClientConfig()
 }
 
+// GetClusterConfig generate kube config.
 func GetClusterConfig(name, kubeconfig string) (*kubernetes.Clientset, error) {
 	config, err := buildConfigFromFlags(name, kubeconfig)
 	if err != nil {
@@ -852,6 +860,7 @@ func GetClusterConfig(name, kubeconfig string) (*kubernetes.Clientset, error) {
 	return c, err
 }
 
+// GetClusterStatus get cluster status using cluster's /readyz API.
 func GetClusterStatus(c *kubernetes.Clientset) string {
 	_, err := c.RESTClient().Get().Timeout(15 * time.Second).RequestURI("/readyz").DoRaw(context.TODO())
 	if err != nil {
@@ -860,6 +869,7 @@ func GetClusterStatus(c *kubernetes.Clientset) string {
 	return types.ClusterStatusRunning
 }
 
+// GetClusterVersion get kube cluster version.
 func GetClusterVersion(c *kubernetes.Clientset) string {
 	v, err := c.DiscoveryClient.ServerVersion()
 	if err != nil {
@@ -868,6 +878,7 @@ func GetClusterVersion(c *kubernetes.Clientset) string {
 	return v.GitVersion
 }
 
+// DescribeClusterNodes describe cluster nodes.
 func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.ClusterNode) ([]types.ClusterNode, error) {
 	// list cluster nodes.
 	timeout := int64(5 * time.Second)

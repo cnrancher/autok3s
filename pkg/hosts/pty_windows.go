@@ -11,6 +11,7 @@ import (
 	"os/exec"
 )
 
+// PtyDialer struct for pty dialer.
 type PtyDialer struct {
 	Stdin  io.ReadCloser
 	Stdout io.Writer
@@ -27,6 +28,7 @@ type PtyDialer struct {
 	err error
 }
 
+// NewPtyDialer returns new pty dialer struct.
 func NewPtyDialer(cmd *exec.Cmd) (*PtyDialer, error) {
 	if cmd == nil {
 		return nil, errors.New("[pty-dialer] no cmd is specified")

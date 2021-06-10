@@ -62,6 +62,7 @@ var (
 	deployTerwayCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/terway.yaml\""
 )
 
+// Alibaba provider alibaba struct.
 type Alibaba struct {
 	*cluster.ProviderBase `json:",inline"`
 	alibaba.Options       `json:",inline"`
@@ -99,15 +100,18 @@ func newProvider() *Alibaba {
 	}
 }
 
+// GetProviderName returns provider name.
 func (p *Alibaba) GetProviderName() string {
 	return p.Provider
 }
 
+// GenerateClusterName generates and returns cluster name.
 func (p *Alibaba) GenerateClusterName() string {
 	p.ContextName = fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.GetProviderName())
 	return p.ContextName
 }
 
+// GenerateManifest generates manifest deploy command.
 func (p *Alibaba) GenerateManifest() []string {
 	extraManifests := make([]string, 0)
 	if strings.EqualFold(p.Terway, "eni") {
@@ -140,6 +144,7 @@ func (p *Alibaba) GenerateManifest() []string {
 	return extraManifests
 }
 
+// CreateK3sCluster create K3S cluster.
 func (p *Alibaba) CreateK3sCluster() (err error) {
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
@@ -147,6 +152,7 @@ func (p *Alibaba) CreateK3sCluster() (err error) {
 	return p.InitCluster(p.Options, p.GenerateManifest, p.generateInstance, nil, p.rollbackInstance)
 }
 
+// JoinK3sNode join K3S node.
 func (p *Alibaba) JoinK3sNode() (err error) {
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
@@ -154,6 +160,7 @@ func (p *Alibaba) JoinK3sNode() (err error) {
 	return p.JoinNodes(p.generateInstance, func() error { return nil }, false, p.rollbackInstance)
 }
 
+// Rollback rollback operate.
 func (p *Alibaba) Rollback() error {
 	return p.RollbackCluster(p.rollbackInstance)
 }
@@ -190,10 +197,12 @@ func (p *Alibaba) rollbackInstance(ids []string) error {
 	return nil
 }
 
+// DeleteK3sCluster delete K3S cluster.
 func (p *Alibaba) DeleteK3sCluster(f bool) error {
 	return p.DeleteCluster(f, p.deleteInstance)
 }
 
+// SSHK3sNode ssh K3s node.
 func (p *Alibaba) SSHK3sNode(ip string) error {
 	c := &types.Cluster{
 		Metadata: p.Metadata,
@@ -203,6 +212,7 @@ func (p *Alibaba) SSHK3sNode(ip string) error {
 	return p.Connect(ip, &p.SSH, c, p.getInstanceNodes, p.isInstanceRunning, nil)
 }
 
+// IsClusterExist determine if the cluster exists.
 func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 	ids := make([]string, 0)
 
@@ -238,6 +248,7 @@ func (p *Alibaba) IsClusterExist() (bool, []string, error) {
 	return false, nil, nil
 }
 
+// GenerateMasterExtraArgs generates K3S master extra args.
 func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(alibaba.Options); ok {
 		if option.CloudControllerManager {
@@ -249,10 +260,12 @@ func (p *Alibaba) GenerateMasterExtraArgs(cluster *types.Cluster, master types.N
 	return ""
 }
 
+// GenerateWorkerExtraArgs generates K3S worker extra args.
 func (p *Alibaba) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
 	return p.GenerateMasterExtraArgs(cluster, worker)
 }
 
+// GetCluster returns cluster status.
 func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 	c := &types.ClusterInfo{
 		ID:       p.ContextName,
@@ -268,6 +281,7 @@ func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 	return p.GetClusterStatus(kubecfg, c, p.getInstanceNodes)
 }
 
+// DescribeCluster describe cluster info.
 func (p *Alibaba) DescribeCluster(kubecfg string) *types.ClusterInfo {
 	c := &types.ClusterInfo{
 		Name:     p.Name,
@@ -278,6 +292,7 @@ func (p *Alibaba) DescribeCluster(kubecfg string) *types.ClusterInfo {
 	return p.Describe(kubecfg, c, p.getInstanceNodes)
 }
 
+// SetConfig set cluster config.
 func (p *Alibaba) SetConfig(config []byte) error {
 	c, err := p.SetClusterConfig(config)
 	if err != nil {
@@ -299,6 +314,7 @@ func (p *Alibaba) SetConfig(config []byte) error {
 	return nil
 }
 
+// SetOptions set options.
 func (p *Alibaba) SetOptions(opt []byte) error {
 	sourceOption := reflect.ValueOf(&p.Options).Elem()
 	option := &alibaba.Options{}
@@ -311,6 +327,7 @@ func (p *Alibaba) SetOptions(opt []byte) error {
 	return nil
 }
 
+// GetProviderOptions get provider options.
 func (p *Alibaba) GetProviderOptions(opt []byte) (interface{}, error) {
 	options := &alibaba.Options{}
 	err := json.Unmarshal(opt, options)
@@ -630,6 +647,7 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 	return response.Vpcs.Vpc[0].CidrBlock, nil
 }
 
+// CreateCheck check create command and flags.
 func (p *Alibaba) CreateCheck() error {
 	if p.KeyPair != "" && p.SSHKeyPath == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --key-pair %s", p.GetProviderName(), p.KeyPair)
@@ -650,7 +668,7 @@ func (p *Alibaba) CreateCheck() error {
 			p.GetProviderName())
 	}
 
-	// check name exist
+	// check name exist.
 	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
 	if err != nil {
 		return err
@@ -677,6 +695,7 @@ func (p *Alibaba) CreateCheck() error {
 	return nil
 }
 
+// JoinCheck check join command and flags.
 func (p *Alibaba) JoinCheck() error {
 	if p.Master == "0" && p.Worker == "0" {
 		return fmt.Errorf("[%s] calling preflight error: `--master` or `--worker` number must >= 1", p.GetProviderName())
@@ -749,7 +768,7 @@ func (p *Alibaba) allocateEipAddresses(num int) ([]vpc.EipAddress, error) {
 		eipIds = append(eipIds, eip.AllocationId)
 	}
 
-	// add tags for eips
+	// add tags for eips.
 	tag := []vpc.TagResourcesTag{{Key: "autok3s", Value: "true"}, {Key: "cluster", Value: common.TagClusterPrefix + p.ContextName}}
 	p.Logger.Infof("[%s] tagging eip(s): %s", p.GetProviderName(), eipIds)
 
@@ -852,7 +871,7 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 			}
 		}
 
-		// no eip need rollback
+		// no eip need rollback.
 		if len(releaseEipIds) == 0 {
 			p.Logger.Infof("[%s] no eip need execute rollback logic", p.GetProviderName())
 			return
@@ -970,7 +989,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		return nil, err
 	}
 
-	// create key pair
+	// create key pair.
 	pk, err := p.createKeyPair(ssh)
 	if err != nil {
 		return nil, fmt.Errorf("[%s] failed to create key pair: %v", p.GetProviderName(), err)
@@ -982,7 +1001,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	p.Logger.Infof("[%s] %d masters and %d workers will be added in region %s", p.GetProviderName(), masterNum, workerNum, p.Region)
 
 	if p.VSwitch == "" {
-		// get default vpc and vswitch
+		// get default vpc and vswitch.
 		err := p.configNetwork()
 		if err != nil {
 			return nil, err
@@ -990,7 +1009,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	}
 
 	if p.SecurityGroup == "" {
-		// get default security group
+		// get default security group.
 		err := p.configSecurityGroup()
 		if err != nil {
 			return nil, err
@@ -1054,7 +1073,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 			associatedEipIds = append(associatedEipIds, eipIds...)
 		}
 
-		// allocate eip for worker
+		// allocate eip for worker.
 		if workerNum > 0 {
 			eipIds, err := p.assignEIPToInstance(workerNum, false)
 			if err != nil {
@@ -1100,7 +1119,7 @@ func (p *Alibaba) assignEIPToInstance(num int, master bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	// associate eip with instance
+	// associate eip with instance.
 	if eips != nil {
 		p.Logger.Infof("[%s] prepare for associating %d eip(s) for instance(s)", p.GetProviderName(), num)
 
@@ -1135,7 +1154,7 @@ func (p *Alibaba) getInstanceNodes() ([]types.Node, error) {
 	}
 	nodes := make([]types.Node, 0)
 	for _, instance := range output {
-		// sync all instance that belongs to current clusters
+		// sync all instance that belongs to current clusters.
 		master := false
 		for _, tag := range instance.Tags.Tag {
 			if strings.EqualFold(tag.TagKey, "master") && strings.EqualFold(tag.TagValue, "true") {
@@ -1201,7 +1220,7 @@ func (p *Alibaba) generateDefaultVPC() error {
 	}
 
 	p.Logger.Infof("[%s] waiting for vpc %s available", p.GetProviderName(), p.Vpc)
-	// wait for vpc available
+	// wait for vpc available.
 	err = utils.WaitFor(p.isVPCAvailable)
 
 	return err
@@ -1273,14 +1292,14 @@ func (p *Alibaba) generateDefaultVSwitch() error {
 	}
 
 	p.Logger.Infof("[%s] waiting for vswitch %s available", p.GetProviderName(), p.VSwitch)
-	// wait for vswitch available
+	// wait for vswitch available.
 	err = utils.WaitFor(p.isVSwitchAvailable)
 
 	return err
 }
 
 func (p *Alibaba) configNetwork() error {
-	// find default vpc and vswitch
+	// find default vpc and vswitch.
 	request := vpc.CreateDescribeVpcsRequest()
 	request.Scheme = "https"
 	request.RegionId = p.Region
@@ -1292,7 +1311,7 @@ func (p *Alibaba) configNetwork() error {
 	}
 
 	if response != nil && response.TotalCount > 0 {
-		//get default vswitch
+		//get default vswitch.
 		defaultVPC := response.Vpcs.Vpc[0]
 		p.Vpc = defaultVPC.VpcId
 		err = utils.WaitFor(p.isVPCAvailable)
@@ -1311,7 +1330,7 @@ func (p *Alibaba) configNetwork() error {
 		}
 		if resp != nil && resp.TotalCount > 0 {
 			vswitchList := resp.VSwitches.VSwitch
-			// check zone
+			// check zone.
 			for _, vswitch := range vswitchList {
 				if vswitch.ZoneId == p.Zone {
 					p.VSwitch = vswitch.VSwitchId
@@ -1345,7 +1364,7 @@ func (p *Alibaba) configSecurityGroup() error {
 	p.Logger.Infof("[%s] config default security group for %s in region %s", p.GetProviderName(), p.Vpc, p.Region)
 
 	if p.Vpc == "" {
-		// if user didn't set security group, get vpc from vswitch to config default security group
+		// if user didn't set security group, get vpc from vswitch to config default security group.
 		vpcID, _, err := p.getVSwitchCIDR()
 		if err != nil {
 			return err
@@ -1375,7 +1394,7 @@ func (p *Alibaba) configSecurityGroup() error {
 	}
 
 	if securityGroup == nil {
-		// create default security group
+		// create default security group.
 		p.Logger.Infof("[%s] create default security group %s for %s in region %s", p.GetProviderName(), defaultSecurityGroupName, p.Vpc, p.Region)
 		req := ecs.CreateCreateSecurityGroupRequest()
 		req.Scheme = "https"
@@ -1462,7 +1481,7 @@ func (p *Alibaba) configDefaultSecurityPermissions(sg *ecs.DescribeSecurityGroup
 	}
 
 	if p.Network == "" || p.Network == "vxlan" {
-		// udp 8472 for flannel vxlan
+		// udp 8472 for flannel vxlan.
 		perms = append(perms, ecs.Permission{
 			IpProtocol:  "udp",
 			PortRange:   "8472/8472",
@@ -1470,7 +1489,7 @@ func (p *Alibaba) configDefaultSecurityPermissions(sg *ecs.DescribeSecurityGroup
 		})
 	}
 
-	// port 6443 for kubernetes api-server
+	// port 6443 for kubernetes api-server.
 	if !hasAPIServerPort {
 		perms = append(perms, ecs.Permission{
 			IpProtocol:  "tcp",
@@ -1479,7 +1498,7 @@ func (p *Alibaba) configDefaultSecurityPermissions(sg *ecs.DescribeSecurityGroup
 		})
 	}
 
-	// 10250 for kubelet
+	// 10250 for kubelet.
 	if !hasKubeletPort {
 		perms = append(perms, ecs.Permission{
 			IpProtocol:  "tcp",

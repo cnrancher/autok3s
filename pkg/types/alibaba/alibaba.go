@@ -1,10 +1,13 @@
 package alibaba
 
 var (
+	// StatusPending alibaba instance pending status.
 	StatusPending = "Pending"
+	// StatusRunning alibaba instance running status.
 	StatusRunning = "Running"
 )
 
+// Options alibaba provider's custom parameters.
 type Options struct {
 	AccessKey               string   `json:"access-key,omitempty" yaml:"access-key,omitempty"`
 	AccessSecret            string   `json:"access-secret,omitempty" yaml:"access-secret,omitempty"`
@@ -26,6 +29,7 @@ type Options struct {
 	CloudControllerManager  bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
 }
 
+// Terway struct for alibaba terway.
 type Terway struct {
 	Mode          string `json:"mode,omitempty" yaml:"mode,omitempty"`
 	AccessKey     string `json:"access-key,omitempty" yaml:"access-key,omitempty"`
@@ -36,6 +40,7 @@ type Terway struct {
 	MaxPoolSize   string `json:"max-pool-size,omitempty" yaml:"max-pool-size,omitempty"`
 }
 
+// CloudControllerManager struct for alibaba cloud-controller-manager.
 type CloudControllerManager struct {
 	Region       string `json:"region,omitempty" yaml:"region,omitempty"`
 	AccessKey    string `json:"access-key,omitempty" yaml:"access-key,omitempty"`

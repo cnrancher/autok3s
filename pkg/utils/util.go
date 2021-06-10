@@ -25,6 +25,7 @@ const (
 `
 )
 
+// RandomToken generate random token.
 func RandomToken(size int) (string, error) {
 	token := make([]byte, size)
 	_, err := rand.Read(token)
@@ -34,6 +35,7 @@ func RandomToken(size int) (string, error) {
 	return hex.EncodeToString(token), err
 }
 
+// UniqueArray returns unique array.
 func UniqueArray(origin []string) (unique []string) {
 	unique = make([]string, 0)
 	for i := 0; i < len(origin); i++ {
@@ -51,6 +53,7 @@ func UniqueArray(origin []string) (unique []string) {
 	return
 }
 
+// AskForConfirmation ask for confirmation form os.Stdin.
 func AskForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -68,6 +71,7 @@ func AskForConfirmation(s string) bool {
 	}
 }
 
+// AskForSelectItem ask for select item from the given map key.
 func AskForSelectItem(s string, ss map[string]string) string {
 	reader := bufio.NewReader(os.Stdin)
 	t := template.New("tmpl")
@@ -87,6 +91,7 @@ func AskForSelectItem(s string, ss map[string]string) string {
 	return ss[strings.ToLower(strings.TrimSpace(response))]
 }
 
+// WaitFor holds parameters applied to a Backoff function.
 func WaitFor(fn func() (bool, error)) error {
 	// retry 5 times, total 120 seconds.
 	backoff := wait.Backoff{
@@ -94,18 +99,10 @@ func WaitFor(fn func() (bool, error)) error {
 		Factor:   1,
 		Steps:    5,
 	}
-	return WaitForBackoff(fn, backoff)
+	return waitForBackoff(fn, backoff)
 }
 
-func WaitForBackoff(fn func() (bool, error), backoff wait.Backoff) error {
-	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
-		return fn()
-	}); err != nil {
-		return err
-	}
-	return nil
-}
-
+// ConvertToFields convert interface to schemas' field.
 func ConvertToFields(obj interface{}) (map[string]schemas.Field, error) {
 	t := reflect.TypeOf(obj)
 	if t.Kind() == reflect.Ptr {
@@ -130,6 +127,7 @@ func ConvertToFields(obj interface{}) (map[string]schemas.Field, error) {
 	return fields, nil
 }
 
+// MergeConfig merge config.
 func MergeConfig(source, target reflect.Value) {
 	if source.Kind() == reflect.Ptr {
 		source = source.Elem()
@@ -155,4 +153,13 @@ func MergeConfig(source, target reflect.Value) {
 			}
 		}
 	}
+}
+
+func waitForBackoff(fn func() (bool, error), backoff wait.Backoff) error {
+	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		return fn()
+	}); err != nil {
+		return err
+	}
+	return nil
 }

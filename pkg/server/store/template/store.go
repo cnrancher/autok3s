@@ -17,10 +17,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Store holds template's API state.
 type Store struct {
 	empty.Store
 }
 
+// Create creates template based on the request data.
 func (t *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	template := &apis.ClusterTemplate{}
 	err := convert.ToObj(data.Data(), template)
@@ -52,6 +54,7 @@ func (t *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	return t.ByID(apiOp, schema, template.ContextName)
 }
 
+// List returns templates as list.
 func (t *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	result := types.APIObjectList{}
 	templates, err := common.DefaultDB.ListTemplates()
@@ -91,6 +94,7 @@ func (t *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 	return result, nil
 }
 
+// ByID returns template by ID.
 func (t *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	context := strings.Split(id, ".")
 	if len(context) != 2 {
@@ -124,6 +128,7 @@ func (t *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 	}, nil
 }
 
+// Update updates template based on the request data.
 func (t *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject, id string) (types.APIObject, error) {
 	template := &apis.ClusterTemplate{}
 	err := convert.ToObj(data.Data(), template)
@@ -148,6 +153,7 @@ func (t *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	return t.ByID(apiOp, schema, id)
 }
 
+// Delete deletes template by ID.
 func (t *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	context := strings.Split(id, ".")
 	if len(context) != 2 {
@@ -157,6 +163,7 @@ func (t *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 	return types.APIObject{}, err
 }
 
+// Watch watches template.
 func (t *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
 	var (
 		result = make(chan types.APIEvent)

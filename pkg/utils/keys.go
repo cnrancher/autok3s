@@ -25,6 +25,7 @@ var (
 	ErrUnableToWriteFile = errors.New("unable to write file")
 )
 
+// KeyPair struct for private/public key.
 type KeyPair struct {
 	PrivateKey []byte
 	PublicKey  []byte

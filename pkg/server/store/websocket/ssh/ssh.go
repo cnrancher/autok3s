@@ -25,6 +25,7 @@ var upgrader = websocket.Upgrader{
 	EnableCompression: true,
 }
 
+// Handler ssh handler.
 func Handler(apiOp *types.APIRequest) (types.APIObjectList, error) {
 	err := handler(apiOp)
 	if err != nil {

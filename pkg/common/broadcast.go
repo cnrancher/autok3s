@@ -3,6 +3,7 @@ package common
 import "sync"
 
 type (
+	// Subscriber interface chan.
 	Subscriber     chan interface{}
 	subscriberFunc func(v interface{}) bool
 )
@@ -13,6 +14,7 @@ type Broadcaster struct {
 	m    sync.RWMutex
 }
 
+// NewBroadcaster returns new broadcaster struct.
 func NewBroadcaster() *Broadcaster {
 	return &Broadcaster{
 		subs: make(map[Subscriber]subscriberFunc),

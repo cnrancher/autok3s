@@ -104,6 +104,7 @@ func GetProvider(name string) (Provider, error) {
 	return f()
 }
 
+// ListProviders returns current supported providers.
 func ListProviders() []apis.Provider {
 	providersMutex.Lock()
 	defer providersMutex.Unlock()

@@ -33,7 +33,29 @@ func (f fsFunc) Open(name string) (fs.File, error) {
 	return f(name)
 }
 
-func ServeAsset() http.Handler {
+// Serve serve ui component.
+func Serve() http.Handler {
+	mode := os.Getenv("AUTOK3S_UI_MODE")
+	if mode == "dev" {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			_ = serveIndex(writer)
+		})
+	}
+	return serveAsset()
+}
+
+// ServeNotFound server ui component, not found will be return index.html.
+func ServeNotFound(next http.Handler) http.Handler {
+	mode := os.Getenv("AUTOK3S_UI_MODE")
+	if mode == "dev" {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			_ = serveIndex(writer)
+		})
+	}
+	return serveAssetNotFound(next)
+}
+
+func serveAsset() http.Handler {
 	handler := fsFunc(func(name string) (fs.File, error) {
 		assetPath := path.Join(localUI, name)
 		file, err := assets.Open(assetPath)
@@ -46,7 +68,7 @@ func ServeAsset() http.Handler {
 	return http.FileServer(http.FS(handler))
 }
 
-func ServeAssetNotFound(next http.Handler) http.Handler {
+func serveAssetNotFound(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		p := strings.TrimPrefix(req.URL.Path, "/ui/")
 		_, err := assets.Open(path.Join(localUI, p))
@@ -58,26 +80,6 @@ func ServeAssetNotFound(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(rw, req)
 	})
-}
-
-func Serve() http.Handler {
-	mode := os.Getenv("AUTOK3S_UI_MODE")
-	if mode == "dev" {
-		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			_ = serveIndex(writer)
-		})
-	}
-	return ServeAsset()
-}
-
-func ServeNotFound(next http.Handler) http.Handler {
-	mode := os.Getenv("AUTOK3S_UI_MODE")
-	if mode == "dev" {
-		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			_ = serveIndex(writer)
-		})
-	}
-	return ServeAssetNotFound(next)
 }
 
 func serveIndex(resp io.Writer) error {

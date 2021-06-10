@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// ClusterState cluster state struct.
 type ClusterState struct {
 	types.Metadata `json:",inline" mapstructure:",squash" gorm:"embedded"`
 	Options        []byte `json:"options,omitempty" gorm:"type:bytes"`
@@ -22,6 +23,7 @@ type ClusterState struct {
 	types.SSH      `json:",inline" mapstructure:",squash" gorm:"embedded"`
 }
 
+// Template template struct.
 type Template struct {
 	types.Metadata `json:",inline" mapstructure:",squash" gorm:"embedded"`
 	Options        []byte `json:"options,omitempty" gorm:"type:bytes"`
@@ -29,6 +31,7 @@ type Template struct {
 	IsDefault      bool `json:"is-default" gorm:"type:bool"`
 }
 
+// Credential credential struct.
 type Credential struct {
 	ID       int    `json:"id" gorm:"type:integer"`
 	Provider string `json:"provider"`
@@ -45,16 +48,19 @@ type clusterEvent struct {
 	Object *ClusterState
 }
 
+// LogEvent log event struct.
 type LogEvent struct {
 	Name        string
 	ContextName string
 }
 
+// Store holds broadcaster's API state.
 type Store struct {
 	*gorm.DB
 	broadcaster *Broadcaster
 }
 
+// NewClusterDB new cluster store.
 func NewClusterDB(ctx context.Context) (*Store, error) {
 	db, err := GetDB()
 	if err != nil {
@@ -67,6 +73,7 @@ func NewClusterDB(ctx context.Context) (*Store, error) {
 	}, nil
 }
 
+// Register register gorm create/update hook.
 func (d *Store) Register() {
 	_ = d.DB.Callback().Create().After("gorm:create").Register("gorm:autok3s_create", d.createHandler)
 	_ = d.DB.Callback().Update().After("gorm:update").Register("gorm:autok3s_update", d.updateHandler)
@@ -102,12 +109,14 @@ func (d *Store) hook(db *gorm.DB, event string) {
 	}
 }
 
+// BroadcastObject broadcast object.
 func (d *Store) BroadcastObject(obj interface{}) {
 	d.broadcaster.Broadcast(obj)
 }
 
+// WatchCluster watch cluster.
 func (d *Store) WatchCluster(apiOp *apitypes.APIRequest, schema *apitypes.APISchema, input chan apitypes.APIEvent) {
-	// new subscribe
+	// new subscribe.
 	sub := d.broadcaster.Register(func(v interface{}) bool {
 		_, ok := v.(*clusterEvent)
 		return ok
@@ -130,6 +139,7 @@ func (d *Store) WatchCluster(apiOp *apitypes.APIRequest, schema *apitypes.APISch
 	}
 }
 
+// Log subscribe log.
 func (d *Store) Log(apiOp *apitypes.APIRequest, input chan *LogEvent) {
 	// new subscribe for cluster logs
 	sub := d.broadcaster.Register(func(v interface{}) bool {
@@ -224,6 +234,7 @@ func convertModelToTemplate(m interface{}) *Template {
 	return temp
 }
 
+// SaveCluster save cluster.
 func (d *Store) SaveCluster(cluster *types.Cluster) error {
 	// find cluster
 	state := &ClusterState{}
@@ -261,6 +272,7 @@ func (d *Store) SaveCluster(cluster *types.Cluster) error {
 	return result.Error
 }
 
+// SaveClusterState save cluster state.
 func (d *Store) SaveClusterState(state *ClusterState) error {
 	result := d.DB.Model(state).
 		Where("name = ? AND provider = ?", state.Name, state.Provider).
@@ -268,6 +280,7 @@ func (d *Store) SaveClusterState(state *ClusterState) error {
 	return result.Error
 }
 
+// DeleteCluster delete cluster.
 func (d *Store) DeleteCluster(name, provider string) error {
 	state, err := d.GetCluster(name, provider)
 	if err != nil {
@@ -284,12 +297,14 @@ func (d *Store) DeleteCluster(name, provider string) error {
 	return result.Error
 }
 
+// ListCluster list cluster.
 func (d *Store) ListCluster() ([]*ClusterState, error) {
 	clusterList := make([]*ClusterState, 0)
 	result := d.DB.Find(&clusterList)
 	return clusterList, result.Error
 }
 
+// GetCluster get cluster.
 func (d *Store) GetCluster(name, provider string) (*ClusterState, error) {
 	state := &ClusterState{}
 	result := d.DB.Where("name = ? AND provider = ?", name, provider).Find(state)
@@ -302,6 +317,7 @@ func (d *Store) GetCluster(name, provider string) (*ClusterState, error) {
 	return state, nil
 }
 
+// GetClusterByID get cluster by ID.
 func (d *Store) GetClusterByID(contextName string) (*ClusterState, error) {
 	state := &ClusterState{}
 	result := d.DB.Where("context_name = ? ", contextName).Find(state)
@@ -314,6 +330,7 @@ func (d *Store) GetClusterByID(contextName string) (*ClusterState, error) {
 	return state, nil
 }
 
+// FindCluster find cluster.
 func (d *Store) FindCluster(name, provider string) ([]*ClusterState, error) {
 	clusterList := make([]*ClusterState, 0)
 	db := d.DB.Where("name = ?", name)
@@ -324,11 +341,13 @@ func (d *Store) FindCluster(name, provider string) ([]*ClusterState, error) {
 	return clusterList, result.Error
 }
 
+// CreateTemplate create template.
 func (d *Store) CreateTemplate(template *Template) error {
 	result := d.DB.Create(template)
 	return result.Error
 }
 
+// UpdateTemplate update template.
 func (d *Store) UpdateTemplate(template *Template) error {
 	result := d.DB.Model(template).
 		Where("name = ? AND provider = ?", template.Name, template.Provider).
@@ -336,6 +355,7 @@ func (d *Store) UpdateTemplate(template *Template) error {
 	return result.Error
 }
 
+// DeleteTemplate delete template.
 func (d *Store) DeleteTemplate(name, provider string) error {
 	temp, err := d.GetTemplate(name, provider)
 	if err != nil {
@@ -353,12 +373,14 @@ func (d *Store) DeleteTemplate(name, provider string) error {
 	return result.Error
 }
 
+// ListTemplates list template.
 func (d *Store) ListTemplates() ([]*Template, error) {
 	list := make([]*Template, 0)
 	result := d.DB.Find(&list)
 	return list, result.Error
 }
 
+// GetTemplate get template.
 func (d *Store) GetTemplate(name, provider string) (*Template, error) {
 	template := &Template{}
 	result := d.DB.Where("name = ? AND provider = ?", name, provider).
@@ -372,6 +394,7 @@ func (d *Store) GetTemplate(name, provider string) (*Template, error) {
 	return template, nil
 }
 
+// WatchTemplate watch template.
 func (d *Store) WatchTemplate(apiOp *apitypes.APIRequest, schema *apitypes.APISchema, input chan apitypes.APIEvent) {
 	// new subscribe for template
 	sub := d.broadcaster.Register(func(v interface{}) bool {
@@ -428,6 +451,7 @@ func toTemplate(temp *Template) *apis.ClusterTemplate {
 	return c
 }
 
+// CreateCredential create credential.
 func (d *Store) CreateCredential(cred *Credential) error {
 	// find exist provider credential.
 	list, err := d.GetCredentialByProvider(cred.Provider)
@@ -446,6 +470,7 @@ func (d *Store) CreateCredential(cred *Credential) error {
 	return result.Error
 }
 
+// UpdateCredential update credential.
 func (d *Store) UpdateCredential(cred *Credential) error {
 	result := d.DB.Model(cred).
 		Where("id = ? ", cred.ID).
@@ -453,18 +478,21 @@ func (d *Store) UpdateCredential(cred *Credential) error {
 	return result.Error
 }
 
+// ListCredential list credential.
 func (d *Store) ListCredential() ([]*Credential, error) {
 	list := make([]*Credential, 0)
 	result := d.DB.Find(&list)
 	return list, result.Error
 }
 
+// GetCredentialByProvider get credential by provider.
 func (d *Store) GetCredentialByProvider(provider string) ([]*Credential, error) {
 	list := make([]*Credential, 0)
 	result := d.DB.Where("provider = ? ", provider).Find(&list)
 	return list, result.Error
 }
 
+// GetCredential get credential by ID.
 func (d *Store) GetCredential(id int) (*Credential, error) {
 	cred := &Credential{}
 	result := d.DB.Where("id = ? ", id).Find(cred)
@@ -477,6 +505,7 @@ func (d *Store) GetCredential(id int) (*Credential, error) {
 	return cred, nil
 }
 
+// DeleteCredential delete credential by ID.
 func (d *Store) DeleteCredential(id int) error {
 	cred := &Credential{}
 	result := d.DB.Where("id = ? ", id).Delete(cred)

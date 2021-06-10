@@ -39,6 +39,7 @@ const sshUsageExample = `  autok3s ssh \
     --secret-key <secret-key>
 `
 
+// GetUsageExample returns aws usage example prompt.
 func (p *Amazon) GetUsageExample(action string) string {
 	switch action {
 	case "create":
@@ -54,6 +55,7 @@ func (p *Amazon) GetUsageExample(action string) string {
 	}
 }
 
+// GetCreateFlags returns aws create flags.
 func (p *Amazon) GetCreateFlags() []types.Flag {
 	cSSH := p.GetSSHConfig()
 	p.SSH = *cSSH
@@ -62,10 +64,12 @@ func (p *Amazon) GetCreateFlags() []types.Flag {
 	return fs
 }
 
+// GetOptionFlags returns aws option flags.
 func (p *Amazon) GetOptionFlags() []types.Flag {
 	return p.sharedFlags()
 }
 
+// GetDeleteFlags returns aws option flags.
 func (p *Amazon) GetDeleteFlags() []types.Flag {
 	return []types.Flag{
 		{
@@ -86,12 +90,14 @@ func (p *Amazon) GetDeleteFlags() []types.Flag {
 	}
 }
 
+// GetJoinFlags returns aws join flags.
 func (p *Amazon) GetJoinFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, p.GetClusterOptions()...)
 	return fs
 }
 
+// GetSSHFlags returns aws ssh flags.
 func (p *Amazon) GetSSHFlags() []types.Flag {
 	fs := []types.Flag{
 		{
@@ -115,6 +121,7 @@ func (p *Amazon) GetSSHFlags() []types.Flag {
 	return fs
 }
 
+// GetCredentialFlags return aws credential flags.
 func (p *Amazon) GetCredentialFlags() []types.Flag {
 	fs := []types.Flag{
 		{
@@ -138,6 +145,7 @@ func (p *Amazon) GetCredentialFlags() []types.Flag {
 	return fs
 }
 
+// GetSSHConfig returns aws ssh config.
 func (p *Amazon) GetSSHConfig() *types.SSH {
 	ssh := &types.SSH{
 		SSHUser: defaultUser,
@@ -146,6 +154,7 @@ func (p *Amazon) GetSSHConfig() *types.SSH {
 	return ssh
 }
 
+// BindCredential bind aws credential.
 func (p *Amazon) BindCredential() error {
 	secretMap := map[string]string{
 		"access-key": p.AccessKey,
@@ -154,6 +163,7 @@ func (p *Amazon) BindCredential() error {
 	return p.SaveCredential(secretMap)
 }
 
+// MergeClusterOptions merge aws cluster options.
 func (p *Amazon) MergeClusterOptions() error {
 	opt, err := p.MergeConfig()
 	if err != nil {
@@ -166,7 +176,7 @@ func (p *Amazon) MergeClusterOptions() error {
 	option := stateOption.(*aws.Options)
 	p.CloudControllerManager = option.CloudControllerManager
 
-	// merge options
+	// merge options.
 	source := reflect.ValueOf(&p.Options).Elem()
 	target := reflect.ValueOf(option).Elem()
 	utils.MergeConfig(source, target)

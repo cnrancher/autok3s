@@ -6,8 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Borrowed from https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/version/types.go.
 // VersionInfo contains version information.
+// Borrowed from https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/version/types.go.
 type VersionInfo struct {
 	GitVersion   string `json:"gitVersion"`
 	GitCommit    string `json:"gitCommit"`

@@ -38,6 +38,7 @@ const sshUsageExample = `  autok3s ssh \
     --secret-key <secret-key>
 `
 
+// GetUsageExample returns tencent usage example prompt.
 func (p *Tencent) GetUsageExample(action string) string {
 	switch action {
 	case "create":
@@ -53,6 +54,7 @@ func (p *Tencent) GetUsageExample(action string) string {
 	}
 }
 
+// GetCreateFlags returns tencent create flags.
 func (p *Tencent) GetCreateFlags() []types.Flag {
 	cSSH := p.GetSSHConfig()
 	p.SSH = *cSSH
@@ -61,16 +63,19 @@ func (p *Tencent) GetCreateFlags() []types.Flag {
 	return fs
 }
 
+// GetOptionFlags returns tencent option flags.
 func (p *Tencent) GetOptionFlags() []types.Flag {
 	return p.sharedFlags()
 }
 
+// GetJoinFlags returns tencent join flags.
 func (p *Tencent) GetJoinFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, p.GetClusterOptions()...)
 	return fs
 }
 
+// GetSSHFlags returns tencent ssh flags.
 func (p *Tencent) GetSSHFlags() []types.Flag {
 	fs := []types.Flag{
 		{
@@ -95,6 +100,7 @@ func (p *Tencent) GetSSHFlags() []types.Flag {
 	return fs
 }
 
+// GetDeleteFlags returns tencent delete flags.
 func (p *Tencent) GetDeleteFlags() []types.Flag {
 	return []types.Flag{
 		{
@@ -115,6 +121,7 @@ func (p *Tencent) GetDeleteFlags() []types.Flag {
 	}
 }
 
+// MergeClusterOptions merge tencent options.
 func (p *Tencent) MergeClusterOptions() error {
 	opt, err := p.MergeConfig()
 	if err != nil {
@@ -127,13 +134,14 @@ func (p *Tencent) MergeClusterOptions() error {
 	option := stateOption.(*tencent.Options)
 	p.CloudControllerManager = option.CloudControllerManager
 
-	// merge options
+	// merge options.
 	source := reflect.ValueOf(&p.Options).Elem()
 	target := reflect.ValueOf(option).Elem()
 	utils.MergeConfig(source, target)
 	return nil
 }
 
+// GetCredentialFlags returns tencent credential flags.
 func (p *Tencent) GetCredentialFlags() []types.Flag {
 	fs := []types.Flag{
 		{
@@ -157,6 +165,7 @@ func (p *Tencent) GetCredentialFlags() []types.Flag {
 	return fs
 }
 
+// GetSSHConfig returns tencent ssh config.
 func (p *Tencent) GetSSHConfig() *types.SSH {
 	ssh := &types.SSH{
 		SSHUser: defaultUser,
@@ -165,6 +174,7 @@ func (p *Tencent) GetSSHConfig() *types.SSH {
 	return ssh
 }
 
+// BindCredential bind tencent credential.
 func (p *Tencent) BindCredential() error {
 	secretMap := map[string]string{
 		secretID:  p.SecretID,

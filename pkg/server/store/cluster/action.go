@@ -20,17 +20,20 @@ const (
 	linkNodes  = "nodes"
 )
 
+// Formatter cluster's formatter.
 func Formatter(request *types.APIRequest, resource *types.RawResource) {
 	resource.Links[linkNodes] = request.URLBuilder.Link(resource.Schema, resource.ID, linkNodes)
 	resource.AddAction(request, actionJoin)
 }
 
+// HandleCluster cluster's action handler.
 func HandleCluster() map[string]http.Handler {
 	return map[string]http.Handler{
 		actionJoin: joinHandler(),
 	}
 }
 
+// LinkCluster cluster's link handler.
 func LinkCluster(request *types.APIRequest) (types.APIObject, error) {
 	if request.Link != "" {
 		return nodesHandler(request, request.Schema, request.Name)

@@ -13,8 +13,9 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-const SSHAuthSock = "SSH_AUTH_SOCK"
+const sshAuthSock = "SSH_AUTH_SOCK"
 
+// SSHPrivateKeyPath returns ssh private key content from given path.
 func SSHPrivateKeyPath(sshKey string) (string, error) {
 	if sshKey[:2] == "~/" {
 		sshKey = filepath.Join(UserHome(), sshKey[2:])
@@ -26,6 +27,7 @@ func SSHPrivateKeyPath(sshKey string) (string, error) {
 	return string(buff), nil
 }
 
+// SSHCertificatePath returns ssh certificate key content from given path
 func SSHCertificatePath(sshCertPath string) (string, error) {
 	if sshCertPath[:2] == "~/" {
 		sshCertPath = filepath.Join(UserHome(), sshCertPath[2:])
@@ -37,6 +39,7 @@ func SSHCertificatePath(sshCertPath string) (string, error) {
 	return string(buff), nil
 }
 
+// GetSSHConfig generate ssh config.
 func GetSSHConfig(username, sshPrivateKeyString, passphrase, sshCert string, password string, timeout time.Duration, useAgentAuth bool) (*ssh.ClientConfig, error) {
 	config := &ssh.ClientConfig{
 		User:            username,
@@ -45,7 +48,7 @@ func GetSSHConfig(username, sshPrivateKeyString, passphrase, sshCert string, pas
 	}
 
 	if useAgentAuth {
-		if sshAgentSock := os.Getenv(SSHAuthSock); sshAgentSock != "" {
+		if sshAgentSock := os.Getenv(sshAuthSock); sshAgentSock != "" {
 			sshAgent, err := net.Dial("unix", sshAgentSock)
 			if err != nil {
 				return config, fmt.Errorf("cannot connect to SSH Auth socket %q: %s", sshAgentSock, err)

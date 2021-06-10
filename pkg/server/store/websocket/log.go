@@ -16,6 +16,7 @@ import (
 	"github.com/rancher/wrangler/pkg/schemas/validation"
 )
 
+// LogHandler log handler.
 func LogHandler(apiOp *types.APIRequest) (types.APIObjectList, error) {
 	if err := logHandler(apiOp); err != nil {
 		return types.APIObjectList{}, err
@@ -23,6 +24,52 @@ func LogHandler(apiOp *types.APIRequest) (types.APIObjectList, error) {
 	return types.APIObjectList{}, validation.ErrComplete
 }
 
+// NewTailLog return new tail struct.
+func NewTailLog(logFilePath string) (*tail.Tail, error) {
+	t, err := tail.TailFile(logFilePath, tail.Config{
+		Follow:    true,
+		MustExist: true,
+		Poll:      true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+// CloseLog used to close log tail.
+func CloseLog(t *tail.Tail) {
+	_ = t.Stop()
+	t.Cleanup()
+}
+
+// WriteLastLogs append logs to the log file.
+func WriteLastLogs(t *tail.Tail, w http.ResponseWriter, f http.Flusher, logFilePath string) error {
+	// the tail is about to close, we need to read last bytes of file to show final log
+	offset, err := t.Tell()
+	if err != nil {
+		return err
+	}
+	logFile, err := os.Open(logFilePath)
+	if err != nil {
+		return err
+	}
+	_, err = logFile.Seek(offset, os.SEEK_CUR)
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(logFile)
+	for scanner.Scan() {
+		var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
+		_, _ = w.Write(bs.Bytes())
+		f.Flush()
+	}
+	CloseLog(t)
+	_ = logFile.Close()
+	return nil
+}
+
+// nolint: gocyclo
 func logHandler(apiOp *types.APIRequest) error {
 	cluster := apiOp.Request.URL.Query().Get("cluster")
 	provider := apiOp.Request.URL.Query().Get("provider")
@@ -104,46 +151,4 @@ func logHandler(apiOp *types.APIRequest) error {
 			f.Flush()
 		}
 	}
-}
-
-func NewTailLog(logFilePath string) (*tail.Tail, error) {
-	t, err := tail.TailFile(logFilePath, tail.Config{
-		Follow:    true,
-		MustExist: true,
-		Poll:      true,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
-}
-
-func CloseLog(t *tail.Tail) {
-	_ = t.Stop()
-	t.Cleanup()
-}
-
-func WriteLastLogs(t *tail.Tail, w http.ResponseWriter, f http.Flusher, logFilePath string) error {
-	// the tail is about to close, we need to read last bytes of file to show final log
-	offset, err := t.Tell()
-	if err != nil {
-		return err
-	}
-	logFile, err := os.Open(logFilePath)
-	if err != nil {
-		return err
-	}
-	_, err = logFile.Seek(offset, os.SEEK_CUR)
-	if err != nil {
-		return err
-	}
-	scanner := bufio.NewScanner(logFile)
-	for scanner.Scan() {
-		var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
-		_, _ = w.Write(bs.Bytes())
-		f.Flush()
-	}
-	CloseLog(t)
-	_ = logFile.Close()
-	return nil
 }

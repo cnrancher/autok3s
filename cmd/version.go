@@ -23,6 +23,7 @@ func init() {
 	versionCmd.Flags().BoolVarP(&short, "short", "s", short, "Print just the version number")
 }
 
+// VersionCommand returns version information.
 func VersionCommand(gitVersion, gitCommit, gitTreeState, buildDate string) *cobra.Command {
 	version := types.VersionInfo{
 		GitVersion:   gitVersion,

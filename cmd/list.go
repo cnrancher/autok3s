@@ -18,6 +18,7 @@ var (
 	}
 )
 
+// ListCommand returns clusters as list.
 func ListCommand() *cobra.Command {
 	listCmd.Run = func(cmd *cobra.Command, args []string) {
 		listCluster()

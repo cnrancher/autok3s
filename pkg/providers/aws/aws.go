@@ -46,6 +46,7 @@ const (
 	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
 )
 
+// Amazon provider amazon struct.
 type Amazon struct {
 	*cluster.ProviderBase `json:",inline"`
 	typesaws.Options      `json:",inline"`
@@ -79,15 +80,18 @@ func newProvider() *Amazon {
 	}
 }
 
+// GetProviderName returns provider name.
 func (p *Amazon) GetProviderName() string {
 	return p.Provider
 }
 
+// GenerateClusterName generates and returns cluster name.
 func (p *Amazon) GenerateClusterName() string {
 	p.ContextName = fmt.Sprintf("%s.%s.%s", p.Name, p.Region, p.GetProviderName())
 	return p.ContextName
 }
 
+// GenerateManifest generates manifest deploy command.
 func (p *Amazon) GenerateManifest() []string {
 	if p.CloudControllerManager {
 		return []string{fmt.Sprintf(deployCCMCommand,
@@ -96,6 +100,7 @@ func (p *Amazon) GenerateManifest() []string {
 	return nil
 }
 
+// CreateK3sCluster create K3S cluster.
 func (p *Amazon) CreateK3sCluster() (err error) {
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
@@ -103,6 +108,7 @@ func (p *Amazon) CreateK3sCluster() (err error) {
 	return p.InitCluster(p.Options, p.GenerateManifest, p.generateInstance, nil, p.rollbackInstance)
 }
 
+// JoinK3sNode join K3S node.
 func (p *Amazon) JoinK3sNode() (err error) {
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
@@ -110,10 +116,12 @@ func (p *Amazon) JoinK3sNode() (err error) {
 	return p.JoinNodes(p.generateInstance, p.syncInstances, false, p.rollbackInstance)
 }
 
+// DeleteK3sCluster delete K3S cluster.
 func (p *Amazon) DeleteK3sCluster(f bool) (err error) {
 	return p.DeleteCluster(f, p.deleteInstance)
 }
 
+// SSHK3sNode ssh K3s node.
 func (p *Amazon) SSHK3sNode(ip string) error {
 	c := &types.Cluster{
 		Metadata: p.Metadata,
@@ -123,10 +131,7 @@ func (p *Amazon) SSHK3sNode(ip string) error {
 	return p.Connect(ip, &p.SSH, c, p.getInstanceNodes, p.isInstanceRunning, nil)
 }
 
-func (p *Amazon) isInstanceRunning(state string) bool {
-	return state == ec2.InstanceStateNameRunning
-}
-
+// IsClusterExist determine if the cluster exists.
 func (p *Amazon) IsClusterExist() (bool, []string, error) {
 	ids := make([]string, 0)
 
@@ -149,6 +154,7 @@ func (p *Amazon) IsClusterExist() (bool, []string, error) {
 	return len(ids) > 0, ids, nil
 }
 
+// GenerateMasterExtraArgs generates K3S master extra args.
 func (p *Amazon) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
 	if option, ok := cluster.Options.(typesaws.Options); ok {
 		if option.CloudControllerManager {
@@ -158,10 +164,12 @@ func (p *Amazon) GenerateMasterExtraArgs(cluster *types.Cluster, master types.No
 	return ""
 }
 
+// GenerateWorkerExtraArgs generates K3S worker extra args.
 func (p *Amazon) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
 	return p.GenerateMasterExtraArgs(cluster, worker)
 }
 
+// SetOptions set options.
 func (p *Amazon) SetOptions(opt []byte) error {
 	sourceOption := reflect.ValueOf(&p.Options).Elem()
 	option := &typesaws.Options{}
@@ -174,6 +182,7 @@ func (p *Amazon) SetOptions(opt []byte) error {
 	return nil
 }
 
+// GetCluster returns cluster status.
 func (p *Amazon) GetCluster(kubecfg string) *types.ClusterInfo {
 	c := &types.ClusterInfo{
 		ID:       p.ContextName,
@@ -188,6 +197,7 @@ func (p *Amazon) GetCluster(kubecfg string) *types.ClusterInfo {
 	return p.GetClusterStatus(kubecfg, c, p.getInstanceNodes)
 }
 
+// DescribeCluster describe cluster info.
 func (p *Amazon) DescribeCluster(kubecfg string) *types.ClusterInfo {
 	c := &types.ClusterInfo{
 		Name:     p.Name,
@@ -198,12 +208,14 @@ func (p *Amazon) DescribeCluster(kubecfg string) *types.ClusterInfo {
 	return p.Describe(kubecfg, c, p.getInstanceNodes)
 }
 
+// GetProviderOptions get provider options.
 func (p *Amazon) GetProviderOptions(opt []byte) (interface{}, error) {
 	options := &typesaws.Options{}
 	err := json.Unmarshal(opt, options)
 	return options, err
 }
 
+// SetConfig set cluster config.
 func (p *Amazon) SetConfig(config []byte) error {
 	c, err := p.SetClusterConfig(config)
 	if err != nil {
@@ -225,6 +237,7 @@ func (p *Amazon) SetConfig(config []byte) error {
 	return nil
 }
 
+// Rollback rollback operate.
 func (p *Amazon) Rollback() error {
 	return p.RollbackCluster(p.rollbackInstance)
 }
@@ -645,6 +658,7 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 	return instanceList, nil
 }
 
+// CreateCheck check create command and flags.
 func (p *Amazon) CreateCheck() error {
 	if p.KeypairName != "" && p.SSHKeyPath == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --keypair-name %s", p.GetProviderName(), p.KeypairName)
@@ -677,7 +691,7 @@ func (p *Amazon) CreateCheck() error {
 		return fmt.Errorf("[%s] calling preflight error: need to set `--iam-instance-profile-worker` if enabled Amazon Cloud Controller Manager", p.GetProviderName())
 	}
 
-	// check name exist
+	// check name exist.
 	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
 	if err != nil {
 		return err
@@ -697,7 +711,7 @@ func (p *Amazon) CreateCheck() error {
 			p.GetProviderName(), p.Name)
 	}
 
-	// check key pair
+	// check key pair.
 	if p.KeypairName != "" {
 		_, err = p.client.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{
 			KeyNames: []*string{&p.KeypairName},
@@ -712,7 +726,7 @@ func (p *Amazon) CreateCheck() error {
 		}
 	}
 
-	// check vpc and subnet
+	// check vpc and subnet.
 	if p.VpcID == "" {
 		p.VpcID, err = p.getDefaultVPCId()
 		if err != nil {
@@ -725,7 +739,7 @@ func (p *Amazon) CreateCheck() error {
 	}
 
 	if p.SubnetID != "" && p.VpcID != "" {
-		// check subnet is belongs to vpc
+		// check subnet is belongs to vpc.
 		subnetFilter := []*ec2.Filter{
 			{
 				Name:   aws.String("subnet-id"),
@@ -772,7 +786,7 @@ func (p *Amazon) CreateCheck() error {
 			return fmt.Errorf("can't get subnets for vpc %s at zone %s", p.VpcID, p.Zone)
 		}
 
-		// find default subnet
+		// find default subnet.
 		if len(subnets.Subnets) > 1 {
 			for _, subnet := range subnets.Subnets {
 				if subnet.DefaultForAz != nil && *subnet.DefaultForAz {
@@ -789,8 +803,9 @@ func (p *Amazon) CreateCheck() error {
 	return nil
 }
 
+// JoinCheck check join command and flags.
 func (p *Amazon) JoinCheck() error {
-	// check cluster exist
+	// check cluster exist.
 	exist, _, err := p.IsClusterExist()
 
 	if err != nil {
@@ -802,7 +817,7 @@ func (p *Amazon) JoinCheck() error {
 			p.GetProviderName(), p.ContextName)
 	}
 
-	// check flags
+	// check flags.
 	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
 		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
 			p.GetProviderName())
@@ -837,7 +852,7 @@ func (p *Amazon) createKeyPair(ssh *types.SSH) error {
 		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeypairName)
 	}
 
-	// check create & upload keypair
+	// check create & upload keypair.
 	if ssh.SSHKeyPath == "" {
 		if _, err := os.Stat(common.GetDefaultSSHKeyPath(p.ContextName, p.GetProviderName())); err != nil {
 			if !os.IsNotExist(err) {
@@ -929,7 +944,7 @@ func (p *Amazon) configSecurityGroup() error {
 
 	var securityGroup *ec2.SecurityGroup
 	if len(groups.SecurityGroups) > 0 {
-		// get default security group
+		// get default security group.
 		securityGroup = groups.SecurityGroups[0]
 	}
 
@@ -943,13 +958,13 @@ func (p *Amazon) configSecurityGroup() error {
 		if err != nil {
 			return err
 		}
-		// Manually translate into the security group construct
+		// Manually translate into the security group construct.
 		securityGroup = &ec2.SecurityGroup{
 			GroupId:   groupResp.GroupId,
 			VpcId:     aws.String(p.VpcID),
 			GroupName: aws.String(defaultSecurityGroupName),
 		}
-		// wait until created (dat eventual consistency)
+		// wait until created (dat eventual consistency).
 		p.Logger.Infof("waiting for group (%s) to become available", *securityGroup.GroupId)
 		err = utils.WaitFor(func() (bool, error) {
 			s, err := p.getSecurityGroup(groupResp.GroupId)
@@ -1025,7 +1040,7 @@ func (p *Amazon) configPermission(group *ec2.SecurityGroup) []*ec2.IpPermission 
 
 	if (p.Network == "" || p.Network == "vxlan") && !hasPorts["8472/udp"] {
 		if !hasPorts["8472/udp"] {
-			// udp 8472 for flannel vxlan
+			// udp 8472 for flannel vxlan.
 			perms = append(perms, &ec2.IpPermission{
 				IpProtocol: aws.String("udp"),
 				FromPort:   aws.Int64(int64(8472)),
@@ -1127,7 +1142,7 @@ func (p *Amazon) addTagsForCCMResource() error {
 		return err
 	}
 
-	// get subnet
+	// get subnet.
 	subnetFilter := []*ec2.Filter{
 		{
 			Name:   aws.String("subnet-id"),
@@ -1218,4 +1233,8 @@ func (p *Amazon) cancelSpotInstance() error {
 		SpotInstanceRequestIds: aws.StringSlice(p.spotInstanceRequestIDs),
 	})
 	return err
+}
+
+func (p *Amazon) isInstanceRunning(state string) bool {
+	return state == ec2.InstanceStateNameRunning
 }

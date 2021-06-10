@@ -23,6 +23,7 @@ func init() {
 	sshCmd.Flags().StringVarP(&sProvider, "provider", "p", sProvider, "Provider is a module which provides an interface for managing cloud resources")
 }
 
+// SSHCommand ssh command.
 func SSHCommand() *cobra.Command {
 	// load dynamic provider flags.
 	pStr := common.FlagHackLookup("--provider")

@@ -15,6 +15,7 @@ import (
 	"net/http/pprof"
 )
 
+// Start starts daemon.
 func Start() http.Handler {
 	s := server.DefaultAPIServer()
 	initMutual(s.Schemas)
@@ -42,7 +43,7 @@ func Start() http.Handler {
 		http.Redirect(rw, req, "/ui/", http.StatusFound)
 	})
 
-	// profiling handlers for pprof under /debug/pprof
+	// profiling handlers for pprof under /debug/pprof.
 	router.HandleFunc("/debug/pprof/", pprof.Index)
 	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	router.HandleFunc("/debug/pprof/profile", pprof.Profile)

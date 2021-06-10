@@ -26,11 +26,13 @@ var upgrader = websocket.Upgrader{
 	EnableCompression: true,
 }
 
+// Shell struct for shell.
 type Shell struct {
 	conn *websocket.Conn
 	ptmx *os.File
 }
 
+// KubeHandler kubectl handler for websocket.
 func KubeHandler(apiOp *types.APIRequest) (types.APIObject, error) {
 	err := ptyHandler(apiOp)
 	if err != nil {
