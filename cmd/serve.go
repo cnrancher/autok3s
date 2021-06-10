@@ -25,6 +25,7 @@ func init() {
 	serveCmd.Flags().StringVar(&bindAddress, "bind-address", bindAddress, "HTTP/HTTPS bind address")
 }
 
+// ServeCommand serve command.
 func ServeCommand() *cobra.Command {
 	serveCmd.Run = func(cmd *cobra.Command, args []string) {
 		router := server.Start()

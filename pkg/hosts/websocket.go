@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Dialer dialer interface definition.
 type Dialer interface {
 	SetIO(stdout, stderr io.Writer, stdin io.ReadCloser)
 	SetWindowSize(height, weight int)
@@ -21,12 +22,14 @@ type Dialer interface {
 	Close() error
 }
 
+// WebSocketDialer struct for websocket dialer.
 type WebSocketDialer struct {
 	dialer Dialer
 	conn   *websocket.Conn
 	reader *TerminalReader
 }
 
+// NewWebSocketDialer returns new websocket dialer.
 func NewWebSocketDialer(conn *websocket.Conn, dialer Dialer) *WebSocketDialer {
 	d := &WebSocketDialer{
 		conn:   conn,
@@ -78,16 +81,19 @@ func (d *WebSocketDialer) ChangeWindowSize(win *WindowSize) {
 	}
 }
 
+// NewBinaryWriter returns new binary writer.
 func NewBinaryWriter(con *websocket.Conn) *BinaryWriter {
 	return &BinaryWriter{
 		conn: con,
 	}
 }
 
+// BinaryWriter struct for binary writer.
 type BinaryWriter struct {
 	conn *websocket.Conn
 }
 
+// Write binary writer Write implement.
 func (s *BinaryWriter) Write(p []byte) (int, error) {
 	w, err := s.conn.NextWriter(websocket.BinaryMessage)
 	if err != nil {
@@ -103,6 +109,7 @@ func (s *BinaryWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// TerminalReader struct for terminal reader.
 type TerminalReader struct {
 	conn     *websocket.Conn
 	reader   io.Reader
@@ -110,6 +117,7 @@ type TerminalReader struct {
 	ClosedCh chan bool
 }
 
+// NewTerminalReader returns new terminal reader.
 func NewTerminalReader(con *websocket.Conn) *TerminalReader {
 	return &TerminalReader{
 		conn:     con,
@@ -117,15 +125,18 @@ func NewTerminalReader(con *websocket.Conn) *TerminalReader {
 	}
 }
 
+// Close used to close terminal reader.
 func (t *TerminalReader) Close() error {
 	t.ClosedCh <- true
 	return nil
 }
 
+// SetResizeFunction set terminal reader resize function.
 func (t *TerminalReader) SetResizeFunction(resizeFun func(size *WindowSize)) {
 	t.resize = resizeFun
 }
 
+// Read terminal reader Read implement.
 func (t *TerminalReader) Read(p []byte) (int, error) {
 	var msgType int
 	var err error
@@ -164,6 +175,7 @@ func (t *TerminalReader) Read(p []byte) (int, error) {
 	}
 }
 
+// WindowSize struct for window size.
 type WindowSize struct {
 	Width  int
 	Height int

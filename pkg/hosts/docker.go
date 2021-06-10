@@ -29,6 +29,7 @@ import (
 // the default escape key sequence: ctrl-p, ctrl-q.
 var defaultEscapeKeys = []byte{16, 17}
 
+// DockerDialer struct for docker dialer.
 type DockerDialer struct {
 	execID string
 
@@ -45,6 +46,7 @@ type DockerDialer struct {
 	response *dockertypes.HijackedResponse
 }
 
+// NewDockerDialer returns new docker dialer.
 func NewDockerDialer(n *types.Node) (*DockerDialer, error) {
 	if n.InstanceID == "" {
 		return nil, errors.New("[docker-dialer] no container ID is specified")
@@ -186,7 +188,7 @@ func (d *DockerDialer) Terminal() error {
 	return nil
 }
 
-// WebSocketTerminal open docker websocket terminal.
+// OpenTerminal open docker websocket terminal.
 func (d *DockerDialer) OpenTerminal() error {
 	return d.ExecStart(false)
 }
@@ -244,6 +246,7 @@ func (d *DockerDialer) ExecStart(needRestore bool) error {
 	return nil
 }
 
+// Wait waits for the command to exit.
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/exec.go#L180.
 func (d *DockerDialer) Wait() error {
 	resp, err := d.client.ContainerExecInspect(d.ctx, d.execID)
@@ -445,6 +448,7 @@ func (d *DockerDialer) ChangeWindowSize(win *WindowSize) error {
 	return d.ResizeTtyTo(d.ctx, uint(win.Height), uint(win.Width))
 }
 
+// Write write implement.
 func (d *DockerDialer) Write(b []byte) error {
 	return nil
 }

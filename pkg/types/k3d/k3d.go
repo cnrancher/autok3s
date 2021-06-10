@@ -1,5 +1,6 @@
 package k3d
 
+// Options k3d provider's custom parameters.
 type Options struct {
 	APIPort       string   `json:"api-port,omitempty" yaml:"api-port,omitempty"`
 	Envs          []string `json:"envs,omitempty" yaml:"envs,omitempty"`

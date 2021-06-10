@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// NewLogger returns new logger struct.
 func NewLogger(debug bool, w *os.File) *logrus.Logger {
 	logger := logrus.New()
 	if debug {
@@ -24,10 +25,12 @@ func NewLogger(debug bool, w *os.File) *logrus.Logger {
 	return logger
 }
 
+// GetLogPath returns log path.
 func GetLogPath() string {
 	return filepath.Join(CfgPath, "logs")
 }
 
+// GetLogFile open and return log file.
 func GetLogFile(name string) (logFile *os.File, err error) {
 	logFilePath := filepath.Join(GetLogPath(), name)
 	// check file exist

@@ -22,7 +22,6 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 - [Key Features](#key-features)
 - [Providers](#providers)
 - [Quick Start (tl;dr)](#quick-start-tldr)
-- [User Guide](#user-guide)
 - [Demo Video](#demo-video)
 - [Developers' Guide](#developers-guide)
 - [License](#license)
@@ -70,14 +69,6 @@ curl -sS http://rancher-mirror.cnrancher.com/autok3s/install.sh  | sh
 # The commands will start autok3s daemon with an interactionable UI.
 autok3s -d serve
 ```
-
-## User Guide
-
-AutoK3s has two running modes: 
-
-- Local Mode: In this mode, you can use Autok3s via Docker or CLI.
-- [WIP] Rancher Mode: In this mode, you can put Autok3s into Rancher.
-  It will serve as an extension that allows you to build the managed K3s service. The K3s cluster created by Autok3s can be automatically imported into Rancher, and take full advantage of Rancher's Kubernetes management capabilities.
 
 ## Demo Video
 

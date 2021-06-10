@@ -17,10 +17,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Store holds cluster's API state
 type Store struct {
 	empty.Store
 }
 
+// Create creates cluster based on the request data.
 func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	providerName := data.Data().String("provider")
 	b, err := json.Marshal(data.Data())
@@ -61,6 +63,7 @@ func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	}, err
 }
 
+// List returns clusters as list.
 func (c *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	list := types.APIObjectList{}
 	clusterList, err := cluster.ListClusters()
@@ -78,6 +81,7 @@ func (c *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 	return list, nil
 }
 
+// ByID returns cluster by ID.
 func (c *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	state, err := common.DefaultDB.GetClusterByID(id)
 	if err != nil || state == nil {
@@ -103,6 +107,7 @@ func (c *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 	}, nil
 }
 
+// Delete deletes cluster by ID.
 func (c *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	state, err := common.DefaultDB.GetClusterByID(id)
 	if err != nil || state == nil {
@@ -137,6 +142,7 @@ func (c *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 	return types.APIObject{}, err
 }
 
+// Watch watches template.
 func (c *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
 	var (
 		result = make(chan types.APIEvent)

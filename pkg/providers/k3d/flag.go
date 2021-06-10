@@ -30,6 +30,7 @@ const sshUsageExample = `  autok3s ssh \
     --name <cluster name>
 `
 
+// GetUsageExample returns k3d usage example prompt.
 func (p *K3d) GetUsageExample(action string) string {
 	switch action {
 	case "create":
@@ -45,6 +46,7 @@ func (p *K3d) GetUsageExample(action string) string {
 	}
 }
 
+// GetCreateFlags returns k3d create flags.
 func (p *K3d) GetCreateFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, []types.Flag{
@@ -65,10 +67,12 @@ func (p *K3d) GetCreateFlags() []types.Flag {
 	return fs
 }
 
+// GetSSHConfig returns k3d ssh config.
 func (p *K3d) GetSSHConfig() *types.SSH {
 	return &types.SSH{}
 }
 
+// GetOptionFlags returns k3d option flags.
 func (p *K3d) GetOptionFlags() []types.Flag {
 	fs := []types.Flag{
 		{
@@ -159,6 +163,7 @@ func (p *K3d) GetOptionFlags() []types.Flag {
 	return fs
 }
 
+// GetDeleteFlags returns k3d delete flags.
 func (p *K3d) GetDeleteFlags() []types.Flag {
 	return []types.Flag{
 		{
@@ -172,10 +177,12 @@ func (p *K3d) GetDeleteFlags() []types.Flag {
 	}
 }
 
+// GetJoinFlags returns k3d join flags.
 func (p *K3d) GetJoinFlags() []types.Flag {
 	return p.sharedFlags()
 }
 
+// GetSSHFlags returns k3d ssh flags.
 func (p *K3d) GetSSHFlags() []types.Flag {
 	return []types.Flag{
 		{
@@ -189,6 +196,7 @@ func (p *K3d) GetSSHFlags() []types.Flag {
 	}
 }
 
+// MergeClusterOptions merge k3d cluster options.
 func (p *K3d) MergeClusterOptions() error {
 	opt, err := p.MergeConfig()
 	if err != nil {
@@ -208,10 +216,12 @@ func (p *K3d) MergeClusterOptions() error {
 	return nil
 }
 
+// GetCredentialFlags returns k3d  credential flags.
 func (p *K3d) GetCredentialFlags() []types.Flag {
 	return []types.Flag{}
 }
 
+// BindCredential bind k3d credential.
 func (p *K3d) BindCredential() error {
 	return nil
 }

@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// SSHDialer struct for ssh dialer.
 type SSHDialer struct {
 	sshKey          string
 	sshCert         string
@@ -48,6 +49,7 @@ type SSHDialer struct {
 	err error
 }
 
+// NewSSHDialer returns new ssh dialer.
 func NewSSHDialer(n *types.Node, timeout bool) (*SSHDialer, error) {
 	if len(n.PublicIPAddress) <= 0 && n.InstanceID == "" {
 		return nil, errors.New("[ssh-dialer] no node IP or node ID is specified")
@@ -115,6 +117,7 @@ func (d *SSHDialer) Dial(t bool) (*ssh.Client, error) {
 	return ssh.Dial("tcp", d.sshAddress, cfg)
 }
 
+// NewSession returns new session.
 func (d *SSHDialer) NewSession() error {
 	session, err := d.conn.NewSession()
 	if err != nil {
@@ -153,14 +156,14 @@ func (d *SSHDialer) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *SSH
 	return d
 }
 
-// SetStdio set dialer's reader and writer.
+// SetIO set dialer's reader and writer.
 func (d *SSHDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
 	d.Stdout = stdout
 	d.Stderr = stderr
 	d.Stdin = stdin
 }
 
-// SetDefaultSize set dialer's default window size.
+// SetWindowSize set dialer's default window size.
 func (d *SSHDialer) SetWindowSize(height, weight int) {
 	d.Height = height
 	d.Weight = weight

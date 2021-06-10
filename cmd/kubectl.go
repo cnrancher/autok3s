@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// KubectlCommand kubectl command.
 func KubectlCommand() *cobra.Command {
 	return kubectl.EmbedCommand()
 }

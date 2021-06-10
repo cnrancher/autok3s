@@ -12,10 +12,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// Store holds kubectl API state.
 type Store struct {
 	empty.Store
 }
 
+// List returns kubectl contexts.
 func (k *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	result := types.APIObjectList{}
 	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)

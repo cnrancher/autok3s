@@ -26,6 +26,7 @@ func init() {
 	deleteCmd.Flags().BoolVarP(&force, "force", "f", force, "Force delete cluster")
 }
 
+// DeleteCommand delete command.
 func DeleteCommand() *cobra.Command {
 	pStr := common.FlagHackLookup("--provider")
 

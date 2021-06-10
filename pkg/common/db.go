@@ -100,6 +100,7 @@ var (
 	}
 )
 
+// InitStorage initializes database storage.
 func InitStorage() error {
 	if err := utils.EnsureFileExist(filepath.Join(CfgPath, DBFolder), DBFile); err != nil {
 		return err
@@ -113,13 +114,14 @@ func InitStorage() error {
 	return db.AutoMigrate(&ClusterState{}, &Template{})
 }
 
+// GetDB open and returns database.
+func GetDB() (*gorm.DB, error) {
+	dataSource := GetDataSource()
+	return gorm.Open(sqlite.Open(dataSource), &gorm.Config{})
+}
+
 func setup(db *gorm.DB) {
 	for _, statement := range schema {
 		db.Exec(statement)
 	}
-}
-
-func GetDB() (*gorm.DB, error) {
-	dataSource := GetDataSource()
-	return gorm.Open(sqlite.Open(dataSource), &gorm.Config{})
 }

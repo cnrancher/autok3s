@@ -2,19 +2,17 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-
-	"github.com/ghodss/yaml"
 )
 
 const (
-	HomeEnv        = "HOME"
-	HomeDriveEnv   = "HOMEDRIVE"
-	HomePathEnv    = "HOMEPATH"
-	UserProfileEnv = "USERPROFILE"
+	homeEnv        = "HOME"
+	homeDriveEnv   = "HOMEDRIVE"
+	homePathEnv    = "HOMEPATH"
+	userProfileEnv = "USERPROFILE"
 )
 
+// EnsureFolderExist ensures folder exist.
 func EnsureFolderExist(path string) error {
 	if path == "" {
 		return fmt.Errorf("path %s cannot be empty", path)
@@ -26,6 +24,7 @@ func EnsureFolderExist(path string) error {
 	return nil
 }
 
+// EnsureFileExist ensures file exist.
 func EnsureFileExist(path, file string) error {
 	if err := EnsureFolderExist(path); err != nil {
 		return err
@@ -41,36 +40,15 @@ func EnsureFileExist(path, file string) error {
 	return nil
 }
 
+// UserHome returns user's home dir.
 func UserHome() string {
-	if home := os.Getenv(HomeEnv); home != "" {
+	if home := os.Getenv(homeEnv); home != "" {
 		return home
 	}
-	homeDrive := os.Getenv(HomeDriveEnv)
-	homePath := os.Getenv(HomePathEnv)
+	homeDrive := os.Getenv(homeDriveEnv)
+	homePath := os.Getenv(homePathEnv)
 	if homeDrive != "" && homePath != "" {
 		return homeDrive + homePath
 	}
-	return os.Getenv(UserProfileEnv)
-}
-
-func WriteYaml(source interface{}, path, name string) error {
-	b, err := yaml.Marshal(source)
-	if err != nil {
-		return err
-	}
-
-	n := fmt.Sprintf("%s/%s", path, name)
-
-	if _, err := os.Stat(n); os.IsNotExist(err) {
-		f, err := os.Create(n)
-		if err != nil {
-			return err
-		}
-
-		defer func() {
-			_ = f.Close()
-		}()
-	}
-
-	return ioutil.WriteFile(n, b, 0644)
+	return os.Getenv(userProfileEnv)
 }

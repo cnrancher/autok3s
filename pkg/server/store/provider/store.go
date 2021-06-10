@@ -13,10 +13,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Store holds provider's API state.
 type Store struct {
 	empty.Store
 }
 
+// ByID returns provider by ID.
 func (p *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	provider, err := providers.GetProvider(id)
 	if err != nil {
@@ -25,6 +27,7 @@ func (p *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 	return toProviderObject(provider, schema, id)
 }
 
+// List returns providers as list.
 func (p *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	list := providers.ListProviders()
 	result := types.APIObjectList{}
@@ -56,7 +59,7 @@ func toProviderObject(provider providers.Provider, schema *types.APISchema, id s
 	for k, v := range creds {
 		options[k] = v
 	}
-	// get cluster config
+	// get cluster config.
 	config := utils.ConvertFlagsToFields(provider.GetCreateFlags())
 	config["registry-content"] = schemas.Field{
 		Type:        "string",

@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// GetCredentialFields returns credential fields.
 func GetCredentialFields(p providers.Provider) map[string]schemas.Field {
 	credFlags := p.GetCredentialFlags()
 	result := make(map[string]schemas.Field, 0)
@@ -26,6 +27,7 @@ func GetCredentialFields(p providers.Provider) map[string]schemas.Field {
 	return result
 }
 
+// GetCredentialByProvider returns credential by provider.
 func GetCredentialByProvider(p providers.Provider) (map[string]schemas.Field, error) {
 	result := GetCredentialFields(p)
 	credList, err := common.DefaultDB.GetCredentialByProvider(p.GetProviderName())
@@ -51,6 +53,7 @@ func GetCredentialByProvider(p providers.Provider) (map[string]schemas.Field, er
 	return result, nil
 }
 
+// ConvertFlagsToFields convert flags to fields.
 func ConvertFlagsToFields(flags []types.Flag) map[string]schemas.Field {
 	result := make(map[string]schemas.Field, 0)
 	for _, flag := range flags {

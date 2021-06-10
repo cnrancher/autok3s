@@ -1,19 +1,25 @@
 package tencent
 
 const (
+	// StatusPending tencent instance pending status.
 	StatusPending = "PENDING"
+	// StatusRunning tencent instance running status.
 	StatusRunning = "RUNNING"
 
-	// task result
+	// Success tencent task success result.
 	Success = "SUCCESS"
-	Failed  = "FAILED"
+	// Failed tencent task failed result.
+	Failed = "FAILED"
+	// Running tencent task running result.
 	Running = "RUNNING"
 
-	// filter eip
-	ServiceTypeEIP    = "cvm"
+	// ServiceTypeEIP eip service type.
+	ServiceTypeEIP = "cvm"
+	// ResourcePrefixEIP eip resource prefix.
 	ResourcePrefixEIP = "eip"
 )
 
+// Options tencent provider's custom parameters.
 type Options struct {
 	SecretID                string   `json:"secret-id,omitempty" yaml:"secret-id,omitempty"`
 	SecretKey               string   `json:"secret-key,omitempty" yaml:"secret-key,omitempty"`
@@ -35,6 +41,7 @@ type Options struct {
 	CloudControllerManager  bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
 }
 
+// CloudControllerManager struct for tencent cloud-controller-manager.
 type CloudControllerManager struct {
 	SecretID              string `json:"secret-id,omitempty" yaml:"secret-id,omitempty"`
 	SecretKey             string `json:"secret-key,omitempty" yaml:"secret-key,omitempty"`

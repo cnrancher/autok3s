@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// BashCompEnvVarFlag cobra flag's annotation used for bind env to flag.
 const BashCompEnvVarFlag = "cobra_annotation_bash_env_var_flag"
 
 // ConvertFlags change autok3s flags to FlagSet, will mark required annotation if possible.

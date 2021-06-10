@@ -27,6 +27,7 @@ func init() {
 	describeCmd.Flags().StringVarP(&name, "name", "n", name, "cluster name")
 }
 
+// DescribeCommand returns the specified cluster details.
 func DescribeCommand() *cobra.Command {
 	describeCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if name == "" {

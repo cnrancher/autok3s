@@ -6,10 +6,12 @@ import (
 	"strings"
 )
 
+// AutoK3s struct for autok3s.
 type AutoK3s struct {
 	Clusters []Cluster `json:"clusters" yaml:"clusters"`
 }
 
+// Cluster struct for cluster.
 type Cluster struct {
 	Metadata `json:",inline" mapstructure:",squash"`
 	Options  interface{} `json:"options,omitempty"`
@@ -18,6 +20,7 @@ type Cluster struct {
 	Status `json:"status" yaml:"status"`
 }
 
+// Metadata struct for metadata.
 type Metadata struct {
 	Name            string      `json:"name" yaml:"name"`
 	Provider        string      `json:"provider" yaml:"provider"`
@@ -46,12 +49,14 @@ type Metadata struct {
 	Enable          StringArray `json:"enable,omitempty" yaml:"enable,omitempty"`
 }
 
+// Status struct for status.
 type Status struct {
 	Status      string `json:"status,omitempty"`
 	MasterNodes []Node `json:"master-nodes,omitempty"`
 	WorkerNodes []Node `json:"worker-nodes,omitempty"`
 }
 
+// Node struct for node.
 type Node struct {
 	SSH `json:",inline"`
 
@@ -65,6 +70,7 @@ type Node struct {
 	Current           bool     `json:"-" yaml:"-"`
 }
 
+// SSH struct for ssh.
 type SSH struct {
 	SSHPort          string `json:"ssh-port,omitempty" yaml:"ssh-port,omitempty" default:"22"`
 	SSHUser          string `json:"ssh-user,omitempty" yaml:"ssh-user,omitempty"`
@@ -76,6 +82,7 @@ type SSH struct {
 	SSHAgentAuth     bool   `json:"ssh-agent-auth,omitempty" yaml:"ssh-agent-auth,omitempty" `
 }
 
+// Flag struct for flag.
 type Flag struct {
 	Name      string
 	P         interface{}
@@ -87,11 +94,15 @@ type Flag struct {
 }
 
 const (
+	// ClusterStatusRunning cluster running status.
 	ClusterStatusRunning = "Running"
+	// ClusterStatusStopped cluster stopped status.
 	ClusterStatusStopped = "Stopped"
+	// ClusterStatusUnknown cluster unknown status.
 	ClusterStatusUnknown = "Unknown"
 )
 
+// ClusterInfo struct for cluster info.
 type ClusterInfo struct {
 	ID       string        `json:"id,omitempty"`
 	Name     string        `json:"name,omitempty"`
@@ -105,6 +116,7 @@ type ClusterInfo struct {
 	Nodes    []ClusterNode `json:"nodes,omitempty"`
 }
 
+// ClusterNode struct for cluster node.
 type ClusterNode struct {
 	InstanceID              string   `json:"instance-id,omitempty"`
 	InstanceStatus          string   `json:"instance-status,omitempty"`
@@ -118,8 +130,10 @@ type ClusterNode struct {
 	Master                  bool     `json:"-"`
 }
 
+// StringArray gorm custom string array flag type.
 type StringArray []string
 
+// Scan gorm Scan implement.
 func (a *StringArray) Scan(value interface{}) (err error) {
 	switch v := value.(type) {
 	case string:
@@ -130,6 +144,7 @@ func (a *StringArray) Scan(value interface{}) (err error) {
 	return nil
 }
 
+// Value gorm Value implement.
 func (a StringArray) Value() (driver.Value, error) {
 	if a == nil {
 		return nil, nil
@@ -137,6 +152,7 @@ func (a StringArray) Value() (driver.Value, error) {
 	return strings.Join(a, ","), nil
 }
 
+// GormDataType returns gorm data type.
 func (a StringArray) GormDataType() string {
 	return "stringArray"
 }

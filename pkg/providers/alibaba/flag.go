@@ -39,6 +39,7 @@ const sshUsageExample = `  autok3s ssh \
     --access-secret <access-secret>
 `
 
+// GetUsageExample returns alibaba usage example prompt.
 func (p *Alibaba) GetUsageExample(action string) string {
 	switch action {
 	case "create":
@@ -54,6 +55,7 @@ func (p *Alibaba) GetUsageExample(action string) string {
 	}
 }
 
+// GetCreateFlags returns alibaba create flags.
 func (p *Alibaba) GetCreateFlags() []types.Flag {
 	cSSH := p.GetSSHConfig()
 	p.SSH = *cSSH
@@ -62,10 +64,12 @@ func (p *Alibaba) GetCreateFlags() []types.Flag {
 	return fs
 }
 
+// GetOptionFlags returns alibaba option flags.
 func (p *Alibaba) GetOptionFlags() []types.Flag {
 	return p.sharedFlags()
 }
 
+// GetDeleteFlags returns alibaba delete flags.
 func (p *Alibaba) GetDeleteFlags() []types.Flag {
 	return []types.Flag{
 		{
@@ -86,6 +90,7 @@ func (p *Alibaba) GetDeleteFlags() []types.Flag {
 	}
 }
 
+// MergeClusterOptions merge alibaba cluster options.
 func (p *Alibaba) MergeClusterOptions() error {
 	opt, err := p.MergeConfig()
 	if err != nil {
@@ -98,19 +103,21 @@ func (p *Alibaba) MergeClusterOptions() error {
 	option := stateOption.(*alibaba.Options)
 	p.CloudControllerManager = option.CloudControllerManager
 
-	// merge options
+	// merge options.
 	source := reflect.ValueOf(&p.Options).Elem()
 	target := reflect.ValueOf(option).Elem()
 	utils.MergeConfig(source, target)
 	return nil
 }
 
+// GetJoinFlags returns alibaba join flags.
 func (p *Alibaba) GetJoinFlags() []types.Flag {
 	fs := p.sharedFlags()
 	fs = append(fs, p.GetClusterOptions()...)
 	return fs
 }
 
+// GetSSHFlags returns alibaba ssh flags.
 func (p *Alibaba) GetSSHFlags() []types.Flag {
 	fs := []types.Flag{
 		{
@@ -134,6 +141,7 @@ func (p *Alibaba) GetSSHFlags() []types.Flag {
 	return fs
 }
 
+// GetCredentialFlags returns alibaba credential flags.
 func (p *Alibaba) GetCredentialFlags() []types.Flag {
 	fs := []types.Flag{
 		{
@@ -157,6 +165,7 @@ func (p *Alibaba) GetCredentialFlags() []types.Flag {
 	return fs
 }
 
+// GetSSHConfig returns alibaba ssh config.
 func (p *Alibaba) GetSSHConfig() *types.SSH {
 	ssh := &types.SSH{
 		SSHUser: defaultUser,
@@ -165,6 +174,7 @@ func (p *Alibaba) GetSSHConfig() *types.SSH {
 	return ssh
 }
 
+// BindCredential bind alibaba credential.
 func (p *Alibaba) BindCredential() error {
 	secretMap := map[string]string{
 		accessKeyID:     p.AccessKey,

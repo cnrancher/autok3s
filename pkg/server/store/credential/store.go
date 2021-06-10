@@ -16,10 +16,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Store holds credential API state.
 type Store struct {
 	empty.Store
 }
 
+// ByID returns credential by ID.
 func (cred *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	credID, err := strconv.Atoi(id)
 	if err != nil {
@@ -44,6 +46,7 @@ func (cred *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id str
 	}, nil
 }
 
+// List returns credentials as list.
 func (cred *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	credList, err := common.DefaultDB.ListCredential()
 	if err != nil {
@@ -65,6 +68,7 @@ func (cred *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types
 	return result, nil
 }
 
+// Create creates credential based on the request data.
 func (cred *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	secrets := data.Data().Map("secrets")
 	p := data.Data().String("provider")
@@ -87,6 +91,7 @@ func (cred *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data
 	}, nil
 }
 
+// Update updates credential based on the request data.
 func (cred *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject, id string) (types.APIObject, error) {
 	credID, err := strconv.Atoi(id)
 	if err != nil {
@@ -106,6 +111,7 @@ func (cred *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data
 	return cred.ByID(apiOp, schema, id)
 }
 
+// Delete deletes credential by ID.
 func (cred *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	credID, err := strconv.Atoi(id)
 	if err != nil {
@@ -120,7 +126,7 @@ func generateCredential(secrets map[string]interface{}, p string) (*common.Crede
 	if err != nil {
 		return nil, apierror.NewAPIError(validation.NotFound, err.Error())
 	}
-	// valid credential keys
+	// valid credential keys.
 	flags := provider.GetCredentialFlags()
 	for _, f := range flags {
 		if _, ok := secrets[f.Name]; !ok {
