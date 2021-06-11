@@ -268,11 +268,10 @@ func (p *Native) CreateCheck() error {
 	if p.SSHKeyPath != "" {
 		sshPrivateKey := p.SSHKeyPath
 		if strings.HasPrefix(sshPrivateKey, "~/") {
-			usr, err := user.Current()
-			if err != nil {
-				return fmt.Errorf("[%s] failed to get user home directory: %v", p.GetProviderName(), err)
+			baseDir := getUserHomeDir()
+			if baseDir == "" {
+				return fmt.Errorf("[%s] failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
 			}
-			baseDir := usr.HomeDir
 			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
 		}
 		if _, err := os.Stat(sshPrivateKey); err != nil {
@@ -290,11 +289,10 @@ func (p *Native) JoinCheck() error {
 	if p.SSHKeyPath != "" {
 		sshPrivateKey := p.SSHKeyPath
 		if strings.HasPrefix(sshPrivateKey, "~/") {
-			usr, err := user.Current()
-			if err != nil {
-				return fmt.Errorf("[%s] failed to get user home directory: %v", p.GetProviderName(), err)
+			baseDir := getUserHomeDir()
+			if baseDir == "" {
+				return fmt.Errorf("[%s] failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
 			}
-			baseDir := usr.HomeDir
 			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
 		}
 		if _, err := os.Stat(sshPrivateKey); err != nil {
@@ -423,4 +421,14 @@ func (p *Native) syncNodesMap(ipList []string, master bool, ssh *types.SSH) {
 			SSH:               *ssh,
 		})
 	}
+}
+
+func getUserHomeDir() string {
+	home := os.Getenv("HOME")
+	if home == "" {
+		if u, err := user.Current(); err == nil {
+			return u.HomeDir
+		}
+	}
+	return home
 }

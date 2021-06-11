@@ -14,6 +14,7 @@ RUN mkdir /home/shell && \
     echo 'PS1="> "' >> /home/shell/.bashrc
 
 ENV AUTOK3S_CONFIG /root/.autok3s
+ENV HOME /root
 
 WORKDIR /home/shell
 VOLUME /root/.autok3s
