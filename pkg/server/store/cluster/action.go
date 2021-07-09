@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,8 +17,10 @@ import (
 )
 
 const (
-	actionJoin = "join"
-	linkNodes  = "nodes"
+	actionJoin            = "join"
+	linkNodes             = "nodes"
+	actionEnableExplorer  = "enable-explorer"
+	actionDisableExplorer = "disable-explorer"
 )
 
 // Formatter cluster's formatter.
@@ -29,13 +32,15 @@ func Formatter(request *types.APIRequest, resource *types.RawResource) {
 // HandleCluster cluster's action handler.
 func HandleCluster() map[string]http.Handler {
 	return map[string]http.Handler{
-		actionJoin: joinHandler(),
+		actionJoin:            joinHandler(),
+		actionEnableExplorer:  enableExplorer(),
+		actionDisableExplorer: disableExplorer(),
 	}
 }
 
 // LinkCluster cluster's link handler.
 func LinkCluster(request *types.APIRequest) (types.APIObject, error) {
-	if request.Link != "" {
+	if request.Link == linkNodes {
 		return nodesHandler(request, request.Schema, request.Name)
 	}
 
@@ -125,4 +130,42 @@ func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (
 		ID:     id,
 		Object: c,
 	}, nil
+}
+
+func enableExplorer() http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		clusterID := vars["name"]
+		if clusterID == "" {
+			rw.WriteHeader(http.StatusUnprocessableEntity)
+			_, _ = rw.Write([]byte("clusterID cannot be empty"))
+			return
+		}
+		port, err := common.EnableExplorer(context.Background(), clusterID)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			_, _ = rw.Write([]byte(err.Error()))
+			return
+		}
+		rw.WriteHeader(http.StatusOK)
+		_, _ = rw.Write([]byte(fmt.Sprintf("{\"data\": \"%s\"}", fmt.Sprintf("kube-explorer for cluster %s will listen on 127.0.0.1:%d...", clusterID, port))))
+	})
+}
+
+func disableExplorer() http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		vars := mux.Vars(req)
+		clusterID := vars["name"]
+		if clusterID == "" {
+			rw.WriteHeader(http.StatusUnprocessableEntity)
+			_, _ = rw.Write([]byte("clusterID cannot be empty"))
+			return
+		}
+		if err := common.DisableExplorer(clusterID); err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			_, _ = rw.Write([]byte(err.Error()))
+			return
+		}
+		rw.WriteHeader(http.StatusOK)
+	})
 }

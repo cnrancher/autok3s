@@ -46,7 +46,7 @@ type Metadata struct {
 	ContextName     string      `json:"context-name" yaml:"context-name"`
 	RegistryContent string      `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
 	Manifests       string      `json:"manifests,omitempty" yaml:"manifests,omitempty"`
-	Enable          StringArray `json:"enable,omitempty" yaml:"enable,omitempty"`
+	Enable          StringArray `json:"enable,omitempty" yaml:"enable,omitempty" gorm:"type:stringArray"`
 }
 
 // Status struct for status.
@@ -137,7 +137,9 @@ type StringArray []string
 func (a *StringArray) Scan(value interface{}) (err error) {
 	switch v := value.(type) {
 	case string:
-		*a = strings.Split(v, ",")
+		if v != "" {
+			*a = strings.Split(v, ",")
+		}
 	default:
 		return fmt.Errorf("failed to scan array value %v", value)
 	}
@@ -146,7 +148,7 @@ func (a *StringArray) Scan(value interface{}) (err error) {
 
 // Value gorm Value implement.
 func (a StringArray) Value() (driver.Value, error) {
-	if a == nil {
+	if a == nil || len(a) == 0 {
 		return nil, nil
 	}
 	return strings.Join(a, ","), nil

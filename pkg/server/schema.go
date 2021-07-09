@@ -3,6 +3,8 @@ package server
 import (
 	"net/http"
 
+	"github.com/cnrancher/autok3s/pkg/server/store/explorer"
+
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/server/store/cluster"
 	"github.com/cnrancher/autok3s/pkg/server/store/credential"
@@ -33,6 +35,12 @@ func initCluster(s *types.APISchemas) {
 		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
 		schema.ResourceMethods = []string{http.MethodGet, http.MethodDelete}
 		schema.ResourceActions["join"] = wranglertypes.Action{
+			Input: "cluster",
+		}
+		schema.ResourceActions["enable-explorer"] = wranglertypes.Action{
+			Input: "cluster",
+		}
+		schema.ResourceActions["disable-explorer"] = wranglertypes.Action{
 			Input: "cluster",
 		}
 		schema.Formatter = cluster.Formatter
@@ -80,5 +88,15 @@ func initTemplates(s *types.APISchemas) {
 		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
 		schema.ResourceMethods = []string{http.MethodGet, http.MethodDelete, http.MethodPut}
 
+	})
+}
+
+func initExplorer(s *types.APISchemas) {
+	s.MustImportAndCustomize(common.Explorer{}, func(schema *types.APISchema) {
+		schema.Store = &explorer.Store{}
+		formatter := explorer.NewFormatter()
+		schema.Formatter = formatter.Formatter
+		schema.CollectionMethods = []string{http.MethodGet}
+		schema.ResourceMethods = []string{http.MethodGet}
 	})
 }

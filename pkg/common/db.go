@@ -97,6 +97,12 @@ var (
 				provider TEXT not null,
 				secrets BLOB
 			);`,
+		`CREATE TABLE IF NOT EXISTS explorers
+			(
+				context_name not null primary key,
+				enabled bool,
+				port int
+			);`,
 	}
 )
 

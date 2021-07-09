@@ -38,6 +38,13 @@ type Credential struct {
 	Secrets  []byte `json:"secrets,omitempty" gorm:"type:bytes"`
 }
 
+// Explorer struct
+type Explorer struct {
+	ContextName string `json:"context-name"`
+	Enabled     bool   `json:"enabled"`
+	Port        int    `json:"port"`
+}
+
 type templateEvent struct {
 	Name   string
 	Object *Template
@@ -52,6 +59,11 @@ type clusterEvent struct {
 type LogEvent struct {
 	Name        string
 	ContextName string
+}
+
+type explorerEvent struct {
+	Name   string
+	Object *Explorer
 }
 
 // Store holds broadcaster's API state.
@@ -88,6 +100,7 @@ func (d *Store) updateHandler(db *gorm.DB) {
 }
 
 func (d *Store) hook(db *gorm.DB, event string) {
+	// TODO refactor for common function
 	if db.Statement.Schema != nil {
 		if db.Statement.Schema.Name == "Template" {
 			temp := convertModelToTemplate(db.Statement.Model)
@@ -103,6 +116,14 @@ func (d *Store) hook(db *gorm.DB, event string) {
 				d.broadcaster.Broadcast(&clusterEvent{
 					Name:   event,
 					Object: state,
+				})
+			}
+		} else if db.Statement.Schema.Name == "Explorer" {
+			exp := convertToExplorer(db.Statement.Model)
+			if exp != nil {
+				d.broadcaster.Broadcast(&explorerEvent{
+					Name:   event,
+					Object: exp,
 				})
 			}
 		}
@@ -157,6 +178,30 @@ func (d *Store) Log(apiOp *apitypes.APIRequest, input chan *LogEvent) {
 				continue
 			}
 			input <- state
+		case <-apiOp.Context().Done():
+			d.broadcaster.Evict(sub)
+			return
+		}
+	}
+}
+
+// Explorer watch K3s cluster setting changes for kube-explorer
+func (d *Store) Explorer(apiOp *apitypes.APIRequest, schema *apitypes.APISchema, input chan apitypes.APIEvent) {
+	sub := d.broadcaster.Register(func(v interface{}) bool {
+		_, ok := v.(*explorerEvent)
+		return ok
+	})
+	for {
+		select {
+		case v, ok := <-sub:
+			if !ok {
+				continue
+			}
+			exp, isExplorer := v.(*explorerEvent)
+			if !isExplorer {
+				continue
+			}
+			input <- toExplorerEvent(exp, schema.ID)
 		case <-apiOp.Context().Done():
 			d.broadcaster.Evict(sub)
 			return
@@ -232,6 +277,36 @@ func convertModelToTemplate(m interface{}) *Template {
 		return nil
 	}
 	return temp
+}
+
+func convertToExplorer(m interface{}) *Explorer {
+	if m == nil {
+		return nil
+	}
+	model, err := json.Marshal(m)
+	if err != nil {
+		logrus.Errorf("failed to convert model %v to bytes: %v", m, err)
+		return nil
+	}
+	exp := &Explorer{}
+	err = json.Unmarshal(model, exp)
+	if err != nil {
+		logrus.Errorf("failed to convert model %v to explorer: %v", m, err)
+		return nil
+	}
+	return exp
+}
+
+func toExplorerEvent(event *explorerEvent, schemaID string) apitypes.APIEvent {
+	return apitypes.APIEvent{
+		Name:         event.Name,
+		ResourceType: schemaID,
+		Object: apitypes.APIObject{
+			Type:   schemaID,
+			ID:     event.Object.ContextName,
+			Object: event.Object,
+		},
+	}
 }
 
 // SaveCluster save cluster.
@@ -510,4 +585,46 @@ func (d *Store) DeleteCredential(id int) error {
 	cred := &Credential{}
 	result := d.DB.Where("id = ? ", id).Delete(cred)
 	return result.Error
+}
+
+// SaveExplorer save cluster kube-explorer settings
+func (d *Store) SaveExplorer(exp *Explorer) error {
+	e, err := d.GetExplorer(exp.ContextName)
+	if err != nil {
+		return err
+	}
+	if e != nil {
+		// update explorer setting
+		result := d.DB.Where("context_name = ? ", exp.ContextName).Omit("context_name").Save(exp)
+		return result.Error
+	}
+	// save explorer setting
+	result := d.DB.Create(exp)
+	return result.Error
+}
+
+// GetExplorer return explorer setting for specified cluster
+func (d *Store) GetExplorer(clusterID string) (*Explorer, error) {
+	exp := &Explorer{}
+	result := d.DB.Where("context_name = ? ", clusterID).Find(exp)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, nil
+	}
+	return exp, nil
+}
+
+// DeleteExplorer remove explorer setting for specified cluster
+func (d *Store) DeleteExplorer(clusterID string) error {
+	result := d.DB.Where("context_name = ? ", clusterID).Delete(&Explorer{})
+	return result.Error
+}
+
+// ListExplorer return all kube-explorer settings
+func (d *Store) ListExplorer() ([]*Explorer, error) {
+	list := make([]*Explorer, 0)
+	result := d.DB.Find(&list)
+	return list, result.Error
 }

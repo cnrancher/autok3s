@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"path/filepath"
 	"time"
 
@@ -56,7 +57,8 @@ var (
 		Steps:    5,
 	}
 	// DefaultDB default database store.
-	DefaultDB *Store
+	DefaultDB        *Store
+	ExplorerWatchers map[string]context.CancelFunc
 )
 
 // GetDefaultSSHKeyPath returns default ssh key path.
