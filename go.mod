@@ -39,9 +39,8 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.35.24
 	github.com/creack/pty v1.1.11
-	github.com/docker/docker v20.10.5+incompatible
+	github.com/docker/docker v20.10.6+incompatible
 	github.com/docker/go-units v0.4.0
-	github.com/ghodss/yaml v1.0.0
 	github.com/gofrs/flock v0.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
@@ -52,7 +51,7 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
-	github.com/rancher/k3d/v4 v4.4.1
+	github.com/rancher/k3d/v4 v4.4.7
 	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
 	github.com/rancher/wrangler v0.6.1
 	github.com/sirupsen/logrus v1.8.1
@@ -62,7 +61,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.20.12
 	k8s.io/api v0.19.0
