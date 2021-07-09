@@ -1,10 +1,10 @@
 <div align="center">
   <h1>AutoK3s</h1>
   <p>
-    <img alt="Build Status" src="http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg">
-    <img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/cnrancher/autok3s">
-    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?color=default&label=release&logo=github">
-    <img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?include_prereleases&label=pre-release&logo=github">
+    <a href="https://drone-pandaria.cnrancher.com/cnrancher/pandaria"><img alt="Build Status" src="http://drone-pandaria.cnrancher.com/api/badges/cnrancher/autok3s/status.svg"></a>
+    <a href="https://goreportcard.com/report/github.com/cnrancher/autok3s"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/cnrancher/autok3s"></a>
+    <a href="https://github.com/cnrancher/autok3s/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?color=default&label=release&logo=github"></a>
+    <a href="https://github.com/cnrancher/autok3s/releases"><img alt="GitHub release (latest by date including pre-releases)" src="https://img.shields.io/github/v/release/cnrancher/autok3s?include_prereleases&label=pre-release&logo=github"></a>
   </p>
   <span>English / </span> <a href="http://docs.rancher.cn/docs/k3s/autok3s/_index/">Simplified Chinese</a>
 </div>
