@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -80,6 +81,7 @@ func initCfg() {
 		logrus.Fatalln(err)
 	}
 	common.DefaultDB = db
+	common.ExplorerWatchers = map[string]context.CancelFunc{}
 }
 
 func printASCII() {

@@ -576,6 +576,21 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 			return fmt.Errorf("[%s] failed to delete cluster state, msg: %v", p.Provider, err)
 		}
 
+		// release kube-explorer
+		exp, err := common.DefaultDB.GetExplorer(p.ContextName)
+		if err != nil && !force {
+			return fmt.Errorf("[%s] failed to get kube-explorer config for cluster %s: %v", p.Provider, p.ContextName, err)
+		}
+		if exp != nil {
+			if exp.Enabled {
+				common.DisableExplorer(p.ContextName)
+			}
+			err = common.DefaultDB.DeleteExplorer(p.ContextName)
+			if err != nil && !force {
+				return fmt.Errorf("[%s] failed to delete explorer setting for %s: %v", p.Provider, p.ContextName, err)
+			}
+		}
+
 		p.Logger.Infof("[%s] successfully deleted cluster %s", p.Provider, p.Name)
 	}
 	return nil

@@ -37,7 +37,7 @@ var (
 	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand          = "if ! type docker; then curl -sSL %s | sh - %s; fi"
-	enableComponentCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/%s.yaml\""
+	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
 	registryPath           = "/etc/rancher/k3s"
@@ -174,31 +174,6 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		return err
 	}
 
-	p.Logger.Infof("[%s] deploying additional manifests", p.Provider)
-
-	// deploy additional components.
-	enabledPlugins := map[string]bool{}
-	if cluster.UI {
-		enabledPlugins["dashboard"] = true
-	}
-	if cluster.Enable != nil {
-		for _, comp := range cluster.Enable {
-			enabledPlugins[comp] = true
-		}
-	}
-
-	for comp := range enabledPlugins {
-		if _, ok := plugins[comp]; !ok {
-			p.Logger.Warnf("[%s] invalid setting for enabled component %s", p.Provider, comp)
-			continue
-		}
-		if _, err := p.execute(&cluster.MasterNodes[0], []string{fmt.Sprintf(enableComponentCommand,
-			base64.StdEncoding.EncodeToString([]byte(plugins[comp])), common.K3sManifestsDir, comp)}); err != nil {
-			return err
-		}
-	}
-	p.Logger.Infof("[%s] successfully deployed additional manifests", p.Provider)
-
 	// merge current cluster to kube config.
 	if err := SaveCfg(cfg, publicIP, cluster.ContextName); err != nil {
 		return err
@@ -214,6 +189,40 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		}
 	}
 
+	p.Logger.Infof("[%s] deploying additional manifests", p.Provider)
+
+	// deploy additional UI manifests.
+	enabledPlugins := map[string]bool{}
+	if cluster.UI {
+		enabledPlugins["dashboard"] = true
+	}
+
+	// deploy plugin
+	if cluster.Enable != nil {
+		for _, comp := range cluster.Enable {
+			enabledPlugins[comp] = true
+		}
+	}
+
+	for plugin := range enabledPlugins {
+		if plugin == "dashboard" {
+			if _, err := p.execute(&cluster.MasterNodes[0], []string{fmt.Sprintf(deployUICommand,
+				base64.StdEncoding.EncodeToString([]byte(dashboardTmpl)), common.K3sManifestsDir)}); err != nil {
+				return err
+			}
+		} else if plugin == "explorer" {
+			// start kube-explorer
+			port, err := common.EnableExplorer(context.Background(), cluster.ContextName)
+			if err != nil {
+				p.Logger.Errorf("[%s] failed to start kube-explorer for cluster %s: %v", p.Provider, cluster.ContextName, err)
+			}
+			if port != 0 {
+				p.Logger.Infof("[%s] kube-explorer for cluster %s will listen on 127.0.0.1:%d...", p.Provider, cluster.Name, port)
+			}
+		}
+	}
+
+	p.Logger.Infof("[%s] successfully deployed additional manifests", p.Provider)
 	p.Logger.Infof("[%s] successfully executed init k3s cluster logic", p.Provider)
 	return nil
 }

@@ -6,12 +6,15 @@ ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN apk add -U --no-cache bash bash-completion curl
+RUN apk add -U --no-cache bash bash-completion curl wget
 RUN mkdir /home/shell && \
     echo '. /etc/profile.d/bash_completion.sh' >> /home/shell/.bashrc && \
     echo 'alias k="kubectl"' >> /home/shell/.bashrc && \
     echo 'source <(kubectl completion bash)' >> /home/shell/.bashrc && \
     echo 'PS1="> "' >> /home/shell/.bashrc
+
+RUN wget -O /usr/local/bin/kube-explorer https://github.com/cnrancher/kube-explorer/releases/download/v0.1.3/kube-explorer-${TARGETOS}-${TARGETARCH} && \
+    chmod +x /usr/local/bin/kube-explorer
 
 ENV AUTOK3S_CONFIG /root/.autok3s
 ENV HOME /root

@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/cnrancher/autok3s/pkg/server/proxy"
 	"github.com/cnrancher/autok3s/pkg/server/ui"
 
 	"github.com/gorilla/mux"
@@ -25,6 +26,7 @@ func Start() http.Handler {
 	initKubeconfig(s.Schemas)
 	initLogs(s.Schemas)
 	initTemplates(s.Schemas)
+	initExplorer(s.Schemas)
 
 	apiroot.Register(s.Schemas, []string{"v1"})
 	router := mux.NewRouter()
@@ -57,6 +59,7 @@ func Start() http.Handler {
 	router.Handle("/debug/pprof/block", pprof.Handler("block"))
 	router.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 
+	router.PathPrefix("/proxy/explorer/{name}").Handler(proxy.NewExplorerProxy())
 	router.Path("/{prefix}/{type}").Handler(s)
 	router.Path("/{prefix}/{type}/{name}").Queries("link", "{link}").Handler(s)
 	router.Path("/{prefix}/{type}/{name}").Queries("action", "{action}").Handler(s)
