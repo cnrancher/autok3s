@@ -188,11 +188,32 @@ configs:
 
 ### Enable UI Component
 
-This flags will enable [kubernetes/dashboard](https://github.com/kubernetes/dashboard) UI component.
-Please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md) to create user token.
+AutoK3s support 2 kinds of UI Component, including [kubernetes/dashboard](https://github.com/kubernetes/dashboard) and [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer).
+
+#### Enable Kubernetes dashboard
+
+You can enable Kubernetes dashboard using following command.
 
 ```bash
-autok3s create \
+autok3s -d create -p aws \
     ... \
-    --ui
+    --enable dashboard
 ```
+If you want to create user token to access dashboard, please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md).
+
+#### Enable kube-explorer dashboard
+
+You can enable kube-explorer using following command.
+
+```bash
+autok3s explorer --context myk3s.ap-southeast-2.aws --port 9999
+```
+
+You can enable kube-explorer when creating K3s Cluster by UI.
+
+![](../../../assets/enable-kube-explorer-by-create-cluster.png)
+
+You can also enable/disable kube-explorer any time from UI, and access kube-explorer dashboard by `dashboard` button.
+
+![](../../../assets/enable-kube-explorer-by-button.png)
+

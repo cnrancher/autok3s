@@ -78,6 +78,10 @@ Watch the demo:
 
 ![](docs/assets/autok3s-demo-min.gif)
 
+In the demo, we can manage multiple K3s clusters by kube-explorer dashboard.
+
+![](docs/assets/kube-explorer-demo.gif)
+
 ## Developers' Guide
 
 Use `dapper` to manage project compilation, testing and packaging.
