@@ -1,4 +1,4 @@
-FROM karalabe/xgo-base
+FROM techknowlogick/xgo:base
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
         xz-utils unzip netcat wget \
         --no-install-recommends \
