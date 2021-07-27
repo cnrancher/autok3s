@@ -54,7 +54,7 @@ function lint() {
   autok3s::log::info "...done"
 }
 
-function build() {
+function cross_build() {
   [[ "${1:-}" != "only" ]] && lint
   ui
   autok3s::log::info "building autok3s(${GIT_VERSION},${GIT_COMMIT},${GIT_TREE_STATE},${BUILD_DATE})..."
@@ -76,15 +76,8 @@ function build() {
   local ext_flags="
     -extldflags '-static'"
 
-  local platforms
-  if [[ "${CROSS:-false}" == "true" ]]; then
-    autok3s::log::info "crossed building"
-    platforms=("${SUPPORTED_PLATFORMS[@]}")
-  else
-    local os="${OS:-$(go env GOOS)}"
-    local arch="${ARCH:-$(go env GOARCH)}"
-    platforms=("${os}/${arch}")
-  fi
+  autok3s::log::info "crossed building"
+  local platforms=("${SUPPORTED_PLATFORMS[@]}")
 
   for platform in "${platforms[@]}"; do
     autok3s::log::info "building ${platform}"
@@ -125,7 +118,7 @@ function build() {
           "${CURR_DIR}/main.go"
         cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
     elif [[ "$os" == "darwin" ]]; then
-        GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+        MACOSX_DEPLOYMENT_TARGET=11.1.0 GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 CC=o64-clang CXX=o64-clang++ HOST=x86_64-apple-darwin19.6.0 go build \
           -ldflags "${version_flags} ${flags}" \
           -tags netgo \
           -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
@@ -144,39 +137,76 @@ function build() {
   autok3s::log::info "...done"
 }
 
+function build() {
+  [[ "${1:-}" != "only" ]] && lint
+  ui
+  autok3s::log::info "building autok3s(${GIT_VERSION},${GIT_COMMIT},${GIT_TREE_STATE},${BUILD_DATE})..."
+
+  local version_flags="
+    -X main.gitVersion=${GIT_VERSION}
+    -X main.gitCommit=${GIT_COMMIT}
+    -X main.buildDate=${BUILD_DATE}
+    -X k8s.io/client-go/pkg/version.gitVersion=${GIT_VERSION}
+    -X k8s.io/client-go/pkg/version.gitCommit=${GIT_COMMIT}
+    -X k8s.io/client-go/pkg/version.gitTreeState=${GIT_TREE_STATE}
+    -X k8s.io/client-go/pkg/version.buildDate=${BUILD_DATE}
+    -X k8s.io/component-base/version.gitVersion=${GIT_VERSION}
+    -X k8s.io/component-base/version.gitCommit=${GIT_COMMIT}
+    -X k8s.io/component-base/version.gitTreeState=${GIT_TREE_STATE}
+    -X k8s.io/component-base/version.buildDate=${BUILD_DATE}"
+  local flags="
+    -w -s"
+  local ext_flags="
+    -extldflags '-static'"
+
+  local os="${OS:-$(go env GOOS)}"
+  local arch="${ARCH:-$(go env GOARCH)}"
+
+  autok3s::log::info "building ${os}/${arch}"
+  if [[ "$os" == "windows" ]]; then
+      GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+        -ldflags "${version_flags} ${flags} ${ext_flags}" \
+        -tags netgo \
+        -o "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" \
+        "${CURR_DIR}/main.go"
+      cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}.exe" "${CURR_DIR}/dist/autok3s_${os}_${arch}.exe"
+  elif [[ "$os" == "darwin" ]]; then
+      GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+        -ldflags "${version_flags} ${flags}" \
+        -tags netgo \
+        -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+        "${CURR_DIR}/main.go"
+      cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+  else
+      GOOS=${os} GOARCH=${arch} CGO_ENABLED=1 go build \
+        -ldflags "${version_flags} ${flags} ${ext_flags}" \
+        -tags netgo \
+        -o "${CURR_DIR}/bin/autok3s_${os}_${arch}" \
+        "${CURR_DIR}/main.go"
+      cp -f "${CURR_DIR}/bin/autok3s_${os}_${arch}" "${CURR_DIR}/dist/autok3s_${os}_${arch}"
+  fi
+
+  autok3s::log::info "...done"
+}
+
 function package() {
   [[ "${1:-}" != "only" ]] && build
   autok3s::log::info "packaging autok3s..."
 
-  local repo=${REPO:-cnrancher}
-  local image_name=${IMAGE_NAME:-autok3s}
-  local tag=${TAG:-${GIT_VERSION}}
+  REPO=${REPO:-cnrancher}
+  TAG=${TAG:-${GIT_VERSION}}
 
-  local platforms
-  if [[ "${CROSS:-false}" == "true" ]]; then
-    autok3s::log::info "crossed packaging"
-    autok3s::docker::prebuild
-    platforms=("${SUPPORTED_PLATFORMS[@]}")
-  else
-    local os="${OS:-$(go env GOOS)}"
-    local arch="${ARCH:-$(go env GOARCH)}"
-    platforms=("${os}/${arch}")
+  local os="$(go env GOOS)"
+  if [[ "$os" == "windows" || "$os" == "darwin" ]]; then
+    autok3s::log::warn "package into Darwin/Windows OS image is unavailable, use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
+    return
   fi
 
-  pushd "${CURR_DIR}" >/dev/null 2>&1
-  for platform in "${platforms[@]}"; do
-    if [[ "${platform}" =~ darwin/* || "${platform}" =~ windows/* ]]; then
-     autok3s::log::warn "package into Darwin/Windows OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
-     continue
-    fi
+  ARCH=${ARCH:-$(go env GOARCH)}
+  SUFFIX="-linux-${ARCH}"
+  IMAGE_NAME=${REPO}/autok3s:${TAG}${SUFFIX}
 
-    local image_tag="${repo}/${image_name}:${tag}-${platform////-}"
-    autok3s::log::info "packaging ${image_tag}"
-    autok3s::docker::build \
-      --platform "${platform}" \
-      -t "${image_tag}" --load .
-  done
-  popd >/dev/null 2>&1
+  docker build --build-arg ARCH=${ARCH} -t ${IMAGE_NAME} .
 
   autok3s::log::info "...done"
 }
@@ -200,25 +230,15 @@ function deploy() {
   fi
   local images=()
   for platform in "${platforms[@]}"; do
-    if [[ "${platform}" =~ darwin/* || "${platform}" =~ windows/* ]]; then
+    if [[ "${platform}" =~ darwin/* || "${platform}" =~ windows/* || "${platform}" == "linux/arm" ]]; then
       autok3s::log::warn "package into Darwin/Windows OS image is unavailable, please use CROSS=true env to containerize multiple arch images or use OS=linux ARCH=amd64 env to containerize linux/amd64 image"
     else
       images+=("${repo}/${image_name}:${tag}-${platform////-}")
     fi
   done
 
-  local only_manifest=${ONLY_MANIFEST:-false}
   local without_manifest=${WITHOUT_MANIFEST:-false}
   local ignore_missing=${IGNORE_MISSING:-false}
-
-  # docker push
-  if [[ "${only_manifest}" == "false" ]]; then
-    autok3s::docker::push "${images[@]}"
-  else
-    autok3s::log::warn "deploying images has been stopped by ONLY_MANIFEST"
-    # execute manifest forcibly
-    without_manifest="false"
-  fi
 
   # docker manifest
   if [[ "${without_manifest}" == "false" ]]; then
@@ -314,13 +334,14 @@ function entry() {
     u | unit) unit "${commands}" ;;
     v | ver | verify) verify "${commands}" ;;
     e | e2e) e2e "${commands}" ;;
+    cb | cross_build) cross_build "${commands}" ;;
     *) autok3s::log::fatal "unknown action '${stage}', select from mod,lint,build,unit,verify,package,deploy,e2e" ;;
     esac
   done
 }
 
 if [[ ${BY:-} == "dapper" ]]; then
-  autok3s::dapper::run -C "${CURR_DIR}" -f "Dockerfile.dapper" "$@"
+  autok3s::dapper::run -C "${CURR_DIR}" -f ${DAPPER_FILE:-Dockerfile.dapper} "$@"
 else
   entry "$@"
 fi
