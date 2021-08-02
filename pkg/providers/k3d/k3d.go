@@ -39,7 +39,7 @@ const (
 
 	k3dConfigVersion = "k3d.io/v1alpha2"
 	k3dConfigKind    = "Simple"
-	k3dImage         = "rancher/k3s:v1.20.5-k3s1"
+	k3dImage         = "rancher/k3s:v1.21.2-k3s1"
 	k3dAPIPort       = "0.0.0.0:0"
 )
 
