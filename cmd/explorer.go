@@ -32,6 +32,9 @@ func ExplorerCommand() *cobra.Command {
 		return nil
 	}
 	explorerCmd.Run = func(cmd *cobra.Command, args []string) {
+		if err := common.CheckCommandExist(common.KubeExplorerCommand); err != nil {
+			logrus.Fatalln(err)
+		}
 		if explorerPort == 0 {
 			port, err := k3dutil.GetFreePort()
 			if err != nil {

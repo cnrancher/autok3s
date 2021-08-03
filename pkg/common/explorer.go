@@ -10,10 +10,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	KubeExplorerCommand = "kube-explorer"
+)
+
 // EnableExplorer will start kube-explorer with random port for specified K3s cluster
 func EnableExplorer(ctx context.Context, config string) (int, error) {
 	if _, ok := ExplorerWatchers[config]; ok {
 		return 0, fmt.Errorf("kube-explorer for cluster %s has already started", config)
+	}
+	if err := CheckCommandExist(KubeExplorerCommand); err != nil {
+		return 0, err
 	}
 	// save config for kube-explorer
 	exp, err := DefaultDB.GetExplorer(config)
@@ -100,7 +107,7 @@ func InitExplorer() {
 
 // StartKubeExplorer start kube-explorer server listen on specified port
 func StartKubeExplorer(ctx context.Context, config string, port int) error {
-	explorer := exec.CommandContext(ctx, "kube-explorer", fmt.Sprintf("--kubeconfig=%s/.kube/config", CfgPath),
+	explorer := exec.CommandContext(ctx, KubeExplorerCommand, fmt.Sprintf("--kubeconfig=%s/.kube/config", CfgPath),
 		fmt.Sprintf("--context=%s", config), fmt.Sprintf("--http-listen-port=%d", port), "--https-listen-port=0")
 	explorer.Stdout = os.Stdout
 	explorer.Stderr = os.Stderr
@@ -109,4 +116,9 @@ func StartKubeExplorer(ctx context.Context, config string, port int) error {
 	}
 	logrus.Infof("kube-explorer for %s K3s cluster will listen on 127.0.0.1:%d ...", config, port)
 	return explorer.Wait()
+}
+
+func CheckCommandExist(cmd string) error {
+	_, err := exec.LookPath(cmd)
+	return err
 }
