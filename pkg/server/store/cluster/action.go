@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -137,14 +138,24 @@ func enableExplorer() http.Handler {
 		vars := mux.Vars(req)
 		clusterID := vars["name"]
 		if clusterID == "" {
+			e := map[string]interface{}{
+				"type":    "error",
+				"message": "clusterID cannot be empty",
+			}
+			eb, _ := json.Marshal(e)
 			rw.WriteHeader(http.StatusUnprocessableEntity)
-			_, _ = rw.Write([]byte("clusterID cannot be empty"))
+			_, _ = rw.Write(eb)
 			return
 		}
 		port, err := common.EnableExplorer(context.Background(), clusterID)
 		if err != nil {
+			e := map[string]interface{}{
+				"type":    "error",
+				"message": err.Error(),
+			}
+			eb, _ := json.Marshal(e)
 			rw.WriteHeader(http.StatusInternalServerError)
-			_, _ = rw.Write([]byte(err.Error()))
+			_, _ = rw.Write(eb)
 			return
 		}
 		rw.WriteHeader(http.StatusOK)
