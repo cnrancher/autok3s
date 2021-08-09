@@ -12,7 +12,7 @@ SUCCESS_CMD="$REPO version"
 BINLOCATION=${BINLOCATION:-'/usr/local/bin'}
 KUBEEXPLORER_REPO=${KUBEEXPLORER_REPO:-'kube-explorer'}
 KUBEEXPLORER_DOWNLOAD_URL=https://github.com/$OWNER/$KUBEEXPLORER_REPO/releases/download
-KUBEEXPLORER_VERSION=$(curl -sI https://github.com/$OWNER/$KUBEEXPLORER_REPO/releases/latest | grep -i "location:" | awk -F"/" '{ printf "%s", $NF }' | tr -d '\r')
+KUBEEXPLORER_VERSION=v0.1.3
 
 #   - INSTALL_AUTOK3S_MIRROR
 #     For Chinese users, set INSTALL_AUTOK3S_MIRROR=cn to use the mirror address to accelerate
@@ -22,7 +22,6 @@ if [ "${INSTALL_AUTOK3S_MIRROR}" = cn ]; then
     AUTOK3S_DOWNLOAD_URL=http://rancher-mirror.rancher.cn/$REPO
     version=$(curl -sS $AUTOK3S_DOWNLOAD_URL/channels/latest)
     KUBEEXPLORER_DOWNLOAD_URL=http://rancher-mirror.rancher.cn/$KUBEEXPLORER_REPO
-    KUBEEXPLORER_VERSION=$(curl -sS $KUBEEXPLORER_DOWNLOAD_URL/channels/latest)
 
 else
     AUTOK3S_DOWNLOAD_URL=https://github.com/$OWNER/$REPO/releases/download
