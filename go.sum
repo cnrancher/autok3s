@@ -786,8 +786,8 @@ github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197 h1:PeTu2AgMa8uxu
 github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197/go.mod h1:8W0EwaR9dH5NDFw6mpAX437D0q+EZqKWbZyX71+z2WI=
 github.com/rancher/dynamiclistener v0.2.1/go.mod h1:9WusTANoiRr8cDWCTtf5txieulezHbpv4vhLADPp0zU=
 github.com/rancher/helm-controller v0.7.3/go.mod h1:ZylsxIMGNADRPRNW+NiBWhrwwks9vnKLQiCHYWb6Bi0=
-github.com/rancher/k3d/v4 v4.4.7 h1:CLvfQvbazmbPLSxZjtH9oNo/GRibWHgu3xald7U6wMI=
-github.com/rancher/k3d/v4 v4.4.7/go.mod h1:Cr4a6z5rTg/C+JwbT7OtWQedzswBlfRfLljYnbesoGE=
+github.com/rancher/k3d/v4 v4.4.8 h1:jHpcjCQU8yTe7r13l7tZzJtKcfzeMrAMKh2c5F7E3t8=
+github.com/rancher/k3d/v4 v4.4.8/go.mod h1:Cr4a6z5rTg/C+JwbT7OtWQedzswBlfRfLljYnbesoGE=
 github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4 h1:dItQ6MSQYlzQdXBcN3unX8kFIemOvetPtZXzaUbwXI0=
 github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4/go.mod h1:QGcX4CeGiwAq17Qo6TNzRiSSgxco5CRoAX5v3EltgjU=
 github.com/rancher/kine v0.5.1 h1:pBAD9LVU3oCuRWzY6lKEVqhNi1nZlJV3bbD4G2mrE1c=
