@@ -31,3 +31,4 @@ main
 static/
 upx*.tar.xz
 upx*/
+.vscode/
