@@ -3,7 +3,7 @@ module github.com/cnrancher/autok3s
 go 1.16
 
 replace (
-	github.com/containerd/containerd => github.com/k3s-io/containerd v1.5.7-k3s1
+	github.com/containerd/containerd => github.com/k3s-io/containerd v1.5.8-k3s1
 	github.com/kubernetes-sigs/cri-tools => github.com/k3s-io/cri-tools v1.21.0-k3s1
 	k8s.io/api => github.com/k3s-io/kubernetes/staging/src/k8s.io/api v1.22.2-k3s1
 	k8s.io/apiextensions-apiserver => github.com/k3s-io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v1.22.2-k3s1
@@ -40,7 +40,7 @@ require (
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.38.49
-	github.com/containerd/containerd v1.5.7 // indirect
+	github.com/containerd/containerd v1.5.8 // indirect
 	github.com/creack/pty v1.1.11
 	github.com/docker/docker v20.10.6+incompatible
 	github.com/docker/go-units v0.4.0
@@ -53,6 +53,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/onsi/ginkgo v1.16.1
 	github.com/onsi/gomega v1.11.0
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
 	github.com/rancher/k3d/v4 v4.4.8
 	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
