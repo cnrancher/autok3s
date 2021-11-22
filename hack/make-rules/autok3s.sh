@@ -206,7 +206,7 @@ function package() {
   SUFFIX="-linux-${ARCH}"
   IMAGE_NAME=${REPO}/autok3s:${TAG}${SUFFIX}
 
-  docker build --build-arg ARCH=${ARCH} --build-arg KUBE_EXPLORER_VERSION=${KUBE_EXPLORER_VERSION} -t ${IMAGE_NAME} .
+  docker build --build-arg ARCH=${ARCH} -t ${IMAGE_NAME} .
 
   autok3s::log::info "...done"
 }

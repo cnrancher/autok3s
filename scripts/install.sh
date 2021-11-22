@@ -12,7 +12,7 @@ SUCCESS_CMD="$REPO version"
 BINLOCATION=${BINLOCATION:-'/usr/local/bin'}
 KUBEEXPLORER_REPO=${KUBEEXPLORER_REPO:-'kube-explorer'}
 KUBEEXPLORER_DOWNLOAD_URL=https://github.com/$OWNER/$KUBEEXPLORER_REPO/releases/download
-KUBEEXPLORER_VERSION=v0.2.5
+KUBEEXPLORER_VERSION=v0.1.3
 
 #   - INSTALL_AUTOK3S_MIRROR
 #     For Chinese users, set INSTALL_AUTOK3S_MIRROR=cn to use the mirror address to accelerate
