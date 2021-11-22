@@ -56,7 +56,6 @@ ENV DAPPER_SOURCE /go/src/github.com/cnrancher/autok3s/
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
 ENV HOME ${DAPPER_SOURCE}
-ENV KUBE_EXPLORER_VERSION=v0.2.5
 # -- for dapper
 
 WORKDIR ${DAPPER_SOURCE}
