@@ -42,6 +42,7 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 Now supports the following providers, we encourage submitting PR contribution for more providers:
 
 - [aws](docs/i18n/en_us/aws/README.md) - Bootstrap K3s onto Amazon EC2
+- [google](docs/i18n/en_us/google/README.md) - Bootstrap K3s onto Google Compute Engine
 - [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap K3s onto Alibaba ECS
 - [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap K3s onto Tencent CVM
 - [k3d](docs/i18n/en_us/k3d/README.md) - Bootstrap K3d onto Local Machine
@@ -54,10 +55,10 @@ Scenario 1 - Run with Docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 # Standard Linux (Recommended)
-$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.4
+$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.5
 
 # MacOS 
-$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.4
+$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.5
 ```
 
 Scenario 2 - Run with CLI:
