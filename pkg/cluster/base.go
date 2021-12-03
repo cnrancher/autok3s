@@ -400,10 +400,10 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 			// join failed.
 			state.Status = common.StatusRunning
 			_ = common.DefaultDB.SaveClusterState(state)
-			// rollback instance
+			// rollback instance.
 			_ = p.RollbackCluster(rollbackInstance)
 		}
-		// remove join state file and save running state
+		// remove join state file and save running state.
 		_ = logFile.Close()
 		if p.Callbacks != nil {
 			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "update" {

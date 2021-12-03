@@ -125,13 +125,6 @@ func (p *K3d) GetOptionFlags() []types.Flag {
 			Required: false,
 		},
 		{
-			Name:     "no-hostip",
-			P:        &p.NoHostIP,
-			V:        p.NoHostIP,
-			Usage:    "Disable the automatic injection of the Host IP as 'host.k3d.internal' into the containers and CoreDNS",
-			Required: false,
-		},
-		{
 			Name:     "no-image-volume",
 			P:        &p.NoImageVolume,
 			V:        p.NoImageVolume,

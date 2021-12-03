@@ -42,7 +42,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.49
 	github.com/containerd/containerd v1.5.8 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/docker/docker v20.10.6+incompatible
+	github.com/docker/docker v20.10.8+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/gofrs/flock v0.7.1
 	github.com/gorilla/mux v1.8.0
@@ -55,11 +55,11 @@ require (
 	github.com/onsi/gomega v1.11.0
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
-	github.com/rancher/k3d/v4 v4.4.8
+	github.com/rancher/k3d/v5 v5.1.0
 	github.com/rancher/k3s v1.19.5-0.20201117235738-2532c10faad4
 	github.com/rancher/wrangler v0.6.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.1.3
+	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
@@ -72,7 +72,7 @@ require (
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.20.12
 	k8s.io/api v0.22.0
-	k8s.io/apimachinery v0.22.0
+	k8s.io/apimachinery v0.22.1
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/component-base v0.22.0
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
