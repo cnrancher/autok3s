@@ -20,8 +20,8 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 	dockerSig "github.com/docker/docker/pkg/signal"
 	"github.com/moby/term"
-	dockerutils "github.com/rancher/k3d/v4/pkg/runtimes/docker"
-	k3dtypes "github.com/rancher/k3d/v4/pkg/types"
+	dockerutils "github.com/rancher/k3d/v5/pkg/runtimes/docker"
+	k3dtypes "github.com/rancher/k3d/v5/pkg/types"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -42,7 +42,7 @@ type DockerDialer struct {
 	Weight int
 
 	ctx      context.Context
-	client   *client.Client
+	client   client.APIClient
 	response *dockertypes.HijackedResponse
 }
 

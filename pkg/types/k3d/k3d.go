@@ -9,7 +9,6 @@ type Options struct {
 	Labels        []string `json:"labels,omitempty" yaml:"labels,omitempty"`
 	MastersMemory string   `json:"masters-memory,omitempty" yaml:"masters-memory,omitempty"`
 	NoLB          bool     `json:"no-lb,omitempty" yaml:"no-lb,omitempty"`
-	NoHostIP      bool     `json:"no-hostip,omitempty" yaml:"no-hostip,omitempty"`
 	NoImageVolume bool     `json:"no-image-volume,omitempty" yaml:"no-image-volume,omitempty"`
 	Ports         []string `json:"ports,omitempty" yaml:"ports,omitempty"`
 	Volumes       []string `json:"volumes,omitempty" yaml:"volumes,omitempty"`

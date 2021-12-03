@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -22,25 +21,26 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	dockerunits "github.com/docker/go-units"
 	"github.com/moby/term"
-	cliutil "github.com/rancher/k3d/v4/cmd/util"
-	k3dutil "github.com/rancher/k3d/v4/cmd/util"
-	"github.com/rancher/k3d/v4/pkg/client"
-	"github.com/rancher/k3d/v4/pkg/config"
-	conf "github.com/rancher/k3d/v4/pkg/config/v1alpha2"
-	"github.com/rancher/k3d/v4/pkg/runtimes"
-	dockerutils "github.com/rancher/k3d/v4/pkg/runtimes/docker"
-	k3d "github.com/rancher/k3d/v4/pkg/types"
-	"github.com/sirupsen/logrus"
+	cliutil "github.com/rancher/k3d/v5/cmd/util"
+	k3dutil "github.com/rancher/k3d/v5/cmd/util"
+	"github.com/rancher/k3d/v5/pkg/client"
+	"github.com/rancher/k3d/v5/pkg/config"
+	k3dtypes "github.com/rancher/k3d/v5/pkg/config/types"
+	k3dconf "github.com/rancher/k3d/v5/pkg/config/v1alpha3"
+	k3dlogger "github.com/rancher/k3d/v5/pkg/logger"
+	"github.com/rancher/k3d/v5/pkg/runtimes"
+	dockerutils "github.com/rancher/k3d/v5/pkg/runtimes/docker"
+	k3d "github.com/rancher/k3d/v5/pkg/types"
+	k3dversion "github.com/rancher/k3d/v5/version"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
 	providerName = "k3d"
 
-	k3dConfigVersion = "k3d.io/v1alpha2"
-	k3dConfigKind    = "Simple"
-	k3dImage         = "rancher/k3s:v1.21.2-k3s1"
-	k3dAPIPort       = "0.0.0.0:0"
+	k3dVersion = "5.1.0"
+	k3dImage   = "rancher/k3s:v1.21.5-k3s2"
+	k3dAPIPort = "0.0.0.0:0"
 )
 
 // K3d provider k3d struct.
@@ -50,6 +50,7 @@ type K3d struct {
 }
 
 func init() {
+	k3dversion.Version = k3dVersion
 	providers.RegisterProvider(providerName, func() (providers.Provider, error) {
 		return newProvider(), nil
 	})
@@ -383,8 +384,7 @@ func (p *K3d) createK3d(ssh *types.SSH) (*types.Cluster, error) {
 		return nil, err
 	}
 
-	p.redirectLogs()
-	defer p.resetRedirectLogs()
+	p.SetLogLevelAndOutput()
 
 	if err := client.ClusterRun(context.Background(), runtimes.SelectedRuntime, cfg); err != nil {
 		return nil, fmt.Errorf("[%s] cluster %s run failed: %w", p.GetProviderName(), p.Name, err)
@@ -450,8 +450,8 @@ func (p *K3d) joinK3d(ssh *types.SSH) (*types.Cluster, error) {
 			Name:  fmt.Sprintf("%s-%s-%s-%d", k3d.DefaultObjectNamePrefix, p.Name, "server", index+1+i),
 			Role:  k3d.ServerRole,
 			Image: p.Image,
-			Labels: map[string]string{
-				k3d.LabelRole: "server",
+			K3sNodeLabels: map[string]string{
+				k3d.LabelRole: string(k3d.ServerRole),
 			},
 			Restart: true,
 		}
@@ -470,8 +470,8 @@ func (p *K3d) joinK3d(ssh *types.SSH) (*types.Cluster, error) {
 			Name:  fmt.Sprintf("%s-%s-%s-%d", k3d.DefaultObjectNamePrefix, p.Name, "agent", index+1+i),
 			Role:  k3d.AgentRole,
 			Image: p.Image,
-			Labels: map[string]string{
-				k3d.LabelRole: "agent",
+			K3sNodeLabels: map[string]string{
+				k3d.LabelRole: string(k3d.AgentRole),
 			},
 			Restart: true,
 		}
@@ -481,8 +481,7 @@ func (p *K3d) joinK3d(ssh *types.SSH) (*types.Cluster, error) {
 		nodes = append(nodes, node)
 	}
 
-	p.redirectLogs()
-	defer p.resetRedirectLogs()
+	p.SetLogLevelAndOutput()
 
 	if err := client.NodeAddToClusterMulti(context.Background(), runtimes.SelectedRuntime, nodes, &k3d.Cluster{Name: p.Name},
 		k3d.NodeCreateOpts{}); err != nil {
@@ -519,8 +518,7 @@ func (p *K3d) deleteK3d(f bool) (string, error) {
 		Name: p.Name,
 	}
 
-	p.redirectLogs()
-	defer p.resetRedirectLogs()
+	p.SetLogLevelAndOutput()
 
 	if err := client.ClusterDelete(context.Background(), runtimes.SelectedRuntime, cfg, k3d.ClusterDeleteOpts{}); err != nil {
 		return "", fmt.Errorf("[%s] calling delete cluster error, msg: %v", p.GetProviderName(), err)
@@ -575,7 +573,7 @@ func (p *K3d) getK3dContainer(node *k3d.Node) (*dockertypes.Container, error) {
 
 	// (1) list containers which have the default k3d labels attached.
 	f := filters.NewArgs()
-	for k, v := range node.Labels {
+	for k, v := range node.K3sNodeLabels {
 		f.Add("label", fmt.Sprintf("%s=%s", k, v))
 	}
 
@@ -604,31 +602,30 @@ func (p *K3d) getK3dContainer(node *k3d.Node) (*dockertypes.Container, error) {
 	return &containers[0], nil
 }
 
-func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
+func (p *K3d) wrapCliFlags(masters, workers int) (*k3dconf.ClusterConfig, error) {
 	ipPorts := strings.Split(p.APIPort, ":")
 
-	cfg := conf.SimpleConfig{
-		TypeMeta: conf.TypeMeta{
-			APIVersion: k3dConfigVersion,
-			Kind:       k3dConfigKind,
+	cfg := k3dconf.SimpleConfig{
+		TypeMeta: k3dtypes.TypeMeta{
+			APIVersion: config.DefaultConfigApiVersion,
+			Kind:       "Simple",
 		},
 		Name:         p.Name,
 		Servers:      masters,
 		Agents:       workers,
 		ClusterToken: p.Token,
 		Image:        p.Image,
-		ExposeAPI: conf.SimpleExposureOpts{
+		ExposeAPI: k3dconf.SimpleExposureOpts{
 			HostIP:   ipPorts[0],
 			HostPort: ipPorts[1],
 		},
-		Options: conf.SimpleConfigOptions{
-			Runtime: conf.SimpleConfigOptionsRuntime{},
-			K3dOptions: conf.SimpleConfigOptionsK3d{
-				DisableImageVolume:         p.NoImageVolume,
-				DisableLoadbalancer:        p.NoLB,
-				PrepDisableHostIPInjection: p.NoHostIP,
+		Options: k3dconf.SimpleConfigOptions{
+			Runtime: k3dconf.SimpleConfigOptionsRuntime{},
+			K3dOptions: k3dconf.SimpleConfigOptionsK3d{
+				DisableImageVolume:  p.NoImageVolume,
+				DisableLoadbalancer: p.NoLB,
 			},
-			K3sOptions: conf.SimpleConfigOptionsK3s{},
+			K3sOptions: k3dconf.SimpleConfigOptionsK3s{},
 		},
 	}
 
@@ -668,11 +665,27 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
 	}
 
 	if p.MasterExtraArgs != "" {
-		cfg.Options.K3sOptions.ExtraServerArgs = strings.Split(p.MasterExtraArgs, " ")
+		cfg.Options.K3sOptions.ExtraArgs = []k3dconf.K3sArgWithNodeFilters{}
+		for _, arg := range strings.Split(p.MasterExtraArgs, " ") {
+			cfg.Options.K3sOptions.ExtraArgs = append(cfg.Options.K3sOptions.ExtraArgs, k3dconf.K3sArgWithNodeFilters{
+				Arg: arg,
+				NodeFilters: []string{
+					"server:*",
+				},
+			})
+		}
 	}
 
 	if p.WorkerExtraArgs != "" {
-		cfg.Options.K3sOptions.ExtraAgentArgs = strings.Split(p.WorkerExtraArgs, " ")
+		cfg.Options.K3sOptions.ExtraArgs = []k3dconf.K3sArgWithNodeFilters{}
+		for _, arg := range strings.Split(p.WorkerExtraArgs, " ") {
+			cfg.Options.K3sOptions.ExtraArgs = append(cfg.Options.K3sOptions.ExtraArgs, k3dconf.K3sArgWithNodeFilters{
+				Arg: arg,
+				NodeFilters: []string{
+					"agent:*",
+				},
+			})
+		}
 	}
 
 	if p.Registry != "" {
@@ -683,7 +696,7 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
 	if len(p.Volumes) > 0 {
 		volumeFilterMap := make(map[string][]string, 1)
 		for _, volumeFlag := range p.Volumes {
-			// split node filter from the specified volume
+			// split node filter from the specified volume.
 			volume, filters, err := cliutil.SplitFiltersFromFlag(volumeFlag)
 			if err != nil {
 				return nil, fmt.Errorf("[%s] cluster %s parse volume config failed: %w", p.GetProviderName(), p.Name, err)
@@ -698,7 +711,7 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
 		}
 
 		for volume, nodeFilters := range volumeFilterMap {
-			cfg.Volumes = append(cfg.Volumes, conf.VolumeWithNodeFilters{
+			cfg.Volumes = append(cfg.Volumes, k3dconf.VolumeWithNodeFilters{
 				Volume:      volume,
 				NodeFilters: nodeFilters,
 			})
@@ -728,7 +741,7 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
 		}
 
 		for port, nodeFilters := range portFilterMap {
-			cfg.Ports = append(cfg.Ports, conf.PortWithNodeFilters{
+			cfg.Ports = append(cfg.Ports, k3dconf.PortWithNodeFilters{
 				Port:        port,
 				NodeFilters: nodeFilters,
 			})
@@ -754,7 +767,7 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
 		}
 
 		for label, nodeFilters := range labelFilterMap {
-			cfg.Labels = append(cfg.Labels, conf.LabelWithNodeFilters{
+			cfg.Options.K3sOptions.NodeLabels = append(cfg.Options.K3sOptions.NodeLabels, k3dconf.LabelWithNodeFilters{
 				Label:       label,
 				NodeFilters: nodeFilters,
 			})
@@ -780,7 +793,7 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
 		}
 
 		for envVar, nodeFilters := range envFilterMap {
-			cfg.Env = append(cfg.Env, conf.EnvVarWithNodeFilters{
+			cfg.Env = append(cfg.Env, k3dconf.EnvVarWithNodeFilters{
 				EnvVar:      envVar,
 				NodeFilters: nodeFilters,
 			})
@@ -804,10 +817,7 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*conf.ClusterConfig, error) {
 	return c, nil
 }
 
-func (p *K3d) redirectLogs() {
-	logrus.SetOutput(p.Logger.Out)
-}
-
-func (p *K3d) resetRedirectLogs() {
-	logrus.SetOutput(os.Stderr)
+func (p *K3d) SetLogLevelAndOutput() {
+	k3dlogger.Logger.SetLevel(p.Logger.Level)
+	k3dlogger.Logger.SetOutput(p.Logger.Out)
 }

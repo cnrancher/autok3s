@@ -14,7 +14,6 @@ RUN wget -O /usr/local/bin/kube-explorer https://github.com/cnrancher/kube-explo
 
 ENV AUTOK3S_CONFIG /root/.autok3s
 ENV HOME /root
-ENV K3D_HELPER_IMAGE_TAG v4.4.8
 
 WORKDIR /home/shell
 VOLUME /root/.autok3s
