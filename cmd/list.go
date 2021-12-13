@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
@@ -16,7 +18,12 @@ var (
 		Short:   "Display all K3s clusters",
 		Example: `  autok3s list`,
 	}
+	jsonOut = false
 )
+
+func init() {
+	listCmd.Flags().BoolVarP(&jsonOut, "json", "j", jsonOut, "json output")
+}
 
 // ListCommand returns clusters as list.
 func ListCommand() *cobra.Command {
@@ -37,6 +44,12 @@ func listCluster() {
 	filters, err := cluster.ListClusters()
 	if err != nil {
 		logrus.Fatalln(err)
+	}
+
+	if jsonOut {
+		cl, _ := json.Marshal(filters)
+		fmt.Println(string(cl))
+		return
 	}
 
 	for _, f := range filters {
