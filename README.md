@@ -60,8 +60,14 @@ $ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/v
 # MacOS 
 $ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.5
 ```
+Scenario 2 - Run with docker-compose
+```
+docker-compose up -d
+```
+- autok3s is available at: http://autok3s.vcap.me (vcap.me resolves to 127.0.0.1)
+- cli and container uses the same `AUTOK3S_CONFIG` dir
 
-Scenario 2 - Run with CLI:
+Scenario 3 - Run with CLI:
 
 ```bash
 # The commands use the shell script on MacOS and Linux, or visit the Releases page to download the executable for Windows.
