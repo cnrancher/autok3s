@@ -61,11 +61,11 @@ $ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/v
 $ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.5
 ```
 Scenario 2 - Run with docker-compose
-```
+```bash
+# autok3s is available at: http://autok3s.vcap.me (vcap.me resolves to 127.0.0.1)
+# cli and container uses the same `AUTOK3S_CONFIG` dir
 docker-compose up -d
 ```
-- autok3s is available at: http://autok3s.vcap.me (vcap.me resolves to 127.0.0.1)
-- cli and container uses the same `AUTOK3S_CONFIG` dir
 
 Scenario 3 - Run with CLI:
 
