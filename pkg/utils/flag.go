@@ -31,6 +31,8 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 					pf.StringArrayVar(f.P.(*[]string), f.Name, t, f.Usage)
 				case types.StringArray:
 					pf.Var(newStringArrayValue(t, f.P.(*types.StringArray)), f.Name, f.Usage)
+				case int:
+					pf.IntVar(f.P.(*int), f.Name, t, f.Usage)
 				default:
 					continue
 				}
