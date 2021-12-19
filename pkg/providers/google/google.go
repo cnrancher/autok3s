@@ -466,6 +466,9 @@ func (p *Google) startInstance(num int, master bool) error {
 			},
 		},
 		Labels: p.generateLabels(master),
+		Tags: &raw.Tags{
+			Items: []string{"autok3s"},
+		},
 		ServiceAccounts: []*raw.ServiceAccount{
 			{
 				Email:  p.ServiceAccount,
