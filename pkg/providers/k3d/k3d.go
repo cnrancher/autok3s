@@ -111,6 +111,9 @@ func (p *K3d) IsClusterExist() (bool, []string, error) {
 
 	cfg := &k3d.Cluster{
 		Name: p.Name,
+		ServerLoadBalancer: &k3d.Loadbalancer{
+			Config: &k3d.LoadbalancerConfig{},
+		},
 	}
 
 	var (
@@ -312,6 +315,9 @@ func (p *K3d) k3dStatus() ([]types.Node, error) {
 
 	cfg := &k3d.Cluster{
 		Name: p.Name,
+		ServerLoadBalancer: &k3d.Loadbalancer{
+			Config: &k3d.LoadbalancerConfig{},
+		},
 	}
 
 	var c *k3d.Cluster
@@ -343,8 +349,14 @@ func (p *K3d) k3dStatus() ([]types.Node, error) {
 	return nodes, nil
 }
 
-func (p *K3d) obtainKubeCfg() (cfg, ip string, err error) {
-	c, err := client.ClusterGet(context.Background(), runtimes.SelectedRuntime, &k3d.Cluster{Name: p.Name})
+func (p *K3d) obtainKubeCfg() (kubeCfg, ip string, err error) {
+	cfg := &k3d.Cluster{
+		Name: p.Name,
+		ServerLoadBalancer: &k3d.Loadbalancer{
+			Config: &k3d.LoadbalancerConfig{},
+		},
+	}
+	c, err := client.ClusterGet(context.Background(), runtimes.SelectedRuntime, cfg)
 	if err != nil {
 		return
 	}
@@ -359,7 +371,7 @@ func (p *K3d) obtainKubeCfg() (cfg, ip string, err error) {
 		return
 	}
 
-	cfg = string(bytes)
+	kubeCfg = string(bytes)
 	ip = strings.Split(p.APIPort, ":")[0]
 
 	return
