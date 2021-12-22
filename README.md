@@ -24,6 +24,7 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 - [Quick Start (tl;dr)](#quick-start-tldr)
 - [Demo Video](#demo-video)
 - [Developers' Guide](#developers-guide)
+- [Source Code](#source-code)
 - [License](#license)
 
 <!-- /toc -->
@@ -50,7 +51,7 @@ Now supports the following providers, we encourage submitting PR contribution fo
 
 ## Quick Start (tl;dr)
 
-Scenario 1 - Run with Docker:
+Scenario 1 - Run with docker:
 
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
@@ -62,12 +63,12 @@ $ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:
 ```
 Scenario 2 - Run with docker-compose
 ```bash
-# autok3s is available at: http://autok3s.vcap.me (vcap.me resolves to 127.0.0.1)
-# cli and container uses the same `AUTOK3S_CONFIG` dir
+# AutoK3s is available at: http://autok3s.vcap.me (vcap.me resolves to 127.0.0.1).
+# The cli and container uses the same `AUTOK3S_CONFIG` directory.
 docker-compose up -d
 ```
 
-Scenario 3 - Run with CLI:
+Scenario 3 - Run with cli:
 
 ```bash
 # The commands use the shell script on MacOS and Linux, or visit the Releases page to download the executable for Windows.
@@ -98,6 +99,13 @@ Use `dapper` to manage project compilation, testing and packaging.
 - packing: `BY=dapper make autok3s package only`
 
 Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
+
+## Source Code
+
+AutoK3s is 100% open-source software. The project source code is spread across a number of repos:
+
+- AutoK3s: https://github.com/cnrancher/autok3s
+- AutoK3s Explorer: https://github.com/cnrancher/autok3s-ui
 
 # License
 
