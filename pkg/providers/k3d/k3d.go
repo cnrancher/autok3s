@@ -38,8 +38,8 @@ import (
 const (
 	providerName = "k3d"
 
-	k3dVersion = "5.1.0"
-	k3dImage   = "rancher/k3s:v1.21.5-k3s2"
+	k3dVersion = "5.2.2"
+	k3dImage   = "rancher/k3s:v1.21.7-k3s1"
 	k3dAPIPort = "0.0.0.0:0"
 )
 
