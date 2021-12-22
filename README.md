@@ -106,6 +106,7 @@ AutoK3s is 100% open-source software. The project source code is spread across a
 
 - AutoK3s: https://github.com/cnrancher/autok3s
 - AutoK3s Explorer: https://github.com/cnrancher/autok3s-ui
+- Kube Explorer: https://github.com/cnrancher/kube-explorer
 
 # License
 
