@@ -12,7 +12,7 @@ SUCCESS_CMD="$REPO version"
 BINLOCATION=${BINLOCATION:-'/usr/local/bin'}
 KUBEEXPLORER_REPO=${KUBEEXPLORER_REPO:-'kube-explorer'}
 KUBEEXPLORER_DOWNLOAD_URL=https://github.com/$OWNER/$KUBEEXPLORER_REPO/releases/download
-KUBEEXPLORER_VERSION=v0.2.5
+KUBEEXPLORER_VERSION=v0.2.6
 
 #   - INSTALL_AUTOK3S_MIRROR
 #     For Chinese users, set INSTALL_AUTOK3S_MIRROR=cn to use the mirror address to accelerate
@@ -68,12 +68,12 @@ checkHash(){
 
     sha_file_url=$AUTOK3S_DOWNLOAD_URL/$version/sha256sum.txt
     (cd $targetFileDir && curl -sSL $sha_file_url | grep $REPO$suffix |$sha_cmd -c >/dev/null)
-   
+
         if [ "$?" != "0" ]; then
             rm $targetFile
             echo "Binary checksum didn't match. Exiting"
             exit 1
-        fi   
+        fi
     fi
 }
 
@@ -124,7 +124,7 @@ getPackage() {
     esac
 
     targetFile="/tmp/$REPO$suffix"
-    
+
     if [ "$userid" != "0" ]; then
         targetFile="$(pwd)/$REPO$suffix"
     fi
@@ -147,7 +147,7 @@ getPackage() {
     chmod +x "$targetFile"
 
     echo "Download complete."
-       
+
     if [ ! -w "$BINLOCATION" ]; then
 
             echo
@@ -158,11 +158,11 @@ getPackage() {
             echo "============================================================"
             echo
             echo "  sudo cp $REPO$suffix $BINLOCATION/$REPO"
-            
+
             if [ -n "$ALIAS_NAME" ]; then
                 echo "  sudo ln -sf $BINLOCATION/$REPO $BINLOCATION/$ALIAS_NAME"
             fi
-            
+
             echo
 
         else
@@ -176,7 +176,7 @@ getPackage() {
             echo "================================================================"
             echo "  $BINLOCATION/$REPO already exists and is not writeable"
             echo "  by the current user.  Please adjust the binary ownership"
-            echo "  or run sh/bash with sudo." 
+            echo "  or run sh/bash with sudo."
             echo "================================================================"
             echo
             exit 1
@@ -184,7 +184,7 @@ getPackage() {
             fi
 
             mv $targetFile $BINLOCATION/$REPO
-        
+
             if [ "$?" = "0" ]; then
                 echo "New version of $REPO installed to $BINLOCATION"
             fi
@@ -226,7 +226,7 @@ getKubeExplorer() {
     esac
 
     targetFile="/tmp/$KUBEEXPLORER_REPO$suffix"
-    
+
     if [ "$userid" != "0" ]; then
         targetFile="$(pwd)/$KUBEEXPLORER_REPO$suffix"
     fi
@@ -243,7 +243,7 @@ getKubeExplorer() {
     chmod +x "$targetFile"
 
     echo "Download complete."
-       
+
     if [ ! -w "$BINLOCATION" ]; then
 
         echo
@@ -267,7 +267,7 @@ getKubeExplorer() {
             echo "================================================================"
             echo "  $BINLOCATION/$KUBEEXPLORER_REPO already exists and is not writeable"
             echo "  by the current user.  Please adjust the binary ownership"
-            echo "  or run sh/bash with sudo." 
+            echo "  or run sh/bash with sudo."
             echo "================================================================"
             echo
             exit 1
@@ -275,7 +275,7 @@ getKubeExplorer() {
         fi
 
         mv $targetFile $BINLOCATION/$KUBEEXPLORER_REPO
-    
+
         if [ "$?" = "0" ]; then
             echo "New version of $KUBEEXPLORER_REPO installed to $BINLOCATION"
         fi
