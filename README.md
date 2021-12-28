@@ -56,10 +56,10 @@ Scenario 1 - Run with docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 # Standard Linux (Recommended)
-$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.5
+$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.6
 
 # MacOS 
-$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.5
+$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.6
 ```
 Scenario 2 - Run with docker-compose
 ```bash
@@ -104,9 +104,9 @@ Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) p
 
 AutoK3s is 100% open-source software. The project source code is spread across a number of repos:
 
-- AutoK3s: https://github.com/cnrancher/autok3s
-- AutoK3s Explorer: https://github.com/cnrancher/autok3s-ui
-- Kube Explorer: https://github.com/cnrancher/kube-explorer
+- https://github.com/cnrancher/autok3s
+- https://github.com/cnrancher/autok3s-ui
+- https://github.com/cnrancher/kube-explorer
 
 # License
 
