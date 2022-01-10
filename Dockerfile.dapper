@@ -6,7 +6,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
 
 # -- for make rules
 ## install golang
-RUN wget --no-check-certificate -O - https://golang.org/dl/go1.16.2.linux-amd64.tar.gz | tar -xz -C /usr/local
+RUN wget --no-check-certificate -O - https://golang.org/dl/go1.17.5.linux-amd64.tar.gz | tar -xz -C /usr/local
 
 # Fix any stock package issues
 RUN ln -s /usr/include/asm-generic /usr/include/asm && \
