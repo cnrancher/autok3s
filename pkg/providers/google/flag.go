@@ -285,7 +285,7 @@ func (p *Google) sharedFlags() []types.Flag {
 			Name:  "cloud-controller-manager",
 			P:     &p.CloudControllerManager,
 			V:     p.CloudControllerManager,
-			Usage: "Enable cloud-controller-manager component",
+			Usage: "Enable gcp-cloud-provider component",
 		},
 	}
 }

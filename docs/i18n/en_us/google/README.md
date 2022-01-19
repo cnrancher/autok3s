@@ -215,6 +215,16 @@ autok3s -d create \
     --registry /etc/autok3s/registries.yaml
 ```
 
+### Enabling GCP Cloud Controller Manager(CCM)
+
+Will enable [gcp-cloud-provider](https://github.com/kubernetes/cloud-provider-gcp) for K3s
+
+```bash
+autok3s -d create -p google \
+    ... \
+    --cloud-controller-manager 
+```
+
 ### Enable UI Component
 
 AutoK3s support 2 kinds of UI Component, including [kubernetes/dashboard](https://github.com/kubernetes/dashboard) and [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer).

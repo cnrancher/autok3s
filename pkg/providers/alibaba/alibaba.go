@@ -426,7 +426,13 @@ func (p *Alibaba) deleteInstance(f bool) (string, error) {
 		return p.ContextName, nil
 	}
 
-	if p.UI && p.CloudControllerManager {
+	ui := p.UI
+	for _, comp := range p.Enable {
+		if !ui && comp == "dashboard" {
+			ui = true
+		}
+	}
+	if ui && p.CloudControllerManager {
 		if err = p.ReleaseManifests(); err != nil {
 			return "", err
 		}
