@@ -2,6 +2,7 @@ package google
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -36,11 +37,13 @@ const (
 	defaultDiskSize    = 10
 	defaultNetwork     = "default"
 	defaultUser        = "autok3s"
-	defaultScopes      = "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write"
+	defaultScopes      = "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/cloud-platform"
 
 	defaultSecurityGroup = "autok3s"
 	apiURL               = "https://www.googleapis.com/compute/v1/projects"
 	statusRunning        = "RUNNING"
+
+	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/gcp-cloud-controller-manager.yaml\""
 )
 
 // Google provider
@@ -87,6 +90,11 @@ func (p *Google) GenerateClusterName() string {
 }
 
 func (p *Google) GenerateManifest() []string {
+	if p.CloudControllerManager {
+		tmp := fmt.Sprintf(googleCCMTmpl, p.ClusterCidr)
+		return []string{fmt.Sprintf(deployCCMCommand,
+			base64.StdEncoding.EncodeToString([]byte(tmp)), common.K3sManifestsDir)}
+	}
 	return nil
 }
 
@@ -139,6 +147,20 @@ func (p *Google) remove(force bool) (string, error) {
 		return p.ContextName, nil
 	}
 
+	ui := p.UI
+	for _, comp := range p.Enable {
+		if !ui && comp == "dashboard" {
+			ui = true
+		}
+	}
+
+	if ui && p.CloudControllerManager {
+		p.Logger.Infof("[%s] release manifests", p.GetProviderName())
+		if err := p.ReleaseManifests(); err != nil {
+			return "", err
+		}
+	}
+
 	p.rollbackInstance(ids)
 	p.Logger.Infof("[%s] successfully terminate instances for cluster %s", p.GetProviderName(), p.Name)
 
@@ -175,11 +197,16 @@ func (p *Google) IsClusterExist() (bool, []string, error) {
 }
 
 func (p *Google) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
+	if option, ok := cluster.Options.(typesgoogle.Options); ok {
+		if option.CloudControllerManager {
+			return fmt.Sprintf(" --kubelet-arg=cloud-provider=external --kubelet-arg=provider-id=gce://%s/%s/%s --node-name=%s", option.Project, option.Zone, master.InstanceID, master.InstanceID)
+		}
+	}
 	return ""
 }
 
 func (p *Google) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
-	return ""
+	return p.GenerateMasterExtraArgs(cluster, worker)
 }
 
 // SetOptions merge option struct for Google Cloud Provider
@@ -398,9 +425,9 @@ func (p *Google) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		Status:   p.Status,
 	}
 	c.ContextName = p.ContextName
-	// TODO deploy cloud-provider-gcp
-	// if p.CloudControllerManager {
-	// }
+	if p.CloudControllerManager {
+		c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik,local-storage"
+	}
 	c.SSH = *ssh
 
 	return c, nil
