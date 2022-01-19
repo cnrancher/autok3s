@@ -35,7 +35,7 @@ func Start() http.Handler {
 
 	middleware := responsewriter.Chain{
 		responsewriter.Gzip,
-		responsewriter.DenyFrameOptions,
+		responsewriter.FrameOptions,
 		responsewriter.CacheMiddleware("json", "js", "css", "svg", "png", "woff", "woff2"),
 		ui.ServeNotFound,
 	}
