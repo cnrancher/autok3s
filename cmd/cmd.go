@@ -14,6 +14,7 @@ import (
 	_ "github.com/cnrancher/autok3s/pkg/providers/alibaba"
 	_ "github.com/cnrancher/autok3s/pkg/providers/aws"
 	_ "github.com/cnrancher/autok3s/pkg/providers/google"
+	_ "github.com/cnrancher/autok3s/pkg/providers/harvester"
 	_ "github.com/cnrancher/autok3s/pkg/providers/k3d"
 	_ "github.com/cnrancher/autok3s/pkg/providers/native"
 	_ "github.com/cnrancher/autok3s/pkg/providers/tencent"
@@ -138,7 +139,7 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 
 Global Environments:
   AUTOK3S_CONFIG  Path to the cfg file to use for CLI requests (default ~/.autok3s)
-  AUTOK3S_RETRY   The number of retries waiting for the desired state (default 5)
+  AUTOK3S_RETRY   The number of retries waiting for the desired state (default 20)
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `

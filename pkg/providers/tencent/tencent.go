@@ -183,9 +183,6 @@ func (p *Tencent) rollbackInstance(ids []string) error {
 			}
 		}
 
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling rollback error, please remove the cloud provider instances manually. region: %s, "+
-			"instanceName: %s, msg: the maximum number of attempts reached", p.GetProviderName(), p.Region, ids)
-
 		// retry 5 times, total 120 seconds.
 		backoff := wait.Backoff{
 			Duration: 30 * time.Second,
@@ -966,9 +963,6 @@ func (p *Tencent) describeVpcTaskResult(taskID uint64) error {
 	request := vpc.NewDescribeTaskResultRequest()
 	request.TaskId = tencentCommon.Uint64Ptr(taskID)
 
-	wait.ErrWaitTimeout = fmt.Errorf("[%s] calling describeVpcTaskResult error. region: %s, zone: %s, taskId: %d",
-		p.GetProviderName(), p.Region, p.Zone, taskID)
-
 	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		response, err := p.v.DescribeTaskResult(request)
 		if err != nil {
@@ -1002,9 +996,6 @@ func (p *Tencent) getInstanceStatus(aimStatus string) error {
 		p.Logger.Infof("[%s] waiting for the instances %s to be in `%s` status...", p.GetProviderName(), ids, aimStatus)
 		request := cvm.NewDescribeInstancesStatusRequest()
 		request.InstanceIds = tencentCommon.StringPtrs(ids)
-
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not `%s` status",
-			p.GetProviderName(), p.Region, p.Zone, ids, aimStatus)
 
 		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 			response, err := p.c.DescribeInstancesStatus(request)

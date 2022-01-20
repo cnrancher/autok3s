@@ -169,9 +169,6 @@ func (p *Alibaba) rollbackInstance(ids []string) error {
 		request.InstanceId = &ids
 		request.Force = requests.NewBoolean(true)
 
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling rollback error, please remove the cloud provider instances manually. region: %s, "+
-			"instanceName: %s, msg: the maximum number of attempts reached", p.GetProviderName(), p.Region, ids)
-
 		// retry 5 times, total 120 seconds.
 		backoff := wait.Backoff{
 			Duration: 30 * time.Second,
@@ -480,9 +477,6 @@ func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 		request := ecs.CreateDescribeInstanceStatusRequest()
 		request.Scheme = "https"
 		request.InstanceId = &ids
-
-		wait.ErrWaitTimeout = fmt.Errorf("[%s] calling getInstanceStatus error. region: %s, zone: %s, instanceName: %s, message: not `%s` status",
-			p.GetProviderName(), p.Region, p.Zone, ids, aimStatus)
 
 		if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 			response, err := p.c.DescribeInstanceStatus(request)

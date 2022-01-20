@@ -26,7 +26,7 @@ const joinUsageExample = `  autok3s -d join \
 
 const deleteUsageExample = `  autok3s -d delete \
     --provider aws \
-    --name <cluster name>
+    --name <cluster name> \
     --access-key <access-key> \
     --secret-key <secret-key> 
 `

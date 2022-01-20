@@ -54,7 +54,7 @@ var (
 	Backoff = wait.Backoff{
 		Duration: 30 * time.Second,
 		Factor:   1,
-		Steps:    5,
+		Steps:    20,
 	}
 	// DefaultDB default database store.
 	DefaultDB        *Store
