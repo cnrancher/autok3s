@@ -47,6 +47,7 @@ Now supports the following providers, we encourage submitting PR contribution fo
 - [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap K3s onto Alibaba ECS
 - [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap K3s onto Tencent CVM
 - [k3d](docs/i18n/en_us/k3d/README.md) - Bootstrap K3d onto Local Machine
+- [harvester](docs/i18n/en_us/harvester/README.md) - Bootstrap K3s onto Harvester VM
 - [native](docs/i18n/en_us/native/README.md) - Bootstrap K3s onto any VM
 
 ## Quick Start (tl;dr)
@@ -110,7 +111,7 @@ AutoK3s is 100% open-source software. The project source code is spread across a
 
 # License
 
-Copyright (c) 2021 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2022 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
