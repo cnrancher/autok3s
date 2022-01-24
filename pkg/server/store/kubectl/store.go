@@ -1,7 +1,7 @@
 package kubectl
 
 import (
-	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -20,7 +20,7 @@ type Store struct {
 // List returns kubectl contexts.
 func (k *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	result := types.APIObjectList{}
-	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
 	clientConfig, err := clientcmd.LoadFromFile(kubeCfg)
 	if err != nil {
 		return result, err

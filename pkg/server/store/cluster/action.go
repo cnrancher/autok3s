@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
@@ -121,7 +122,7 @@ func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (
 	}
 	provider.SetMetadata(&state.Metadata)
 	_ = provider.SetOptions(state.Options)
-	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
 	if state.Status == common.StatusMissing {
 		kubeCfg = ""
 	}

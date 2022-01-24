@@ -49,7 +49,7 @@ var (
 	// Debug used to enable log debug level.
 	Debug = false
 	// CfgPath default config file dir.
-	CfgPath = utils.UserHome() + "/.autok3s"
+	CfgPath = filepath.Join(utils.UserHome(), ".autok3s")
 	// Backoff default backoff variable, retry 5 times, total 120 seconds.
 	Backoff = wait.Backoff{
 		Duration: 30 * time.Second,
@@ -59,6 +59,8 @@ var (
 	// DefaultDB default database store.
 	DefaultDB        *Store
 	ExplorerWatchers map[string]context.CancelFunc
+
+	FileManager *ConfigFileManager
 )
 
 // GetDefaultSSHKeyPath returns default ssh key path.

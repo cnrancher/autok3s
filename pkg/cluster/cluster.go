@@ -178,7 +178,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	if err := SaveCfg(cfg, publicIP, cluster.ContextName); err != nil {
 		return err
 	}
-	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, filepath.Join(common.CfgPath, common.KubeCfgFile))
 	cluster.Status.Status = common.StatusRunning
 
 	// write current cluster to state file.
@@ -436,7 +436,7 @@ func SaveCfg(cfg, ip, context string) error {
 
 	result := replacer.Replace(cfg)
 
-	tempPath := fmt.Sprintf("%s/.kube", common.CfgPath)
+	tempPath := filepath.Join(common.CfgPath, ".kube")
 	if err := utils.EnsureFolderExist(tempPath); err != nil {
 		return fmt.Errorf("[cluster] generate kubecfg temp folder error, msg: %s", err)
 	}
@@ -447,6 +447,9 @@ func SaveCfg(cfg, ip, context string) error {
 	}
 	defer func() {
 		_ = temp.Close()
+		if err := os.Remove(temp.Name()); err != nil {
+			logrus.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
+		}
 	}()
 
 	absPath, _ := filepath.Abs(temp.Name())
@@ -454,15 +457,7 @@ func SaveCfg(cfg, ip, context string) error {
 		return fmt.Errorf("[cluster] write content to kubecfg temp file error: %v", err)
 	}
 
-	return mergeCfg(context, temp.Name())
-}
-
-// OverwriteCfg overwrite kube config file.
-func OverwriteCfg(context string) error {
-	path := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
-	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
-	fMgr := &common.ConfigFileManager{}
-	return fMgr.OverwriteCfg(path, context, fMgr.RemoveCfg)
+	return common.FileManager.SaveCfg(context, temp.Name())
 }
 
 // DeployExtraManifest deploy extra K3S manifest.
@@ -676,22 +671,6 @@ func terminal(n *types.Node) error {
 	dialer.SetStdio(os.Stdout, os.Stderr, os.Stdin)
 
 	return dialer.Terminal()
-}
-
-func mergeCfg(context, tempFile string) error {
-	defer func() {
-		if err := os.Remove(tempFile); err != nil {
-			logrus.Errorf("[cluster] remove kubecfg temp file error, msg: %s", err)
-		}
-		_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
-	}()
-	kubeConfigPath := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
-	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeConfigPath)
-	fMgr := &common.ConfigFileManager{}
-	_ = fMgr.OverwriteCfg(kubeConfigPath, context, fMgr.RemoveCfg)
-	mergeKubeConfigENV := fmt.Sprintf("%s:%s", kubeConfigPath, tempFile)
-	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, mergeKubeConfigENV)
-	return fMgr.OverwriteCfg(fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile), context, fMgr.MergeCfg)
 }
 
 func genK3sVersion(version, channel string) string {

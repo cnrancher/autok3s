@@ -44,7 +44,6 @@ require (
 	github.com/creack/pty v1.1.11
 	github.com/docker/docker v20.10.10+incompatible
 	github.com/docker/go-units v0.4.0
-	github.com/gofrs/flock v0.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hpcloud/tail v1.0.0
@@ -65,6 +64,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.34
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/net v0.0.0-20211209124913-491a49abca63
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/api v0.62.0
@@ -78,8 +78,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 	k8s.io/kubectl v0.23.1
 )
-
-require golang.org/x/net v0.0.0-20211209124913-491a49abca63
 
 require (
 	cloud.google.com/go v0.99.0 // indirect
