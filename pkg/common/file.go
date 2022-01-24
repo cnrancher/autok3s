@@ -2,20 +2,16 @@ package common
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/gofrs/flock"
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-)
-
-var (
-	pollInterval = 250 * time.Millisecond
-	maxWait      = 10 * time.Second
 )
 
 // ConfigFileManager struct for config file manager.
@@ -23,38 +19,46 @@ type ConfigFileManager struct {
 	mutex sync.RWMutex
 }
 
-// OverwriteCfg overwrites kubectl config file.
-func (c *ConfigFileManager) OverwriteCfg(path string, context string, cfg func(string, clientcmd.ConfigAccess) (*api.Config, error)) error {
-	paOpt := clientcmd.NewDefaultPathOptions()
+// ClearCfgByContext clear kube config by specified context.
+func (c *ConfigFileManager) ClearCfgByContext(context string) error {
+	path := filepath.Join(CfgPath, KubeCfgFile)
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, path)
+	return c.OverwriteCfg(path, context, c.RemoveCfg)
+}
 
-	c.mutex.Lock()
-	fileLock := flock.New(path)
-	locked, err := fileLock.TryLock()
+// SaveCfg save kube config file.
+func (c *ConfigFileManager) SaveCfg(context, tempFile string) error {
+	defer func() {
+		_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, filepath.Join(CfgPath, KubeCfgFile))
+	}()
+	kubeConfigPath := filepath.Join(CfgPath, KubeCfgFile)
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeConfigPath)
+	err := c.OverwriteCfg(kubeConfigPath, context, c.RemoveCfg)
 	if err != nil {
 		return err
 	}
-	c.mutex.Unlock()
-	defer func() {
-		_ = fileLock.Unlock()
-	}()
-	for i := time.Duration(0); i < maxWait; i += pollInterval {
-		if locked {
-			config, err := cfg(context, paOpt)
-			if err != nil {
-				return err
-			}
-			return clientcmd.WriteToFile(*config, path)
-		}
-		logrus.Infof("file %v is locking, wait until unlock", path)
-		time.Sleep(pollInterval)
-		locked, err = fileLock.TryLock()
-		if err != nil {
-			return err
-		}
-		continue
-
+	mergeKubeConfigENV := fmt.Sprintf("%s:%s", kubeConfigPath, tempFile)
+	if runtime.GOOS == "windows" {
+		mergeKubeConfigENV = fmt.Sprintf("%s;%s", kubeConfigPath, tempFile)
 	}
-	return fmt.Errorf("timeout for wait config file %v unlock", path)
+	logrus.Debugf("merge kubeconfig with KUBECONFIG=%s", mergeKubeConfigENV)
+	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, mergeKubeConfigENV)
+	return c.OverwriteCfg(filepath.Join(CfgPath, KubeCfgFile), context, c.MergeCfg)
+}
+
+// OverwriteCfg overwrites kubectl config file.
+func (c *ConfigFileManager) OverwriteCfg(path string, context string, cfg func(string, clientcmd.ConfigAccess) (*api.Config, error)) error {
+	c.mutex.Lock()
+	paOpt := clientcmd.NewDefaultPathOptions()
+	defer func() {
+		c.mutex.Unlock()
+	}()
+
+	config, err := cfg(context, paOpt)
+	if err != nil {
+		return err
+	}
+	return clientcmd.WriteToFile(*config, path)
 }
 
 // RemoveCfg removes kubectl config file.
@@ -83,7 +87,7 @@ func (c *ConfigFileManager) RemoveCfg(context string, configAccess clientcmd.Con
 // MergeCfg merges kubectl config file.
 func (c *ConfigFileManager) MergeCfg(context string, configAccess clientcmd.ConfigAccess) (*api.Config, error) {
 	// check context exists
-	oldConfig, err := clientcmd.LoadFromFile(fmt.Sprintf("%s/%s", CfgPath, KubeCfgFile))
+	oldConfig, err := clientcmd.LoadFromFile(filepath.Join(CfgPath, KubeCfgFile))
 	if err != nil {
 		return nil, err
 	}

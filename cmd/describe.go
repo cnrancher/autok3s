@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -43,7 +44,7 @@ func DescribeCommand() *cobra.Command {
 
 func describeCluster() {
 	allErr := make([]string, 0)
-	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
 	out := new(tabwriter.Writer)
 	out.Init(os.Stdout, 0, 8, 0, '\t', 0)
 

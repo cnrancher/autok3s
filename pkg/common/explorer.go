@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	k3dutil "github.com/rancher/k3d/v5/cmd/util"
 	"github.com/sirupsen/logrus"
@@ -107,7 +108,7 @@ func InitExplorer() {
 
 // StartKubeExplorer start kube-explorer server listen on specified port
 func StartKubeExplorer(ctx context.Context, config string, port int) error {
-	explorer := exec.CommandContext(ctx, KubeExplorerCommand, fmt.Sprintf("--kubeconfig=%s/.kube/config", CfgPath),
+	explorer := exec.CommandContext(ctx, KubeExplorerCommand, fmt.Sprintf("--kubeconfig=%s", filepath.Join(CfgPath, KubeCfgFile)),
 		fmt.Sprintf("--context=%s", config), fmt.Sprintf("--http-listen-port=%d", port), "--https-listen-port=0")
 	explorer.Stdout = os.Stdout
 	explorer.Stderr = os.Stderr

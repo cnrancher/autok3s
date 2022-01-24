@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -68,7 +69,7 @@ func initCfg() {
 		logrus.Fatalln(err)
 	}
 
-	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
 	if err := os.Setenv(clientcmd.RecommendedConfigPathEnvVar, kubeCfg); err != nil {
 		logrus.Errorf("[kubectl] failed to set %s=%s env", clientcmd.RecommendedConfigPathEnvVar, kubeCfg)
 	}
@@ -83,6 +84,7 @@ func initCfg() {
 	}
 	common.DefaultDB = db
 	common.ExplorerWatchers = map[string]context.CancelFunc{}
+	common.FileManager = &common.ConfigFileManager{}
 }
 
 func printASCII() {

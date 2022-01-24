@@ -343,7 +343,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 		if err := SaveCfg(cfg, ip, c.ContextName); err != nil {
 			return err
 		}
-		_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile))
+		_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, filepath.Join(common.CfgPath, common.KubeCfgFile))
 		// change & save current cluster's status to database.
 		c.Status.Status = common.StatusRunning
 		if err = common.DefaultDB.SaveCluster(c); err != nil {
@@ -567,7 +567,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 		if err != nil {
 			return err
 		}
-		err = OverwriteCfg(contextName)
+		err = common.FileManager.ClearCfgByContext(contextName)
 		if err != nil && !force {
 			return fmt.Errorf("[%s] merge kubeconfig error, msg: %v", p.Provider, err)
 		}
@@ -692,7 +692,7 @@ func ListClusters() ([]*types.ClusterInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	kubeCfg := fmt.Sprintf("%s/%s", common.CfgPath, common.KubeCfgFile)
+	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
 	clusterList := make([]*types.ClusterInfo, 0)
 	for _, state := range stateList {
 		provider, err := providers.GetProvider(state.Provider)
@@ -719,7 +719,7 @@ func ListClusters() ([]*types.ClusterInfo, error) {
 		if !isExist {
 			logrus.Warnf("cluster %s (provider %s) is not exist, will remove from config", state.Name, state.Provider)
 			// remove kube config if cluster not exist
-			if err := OverwriteCfg(contextName); err != nil {
+			if err := common.FileManager.ClearCfgByContext(contextName); err != nil {
 				logrus.Errorf("failed to remove unexist cluster %s from kube config", state.Name)
 			}
 			// update status to missing
@@ -909,7 +909,7 @@ func (p *ProviderBase) RollbackCluster(rollbackInstance func(ids []string) error
 			return err
 		}
 		// remove context.
-		if err := OverwriteCfg(p.ContextName); err != nil {
+		if err := common.FileManager.ClearCfgByContext(p.ContextName); err != nil {
 			logrus.Errorf("failed to remove cluster context %s from kube config", p.ContextName)
 		}
 		p.Logger.Infof("[%s] successfully executed rollback logic", p.Provider)
