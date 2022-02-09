@@ -9,7 +9,7 @@ RUN mkdir /home/shell && \
     echo 'source <(kubectl completion bash)' >> /home/shell/.bashrc && \
     echo 'PS1="> "' >> /home/shell/.bashrc
 
-RUN wget -O /usr/local/bin/kube-explorer https://github.com/cnrancher/kube-explorer/releases/download/v0.2.7/kube-explorer-linux-${ARCH} && \
+RUN wget -O /usr/local/bin/kube-explorer https://github.com/cnrancher/kube-explorer/releases/download/v0.2.8/kube-explorer-linux-${ARCH} && \
     chmod +x /usr/local/bin/kube-explorer
 
 ENV AUTOK3S_CONFIG /root/.autok3s
