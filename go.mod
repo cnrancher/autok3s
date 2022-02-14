@@ -4,7 +4,7 @@ go 1.17
 
 replace (
 	github.com/containerd/containerd => github.com/k3s-io/containerd v1.5.8-k3s2
-	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
+	github.com/docker/distribution => github.com/docker/distribution v2.8.0+incompatible
 	github.com/docker/docker => github.com/docker/docker v20.10.12+incompatible
 
 	github.com/harvester/harvester => github.com/harvester/harvester v0.0.2-0.20220129083315-1a861fc1c348
@@ -59,6 +59,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.38.65
 	github.com/creack/pty v1.1.11
+	github.com/docker/distribution v2.8.0+incompatible // indirect
 	github.com/docker/docker v20.10.10+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/ghodss/yaml v1.0.0
@@ -123,7 +124,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daviddengcn/go-colortext v0.0.0-20160507010035-511bcaf42ccd // indirect
 	github.com/docker/cli v20.10.10+incompatible // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/docker/go v1.5.1-1.0.20160303222718-d30aec9fd63c // indirect
 	github.com/docker/go-connections v0.4.0 // indirect

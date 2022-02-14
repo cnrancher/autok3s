@@ -1,11 +1,17 @@
 package native
 
 import (
+	"reflect"
+
 	"github.com/cnrancher/autok3s/pkg/types"
+	"github.com/cnrancher/autok3s/pkg/types/native"
+	"github.com/cnrancher/autok3s/pkg/utils"
 )
 
 const createUsageExample = `  autok3s -d create \
     --provider native \
+    --name <cluster name> \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --master-ips <master-ips> \
     --worker-ips <worker-ips>
@@ -13,10 +19,21 @@ const createUsageExample = `  autok3s -d create \
 
 const joinUsageExample = `  autok3s -d join \
     --provider native \
+    --name <cluster name> \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
-    --ip <existing server ip> \
     --master-ips <master-ips> \
     --worker-ips <worker-ips>
+`
+
+const deleteUsageExample = `  autok3s -d delete \
+    --provider native \
+    --name <cluster name>
+`
+
+const sshUsageExample = `  autok3s ssh \
+    --provider native \
+    --name <cluster name>
 `
 
 // GetUsageExample returns native usage example prompt.
@@ -26,6 +43,10 @@ func (p *Native) GetUsageExample(action string) string {
 		return createUsageExample
 	case "join":
 		return joinUsageExample
+	case "delete":
+		return deleteUsageExample
+	case "ssh":
+		return sshUsageExample
 	default:
 		return "not support"
 	}
@@ -60,12 +81,33 @@ func (p *Native) GetJoinFlags() []types.Flag {
 
 // GetSSHFlags returns native ssh flags.
 func (p *Native) GetSSHFlags() []types.Flag {
-	return []types.Flag{}
+	fs := []types.Flag{
+		{
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
+		},
+	}
+	fs = append(fs, p.GetSSHOptions()...)
+
+	return fs
 }
 
 // GetDeleteFlags return native delete flags.
 func (p *Native) GetDeleteFlags() []types.Flag {
-	return []types.Flag{}
+	return []types.Flag{
+		{
+			Name:      "name",
+			P:         &p.Name,
+			V:         p.Name,
+			Usage:     "Set the name of the kubeconfig context",
+			ShortHand: "n",
+			Required:  true,
+		},
+	}
 }
 
 // GetCredentialFlags return native credential flags.
@@ -90,6 +132,19 @@ func (p *Native) BindCredential() error {
 
 // MergeClusterOptions merge native cluster options.
 func (p *Native) MergeClusterOptions() error {
+	opt, err := p.MergeConfig()
+	if err != nil {
+		return err
+	}
+	stateOption, err := p.GetProviderOptions(opt)
+	if err != nil {
+		return err
+	}
+	option := stateOption.(*native.Options)
+	// merge options.
+	source := reflect.ValueOf(&p.Options).Elem()
+	target := reflect.ValueOf(option).Elem()
+	utils.MergeConfig(source, target)
 	return nil
 }
 

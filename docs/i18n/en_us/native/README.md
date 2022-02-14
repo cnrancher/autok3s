@@ -41,6 +41,7 @@ The following command creates a K3s cluster named "myk3s", and assign it with 2 
 autok3s -d create \
     --provider native \
     --name myk3s \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --master-ips <master-ip-1,master-ip-2> \
     --worker-ips <worker-ip-1,worker-ip-2>
@@ -58,6 +59,7 @@ The following command creates an HA K3s cluster named "myk3s", and assigns it wi
 autok3s -d create \
     --provider native \
     --name myk3s \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --master-ips <master-ip-1,master-ip-2,master-ip-3> \
     --cluster
@@ -78,6 +80,7 @@ Run the command below and create an HA K3s cluster with an external database:
 autok3s -d create \
     --provider native \
     --name myk3s \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
     --master-ips <master-ip-1,master-ip-2> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
@@ -95,8 +98,8 @@ The command below shows how to add 2 worker nodes for an existing K3s cluster na
 autok3s -d join \
     --provider native \
     --name myk3s \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
-    --ip <existing-k3s-server-public-ip> \
     --worker-ips <worker-ip-2,worker-ip-3>
 ```
 
@@ -112,8 +115,8 @@ Run the command below, to add 2 master nodes for an Embedded etcd HA cluster(emb
 autok3s -d join \
     --provider native \
     --name myk3s \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
-    --ip <existing-k3s-server-public-ip> \
     --master-ips <master-ip-2,master-ip-3>
 ```
 
@@ -125,10 +128,62 @@ Run the command below, to add 2 master nodes for an HA cluster with external dat
 autok3s -d join \
     --provider native \
     --name myk3s \
+    --ssh-user <ssh-user> \
     --ssh-key-path <ssh-key-path> \
-    --ip <existing-k3s-server-public-ip> \
     --master-ips <master-ip-2,master-ip-3> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
+```
+
+## Delete K3s Cluster
+
+This command will delete a k3s cluster named "myk3s".
+
+```bash
+autok3s -d delete --provider native --name myk3s
+```
+
+## List K3s Clusters
+
+This command will list the clusters that you have created on this machine.
+
+```bash
+autok3s list
+```
+
+```bash
+   NAME     REGION  PROVIDER  STATUS   MASTERS  WORKERS    VERSION
+  myk3s             native    Running  1        0        v1.22.6+k3s1
+```
+
+## Describe k3s cluster
+
+This command will show detail information of a specified cluster, such as instance status, node IP, kubelet version, etc.
+
+```bash
+autok3s describe -n <clusterName> -p native
+```
+
+> Note：There will be multiple results if using the same name to create with different providers, please use `-p <provider>` to choose a specified cluster. i.e. `autok3s describe cluster myk3s -p native`
+
+```bash
+Name: myk3s
+Provider: native
+Region:
+Zone:
+Master: 1
+Worker: 0
+Status: Running
+Version: v1.22.6+k3s1
+Nodes:
+  - internal-ip: [x.x.x.x]
+    external-ip: [x.x.x.x]
+    instance-status: -
+    instance-id: xxxxxxxxxx
+    roles: control-plane,master
+    status: Ready
+    hostname: test
+    container-runtime: containerd://1.5.9-k3s1
+    version: v1.22.6+k3s1
 ```
 
 ## Access K3s Cluster
@@ -163,8 +218,10 @@ When running `autok3s create` or `autok3s join` command, it takes effect with th
 autok3s -d create \
     --provider native \
     --name myk3s \
-    --master 1 \
-    --worker 1 \
+    --ssh-user <ssh-user> \
+    --ssh-key-path <ssh-key-path> \
+    --master-ips <master-ip-1,master-ip-2> \
+    --worker-ips <worker-ip-1,worker-ip-2> \
     --registry /etc/autok3s/registries.yaml
 ```
 
@@ -195,7 +252,7 @@ AutoK3s support 2 kinds of UI Component, including [kubernetes/dashboard](https:
 You can enable Kubernetes dashboard using following command.
 
 ```bash
-autok3s -d create -p aws \
+autok3s -d create -p native \
     ... \
     --enable dashboard
 ```
@@ -206,7 +263,7 @@ If you want to create user token to access dashboard, please following this [doc
 You can enable kube-explorer using following command.
 
 ```bash
-autok3s explorer --context myk3s.ap-southeast-2.aws --port 9999
+autok3s explorer --context myk3s --port 9999
 ```
 
 You can enable kube-explorer when creating K3s Cluster by UI.
