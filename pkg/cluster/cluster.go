@@ -182,11 +182,8 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	cluster.Status.Status = common.StatusRunning
 
 	// write current cluster to state file.
-	// native provider no need to operate .state file.
-	if p.Provider != "native" {
-		if err := common.DefaultDB.SaveCluster(cluster); err != nil {
-			return err
-		}
+	if err := common.DefaultDB.SaveCluster(cluster); err != nil {
+		return err
 	}
 
 	p.Logger.Infof("[%s] deploying additional manifests", p.Provider)
@@ -337,12 +334,9 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 	merged.Worker = strconv.Itoa(len(merged.WorkerNodes))
 	merged.Status.Status = common.StatusRunning
 	// write current cluster to state file.
-	// native provider no need to operate .state file.
-	if p.Provider != "native" {
-		if err = common.DefaultDB.SaveCluster(merged); err != nil {
-			p.Logger.Errorf("failed to save cluster state: %v", err)
-			return nil
-		}
+	if err = common.DefaultDB.SaveCluster(merged); err != nil {
+		p.Logger.Errorf("failed to save cluster state: %v", err)
+		return nil
 	}
 
 	p.Logger.Infof("[%s] successfully executed join k3s node logic", merged.Provider)
@@ -875,12 +869,14 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 		return nil, err
 	}
 	for _, node := range nodeList.Items {
-		var internalIP, hostName string
+		var internalIP, externalIP, hostName string
 		addressList := node.Status.Addresses
 		for _, address := range addressList {
 			switch address.Type {
 			case v1.NodeInternalIP:
 				internalIP = address.Address
+			case v1.NodeExternalIP:
+				externalIP = address.Address
 			case v1.NodeHostName:
 				hostName = address.Address
 			default:
@@ -893,6 +889,14 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 				if address == internalIP {
 					isCurrentInstance = true
 					break
+				}
+			}
+			if !isCurrentInstance {
+				for _, address := range n.ExternalIP {
+					if address == externalIP {
+						isCurrentInstance = true
+						break
+					}
 				}
 			}
 			if !isCurrentInstance {

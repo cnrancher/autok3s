@@ -72,7 +72,6 @@ func WriteLastLogs(t *tail.Tail, w http.ResponseWriter, f http.Flusher, logFileP
 // nolint: gocyclo
 func logHandler(apiOp *types.APIRequest) error {
 	cluster := apiOp.Request.URL.Query().Get("cluster")
-	provider := apiOp.Request.URL.Query().Get("provider")
 	w := apiOp.Response
 	f, ok := w.(http.Flusher)
 	if !ok {
@@ -85,31 +84,29 @@ func logHandler(apiOp *types.APIRequest) error {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	logFilePath := filepath.Join(common.GetLogPath(), cluster)
-	if provider != "native" {
-		state, err := common.DefaultDB.GetClusterByID(cluster)
+	state, err := common.DefaultDB.GetClusterByID(cluster)
+	if err != nil {
+		return err
+	}
+	if state == nil {
+		return apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
+	}
+
+	// show all logs if cluster is running
+	if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
+		// show all logs from file
+		logFile, err := os.Open(logFilePath)
 		if err != nil {
 			return err
 		}
-		if state == nil {
-			return apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
+		scanner := bufio.NewScanner(logFile)
+		for scanner.Scan() {
+			var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
+			_, _ = w.Write(bs.Bytes())
+			f.Flush()
 		}
-
-		// show all logs if cluster is running
-		if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
-			// show all logs from file
-			logFile, err := os.Open(logFilePath)
-			if err != nil {
-				return err
-			}
-			scanner := bufio.NewScanner(logFile)
-			for scanner.Scan() {
-				var bs = bytes.NewBufferString(fmt.Sprintf("data:%s\n\n", scanner.Text()))
-				_, _ = w.Write(bs.Bytes())
-				f.Flush()
-			}
-			_, _ = w.Write([]byte("event: close\ndata: close\n\n"))
-			return logFile.Close()
-		}
+		_, _ = w.Write([]byte("event: close\ndata: close\n\n"))
+		return logFile.Close()
 	}
 
 	t, err := NewTailLog(logFilePath)
