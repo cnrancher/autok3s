@@ -28,8 +28,8 @@ type Options struct {
 	EndpointURL             string   `json:"endpoint-url,omitempty" yaml:"endpoint-url,omitempty"`
 	SecurityGroupIds        string   `json:"security-group,omitempty" yaml:"security-group,omitempty"`
 	KeypairID               string   `json:"keypair-id,omitempty" yaml:"keypair-id,omitempty"`
-	VpcID                   string   `json:"vpc-id,omitempty" yaml:"vpc-id,omitempty"`
-	SubnetID                string   `json:"subnet-id,omitempty" yaml:"subnet-id,omitempty"`
+	VpcID                   string   `json:"vpc,omitempty" yaml:"vpc,omitempty"`
+	SubnetID                string   `json:"subnet,omitempty" yaml:"subnet,omitempty"`
 	ImageID                 string   `json:"image,omitempty" yaml:"image,omitempty"`
 	InstanceType            string   `json:"instance-type,omitempty" yaml:"instance-type,omitempty"`
 	SystemDiskType          string   `json:"disk-category,omitempty" yaml:"disk-category,omitempty"`

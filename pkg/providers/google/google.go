@@ -24,6 +24,7 @@ import (
 	"golang.org/x/oauth2/google"
 	raw "google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 const (
@@ -524,9 +525,9 @@ func (p *Google) startInstance(num int, master bool) error {
 	for i := 0; i < num; i++ {
 		var instanceName string
 		if master {
-			instanceName = strings.ReplaceAll(fmt.Sprintf("%s-%d", fmt.Sprintf(common.MasterInstanceName, p.ContextName), i), ".", "-")
+			instanceName = strings.ReplaceAll(fmt.Sprintf("%s-%s", fmt.Sprintf(common.MasterInstanceName, p.Name), rand.String(5)), ".", "-")
 		} else {
-			instanceName = strings.ReplaceAll(fmt.Sprintf("%s-%d", fmt.Sprintf(common.WorkerInstanceName, p.ContextName), i), ".", "-")
+			instanceName = strings.ReplaceAll(fmt.Sprintf("%s-%s", fmt.Sprintf(common.WorkerInstanceName, p.Name), rand.String(5)), ".", "-")
 		}
 		instance.Name = instanceName
 		diskName := fmt.Sprintf("%s-disk", instance.Name)
