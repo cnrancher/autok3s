@@ -54,7 +54,7 @@ replace (
 )
 
 require (
-	github.com/Jason-ZW/autok3s-geo v0.0.0-20220119051030-70cab02ab606
+	github.com/Jason-ZW/autok3s-geo v0.0.0-20220207061948-3abc3068deea
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.38.65
