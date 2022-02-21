@@ -118,9 +118,8 @@ func (p *Native) GetCredentialFlags() []types.Flag {
 // GetSSHConfig return native ssh config.
 func (p *Native) GetSSHConfig() *types.SSH {
 	ssh := &types.SSH{
-		SSHUser:    defaultUser,
-		SSHPort:    "22",
-		SSHKeyPath: defaultSSHKeyPath,
+		SSHUser: defaultUser,
+		SSHPort: "22",
 	}
 	return ssh
 }
