@@ -121,6 +121,7 @@ func (p *Native) CreateCheck() error {
 	if p.MasterIps == "" {
 		return fmt.Errorf("[%s] cluster must have one master when create", p.GetProviderName())
 	}
+
 	// check file exists.
 	if p.SSHKeyPath != "" {
 		sshPrivateKey := p.SSHKeyPath
