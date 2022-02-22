@@ -1,8 +1,8 @@
 package harvester
 
 type Options struct {
-	KubeConfigContent string `json:"kube-config-content,omitempty" yaml:"kube-config-content,omitempty"`
-	KubeConfigFile    string `json:"kube-config-file,omitempty" yaml:"kube-config-file,omitempty"`
+	KubeConfigContent string `json:"kubeconfig-content,omitempty" yaml:"kubeconfig-content,omitempty"`
+	KubeConfigFile    string `json:"kubeconfig-file,omitempty" yaml:"kubeconfig-file,omitempty"`
 	VMNamespace       string `json:"vm-namespace,omitempty" yaml:"vm-namespace,omitempty"`
 	CPUCount          int    `json:"cpu-count,omitempty" yaml:"cpu-count,omitempty"`
 	MemorySize        string `json:"memory-size,omitempty" yaml:"memory-size,omitempty"`
