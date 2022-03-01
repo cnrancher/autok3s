@@ -81,15 +81,13 @@ autok3s -d serve
 
 ## Demo Video
 
-In the demo, we install K3s onto AWS EC2 machines in around 1 minute.
+In the demo, we install K3s by k3d provider in around 1 minute, and
+we can manage K3s clusters by kube-explorer dashboard.
 
 Watch the demo:
 
-![](docs/assets/autok3s-demo-min.gif)
+![](docs/assets/autok3s-v0.4.7-demo.gif)
 
-In the demo, we can manage multiple K3s clusters by kube-explorer dashboard.
-
-![](docs/assets/kube-explorer-demo.gif)
 
 ## Developers' Guide
 
