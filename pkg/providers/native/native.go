@@ -136,6 +136,17 @@ func (p *Native) CreateCheck() error {
 			return err
 		}
 	}
+
+	// check name exist.
+	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+	if err != nil {
+		return err
+	}
+
+	if state != nil && state.Status != common.StatusFailed {
+		return fmt.Errorf("[%s] cluster %s is already exist", p.GetProviderName(), p.Name)
+	}
+
 	return nil
 }
 
@@ -290,6 +301,7 @@ func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 		Metadata: p.Metadata,
 		Options:  p.Options,
 		Status:   p.Status,
+		SSH:      *ssh,
 	}, nil
 }
 

@@ -39,10 +39,8 @@ func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	}
 	id := p.GenerateClusterName()
 	// save credential config.
-	if providerName != "native" {
-		if err = p.BindCredential(); err != nil {
-			return types.APIObject{}, err
-		}
+	if err = p.BindCredential(); err != nil {
+		return types.APIObject{}, err
 	}
 
 	if err := p.CreateCheck(); err != nil {
