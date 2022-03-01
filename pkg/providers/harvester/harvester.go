@@ -527,18 +527,20 @@ func (h *Harvester) waitForInstanceIP() error {
 		}
 
 		for _, vmi := range vmiList.Items {
-			addr := strings.Split(vmi.Status.Interfaces[0].IP, "/")[0]
-			if ip := net.ParseIP(addr); ip == nil || ip.To4() == nil {
-				return false, nil
-			}
-			if addr != "" {
-				if value, ok := h.M.Load(vmi.Name); ok {
-					v := value.(types.Node)
-					v.PublicIPAddress = []string{addr}
-					v.InternalIPAddress = []string{addr}
-					h.M.Store(vmi.Name, v)
+			if len(vmi.Status.Interfaces) > 0 {
+				addr := strings.Split(vmi.Status.Interfaces[0].IP, "/")[0]
+				if ip := net.ParseIP(addr); ip == nil || ip.To4() == nil {
+					return false, nil
 				}
-				continue
+				if addr != "" {
+					if value, ok := h.M.Load(vmi.Name); ok {
+						v := value.(types.Node)
+						v.PublicIPAddress = []string{addr}
+						v.InternalIPAddress = []string{addr}
+						h.M.Store(vmi.Name, v)
+					}
+					continue
+				}
 			}
 			return false, nil
 		}
