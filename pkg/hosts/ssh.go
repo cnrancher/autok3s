@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -19,6 +18,12 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
+
+var defaultBackoff = wait.Backoff{
+	Duration: 30 * time.Second,
+	Factor:   1,
+	Steps:    5,
+}
 
 // SSHDialer struct for ssh dialer.
 type SSHDialer struct {
@@ -86,7 +91,7 @@ func NewSSHDialer(n *types.Node, timeout bool) (*SSHDialer, error) {
 		}
 	}
 
-	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
+	if err := wait.ExponentialBackoff(defaultBackoff, func() (bool, error) {
 		c, err := d.Dial(timeout)
 		if err != nil {
 			return false, nil
@@ -104,7 +109,7 @@ func NewSSHDialer(n *types.Node, timeout bool) (*SSHDialer, error) {
 
 // Dial handshake with ssh address.
 func (d *SSHDialer) Dial(t bool) (*ssh.Client, error) {
-	timeout := time.Duration((common.Backoff.Steps - 1) * int(common.Backoff.Duration))
+	timeout := 30 * time.Second
 	if !t {
 		timeout = 0
 	}

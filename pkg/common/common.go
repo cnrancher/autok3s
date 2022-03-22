@@ -50,7 +50,7 @@ var (
 	Debug = false
 	// CfgPath default config file dir.
 	CfgPath = filepath.Join(utils.UserHome(), ".autok3s")
-	// Backoff default backoff variable, retry 5 times, total 120 seconds.
+	// Backoff default backoff variable, retry 20 times, total 570 seconds.
 	Backoff = wait.Backoff{
 		Duration: 30 * time.Second,
 		Factor:   1,
