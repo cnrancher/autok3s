@@ -30,7 +30,6 @@ ssh_pwauth: True`
 ssh_authorized_keys:
 - >-
   %s`
-	cloudInitNoCloudLimitSize = 2048
 )
 
 func (h *Harvester) buildCloudInit(name string) (*builder.CloudInitSource, *corev1.Secret, error) {
@@ -49,20 +48,12 @@ func (h *Harvester) buildCloudInit(name string) (*builder.CloudInitSource, *core
 		Data: map[string][]byte{},
 	}
 	if userData != "" {
-		if len(userData) > cloudInitNoCloudLimitSize {
-			cloudConfigSecret.Data["userdata"] = []byte(userData)
-			cloudInitSource.UserDataSecretName = cloudConfigSecret.Name
-		} else {
-			cloudInitSource.UserData = userData
-		}
+		cloudConfigSecret.Data["userdata"] = []byte(userData)
+		cloudInitSource.UserDataSecretName = cloudConfigSecret.Name
 	}
 	if networkData != "" {
-		if len(userData) > cloudInitNoCloudLimitSize {
-			cloudConfigSecret.Data["networkdata"] = []byte(networkData)
-			cloudInitSource.NetworkDataSecretName = cloudConfigSecret.Name
-		} else {
-			cloudInitSource.NetworkData = networkData
-		}
+		cloudConfigSecret.Data["networkdata"] = []byte(networkData)
+		cloudInitSource.NetworkDataSecretName = cloudConfigSecret.Name
 	}
 	if len(cloudConfigSecret.Data) == 0 {
 		cloudConfigSecret = nil
