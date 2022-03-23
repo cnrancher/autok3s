@@ -33,6 +33,8 @@ const (
 	StatusFailed = "Failed"
 	// StatusUpgrading instance upgrading status.
 	StatusUpgrading = "Upgrading"
+	// StatusRemoving instance removing status.
+	StatusRemoving = "Removing"
 	// UsageInfoTitle usage info title.
 	UsageInfoTitle = "=========================== Prompt Info ==========================="
 	// UsageContext usage info context.

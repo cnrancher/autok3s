@@ -561,8 +561,20 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 			// remove log file.
 			_ = os.Remove(filepath.Join(common.GetLogPath(), p.ContextName))
 		}()
+		state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+		if err != nil && !force {
+			return fmt.Errorf("[%s] failed to get cluster %s, got error %v", p.Provider, p.Name, err)
+		}
 		p.Logger = common.NewLogger(common.Debug, logFile)
 		p.Logger.Infof("[%s] begin to delete cluster %v...", p.Provider, p.Name)
+		if state != nil {
+			state.Status = common.StatusRemoving
+			err = common.DefaultDB.SaveClusterState(state)
+			if err != nil && !force {
+				return fmt.Errorf("[%s] failed to update cluster %s status to removing, got error %v", p.Provider, p.Name, err)
+			}
+		}
+
 		contextName, err := delete(force)
 		if err != nil {
 			return err
