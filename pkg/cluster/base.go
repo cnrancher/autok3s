@@ -312,7 +312,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 		}
 	}()
 	p.Logger = common.NewLogger(common.Debug, logFile)
-	p.Logger.Infof("[%s] executing create logic...", p.Provider)
+	p.Logger.Infof("[%s] begin to create cluster %s...", p.Provider, p.Name)
 	c.Status.Status = common.StatusCreating
 	// save cluster.
 	err = common.DefaultDB.SaveCluster(c)
@@ -417,7 +417,7 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 	}()
 
 	p.Logger = common.NewLogger(common.Debug, logFile)
-	p.Logger.Infof("[%s] executing join logic...", p.Provider)
+	p.Logger.Infof("[%s] begin to join nodes for %v...", p.Provider, p.Name)
 	state.Status = common.StatusUpgrading
 	err = common.DefaultDB.SaveClusterState(state)
 	if err != nil {
@@ -562,7 +562,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 			_ = os.Remove(filepath.Join(common.GetLogPath(), p.ContextName))
 		}()
 		p.Logger = common.NewLogger(common.Debug, logFile)
-		p.Logger.Infof("[%s] executing delete cluster logic...", p.Provider)
+		p.Logger.Infof("[%s] begin to delete cluster %v...", p.Provider, p.Name)
 		contextName, err := delete(force)
 		if err != nil {
 			return err

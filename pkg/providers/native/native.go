@@ -264,11 +264,13 @@ func (p *Native) GetProviderOptions(opt []byte) (interface{}, error) {
 func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 	if p.MasterIps != "" {
 		masterIps := strings.Split(p.MasterIps, ",")
+		p.Master = strconv.Itoa(len(masterIps))
 		p.syncNodesMap(masterIps, true, ssh)
 	}
 
 	if p.WorkerIps != "" {
 		workerIps := strings.Split(p.WorkerIps, ",")
+		p.Worker = strconv.Itoa(len(workerIps))
 		p.syncNodesMap(workerIps, false, ssh)
 	}
 
@@ -279,23 +281,16 @@ func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 			nodes = p.Status.MasterNodes
 		}
 		index, b := putil.IsExistedNodes(nodes, v.InstanceID)
-		if !b {
-			nodes = append(nodes, v)
-		} else {
+		if b {
 			nodes[index].Current = false
 			nodes[index].RollBack = false
+			v.Current = false
+			v.RollBack = false
+			p.M.Store(v.InstanceID, v)
 		}
 
-		if v.Master {
-			p.Status.MasterNodes = nodes
-		} else {
-			p.Status.WorkerNodes = nodes
-		}
 		return true
 	})
-
-	p.Master = strconv.Itoa(len(p.MasterNodes))
-	p.Worker = strconv.Itoa(len(p.WorkerNodes))
 
 	return &types.Cluster{
 		Metadata: p.Metadata,
@@ -306,34 +301,6 @@ func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 }
 
 func (p *Native) syncNodes() error {
-	masterNodes := p.Status.MasterNodes
-	for _, node := range masterNodes {
-		if value, ok := p.M.Load(node.InstanceID); ok {
-			v := value.(types.Node)
-			_, b := putil.IsExistedNodes(masterNodes, v.InstanceID)
-			if b {
-				v.Current = false
-				v.RollBack = false
-				p.M.Store(node.InstanceID, v)
-				continue
-			}
-		}
-	}
-
-	workerNodes := p.Status.MasterNodes
-	for _, node := range workerNodes {
-		if value, ok := p.M.Load(node.InstanceID); ok {
-			v := value.(types.Node)
-			_, b := putil.IsExistedNodes(workerNodes, v.InstanceID)
-			if b {
-				v.Current = false
-				v.RollBack = false
-				p.M.Store(node.InstanceID, v)
-				continue
-			}
-		}
-	}
-
 	return nil
 }
 
