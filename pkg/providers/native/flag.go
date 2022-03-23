@@ -1,11 +1,12 @@
 package native
 
 import (
-	"reflect"
+	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
-	"github.com/cnrancher/autok3s/pkg/utils"
+
+	"github.com/rancher/wrangler/pkg/slice"
 )
 
 const createUsageExample = `  autok3s -d create \
@@ -141,9 +142,37 @@ func (p *Native) MergeClusterOptions() error {
 	}
 	option := stateOption.(*native.Options)
 	// merge options.
-	source := reflect.ValueOf(&p.Options).Elem()
-	target := reflect.ValueOf(option).Elem()
-	utils.MergeConfig(source, target)
+	if p.MasterIps != "" {
+		mergedMasterIps := []string{}
+		masterIps := []string{}
+		if option.MasterIps != "" {
+			masterIps = strings.Split(option.MasterIps, ",")
+		}
+		optionMasterIps := strings.Split(p.MasterIps, ",")
+		for _, ip := range optionMasterIps {
+			if !slice.ContainsString(masterIps, ip) {
+				mergedMasterIps = append(mergedMasterIps, ip)
+			}
+		}
+		p.MasterIps = strings.Join(append(masterIps, mergedMasterIps...), ",")
+	}
+
+	if p.WorkerIps != "" {
+		mergedWorkerIps := []string{}
+		workerIps := []string{}
+		if option.WorkerIps != "" {
+			workerIps = strings.Split(option.WorkerIps, ",")
+		}
+		optionWorkerIps := strings.Split(p.WorkerIps, ",")
+		for _, ip := range optionWorkerIps {
+			if !slice.ContainsString(workerIps, ip) {
+				mergedWorkerIps = append(mergedWorkerIps, ip)
+			}
+		}
+
+		p.WorkerIps = strings.Join(append(workerIps, mergedWorkerIps...), ",")
+	}
+
 	return nil
 }
 
