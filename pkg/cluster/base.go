@@ -146,6 +146,18 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Usage: "For Chinese users, set INSTALL_K3S_MIRROR=cn to use the mirror address to accelerate k3s binary file download",
 		},
 		{
+			Name:  "docker-arg",
+			P:     &p.DockerArg,
+			V:     p.DockerArg,
+			Usage: "Parameter for docker script, wrapped in quotes.  e.g.(--docker-arg 'P1=\"xxxx\" P2=\"xxxx\"') for multiple parameters, P1 P2 are the parameters in docker install script",
+		},
+		{
+			Name:  "docker-script",
+			P:     &p.DockerScript,
+			V:     p.DockerScript,
+			Usage: fmt.Sprintf("Change the default docker install script address, default is : %s", dockerInstallScript),
+		},
+		{
 			Name:  "master-extra-args",
 			P:     &p.MasterExtraArgs,
 			V:     p.MasterExtraArgs,
@@ -532,6 +544,12 @@ func (p *ProviderBase) overwriteMetadata(matched *common.ClusterState) {
 	}
 	if p.InstallScript == "" {
 		p.InstallScript = matched.InstallScript
+	}
+	if p.DockerArg == "" {
+		p.DockerArg = matched.DockerArg
+	}
+	if p.DockerScript == "" {
+		p.DockerScript = matched.DockerScript
 	}
 	if p.Registry == "" {
 		p.Registry = matched.Registry
