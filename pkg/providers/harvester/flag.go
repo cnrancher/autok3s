@@ -126,16 +126,18 @@ func (h *Harvester) MergeClusterOptions() error {
 	if err != nil {
 		return err
 	}
-	stateOption, err := h.GetProviderOptions(opt)
-	if err != nil {
-		return err
-	}
-	option := stateOption.(*harvestertypes.Options)
+	if opt != nil {
+		stateOption, err := h.GetProviderOptions(opt)
+		if err != nil {
+			return err
+		}
+		option := stateOption.(*harvestertypes.Options)
 
-	// merge options.
-	source := reflect.ValueOf(&h.Options).Elem()
-	target := reflect.ValueOf(option).Elem()
-	utils.MergeConfig(source, target)
+		// merge options.
+		source := reflect.ValueOf(&h.Options).Elem()
+		target := reflect.ValueOf(option).Elem()
+		utils.MergeConfig(source, target)
+	}
 
 	return nil
 }

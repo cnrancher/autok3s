@@ -41,7 +41,7 @@ func listCluster() {
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetHeader([]string{"Name", "Region", "Provider", "Status", "Masters", "Workers", "Version"})
 
-	filters, err := cluster.ListClusters()
+	filters, err := cluster.ListClusters("")
 	if err != nil {
 		logrus.Fatalln(err)
 	}

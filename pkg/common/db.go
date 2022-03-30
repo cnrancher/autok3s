@@ -50,6 +50,7 @@ var (
 				ssh_agent_auth           bool,
 				manifests                TEXT,
 				enable                   TEXT,
+				standalone               bool,
 				unique (name, provider)
 			);`,
 		`CREATE TABLE IF NOT EXISTS templates

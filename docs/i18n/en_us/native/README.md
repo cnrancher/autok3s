@@ -103,6 +103,20 @@ autok3s -d join \
     --worker-ips <worker-ip-2,worker-ip-3>
 ```
 
+If you want to join a worker node to an existing K3s cluster which is not handled by AutoK3s, please use the following command.
+
+> PS: The existing cluster is not handled by AutoK3s, so it's better to use the same ssh connect information for both master node and worker node so that we can access both VM with the same ssh config.
+
+```bash
+autok3s -d join \
+    --provider native \
+    --name myk3s \
+    --ip <master-ip> \
+    --ssh-user <ssh-user> \
+    --ssh-key-path <ssh-key-path> \
+    --worker-ips <worker-ip>
+```
+
 ### HA Cluster
 
 The commands to add one or more nodes for an existing HA K3s cluster varies based on the types of HA cluster. Please choose one of the following commands to run.
@@ -141,6 +155,8 @@ This command will delete a k3s cluster named "myk3s".
 ```bash
 autok3s -d delete --provider native --name myk3s
 ```
+
+> PS: If the cluster is an existing K3s cluster which is not handled by AutoK3s, we won't uninstall it when delete the cluster from AutoK3s.
 
 ## List K3s Clusters
 
@@ -200,6 +216,22 @@ In the scenario of multiple clusters, the access to different clusters can be co
 ```bash
 autok3s kubectl config get-contexts
 autok3s kubectl config use-context <context>
+```
+
+## SSH K3s Cluster's Node
+
+Login to a specific k3s cluster node via ssh, i.e. myk3s.
+
+```bash
+autok3s ssh --provider native --name myk3s
+```
+
+> If the cluster is an existing one which is not handled by AutoK3s, you can't use Execute Shell from UI, but you can access the cluster nodes via CLI.
+
+If the ssh config is different between the existing nodes and current nodes(joined with AutoK3s), you can use the command below to switch the ssh config
+
+```bash
+autok3s ssh --provider native --name myk3s <ip> --ssh-user ubuntu --ssh-key-path ~/.ssh/id_rsa
 ```
 
 ## Other Usages

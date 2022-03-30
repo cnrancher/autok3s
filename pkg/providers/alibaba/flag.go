@@ -96,17 +96,19 @@ func (p *Alibaba) MergeClusterOptions() error {
 	if err != nil {
 		return err
 	}
-	stateOption, err := p.GetProviderOptions(opt)
-	if err != nil {
-		return err
-	}
-	option := stateOption.(*alibaba.Options)
-	p.CloudControllerManager = option.CloudControllerManager
+	if opt != nil {
+		stateOption, err := p.GetProviderOptions(opt)
+		if err != nil {
+			return err
+		}
+		option := stateOption.(*alibaba.Options)
+		p.CloudControllerManager = option.CloudControllerManager
 
-	// merge options.
-	source := reflect.ValueOf(&p.Options).Elem()
-	target := reflect.ValueOf(option).Elem()
-	utils.MergeConfig(source, target)
+		// merge options.
+		source := reflect.ValueOf(&p.Options).Elem()
+		target := reflect.ValueOf(option).Elem()
+		utils.MergeConfig(source, target)
+	}
 	return nil
 }
 
