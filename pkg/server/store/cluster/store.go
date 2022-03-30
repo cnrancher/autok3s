@@ -64,7 +64,9 @@ func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 // List returns clusters as list.
 func (c *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	list := types.APIObjectList{}
-	clusterList, err := cluster.ListClusters()
+	queryParams := apiOp.Request.URL.Query()
+	provider := queryParams.Get("provider")
+	clusterList, err := cluster.ListClusters(provider)
 	if err != nil {
 		return list, err
 	}

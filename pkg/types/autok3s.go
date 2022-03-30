@@ -42,8 +42,8 @@ type Metadata struct {
 	DockerArg       string      `json:"docker-arg,omitempty" yaml:"docker-arg,omitempty"`
 	DockerScript    string      `json:"docker-script,omitempty" yaml:"docker-script,omitempty"`
 	Network         string      `json:"network,omitempty" yaml:"network,omitempty"`
-	UI              bool        `json:"ui" yaml:"ui"` // Deprecated
-	Cluster         bool        `json:"cluster" yaml:"cluster"`
+	UI              bool        `json:"ui" yaml:"ui" gorm:"type:bool"` // Deprecated
+	Cluster         bool        `json:"cluster" yaml:"cluster" gorm:"type:bool"`
 	ContextName     string      `json:"context-name" yaml:"context-name"`
 	RegistryContent string      `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
 	Manifests       string      `json:"manifests,omitempty" yaml:"manifests,omitempty"`
@@ -55,6 +55,7 @@ type Status struct {
 	Status      string `json:"status,omitempty"`
 	MasterNodes []Node `json:"master-nodes,omitempty"`
 	WorkerNodes []Node `json:"worker-nodes,omitempty"`
+	Standalone  bool   `json:"standalone"`
 }
 
 // Node struct for node.
@@ -69,6 +70,7 @@ type Node struct {
 	Master            bool     `json:"master,omitempty" yaml:"master,omitempty"`
 	RollBack          bool     `json:"-" yaml:"-"`
 	Current           bool     `json:"-" yaml:"-"`
+	Standalone        bool     `json:"standalone"`
 }
 
 // SSH struct for ssh.
@@ -129,6 +131,7 @@ type ClusterNode struct {
 	ContainerRuntimeVersion string   `json:"containerRuntimeVersion,omitempty"`
 	Version                 string   `json:"version,omitempty"`
 	Master                  bool     `json:"-"`
+	Standalone              bool     `json:"standalone"`
 }
 
 // StringArray gorm custom string array flag type.

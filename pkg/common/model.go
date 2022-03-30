@@ -18,6 +18,7 @@ type ClusterState struct {
 	types.Metadata `json:",inline" mapstructure:",squash" gorm:"embedded"`
 	Options        []byte `json:"options,omitempty" gorm:"type:bytes"`
 	Status         string `json:"status" yaml:"status"`
+	Standalone     bool   `json:"standalone" yaml:"standalone" gorm:"type:bool"`
 	MasterNodes    []byte `json:"master-nodes,omitempty" gorm:"type:bytes"`
 	WorkerNodes    []byte `json:"worker-nodes,omitempty" gorm:"type:bytes"`
 	types.SSH      `json:",inline" mapstructure:",squash" gorm:"embedded"`
@@ -334,6 +335,7 @@ func (d *Store) SaveCluster(cluster *types.Cluster) error {
 		MasterNodes: masterNodeBytes,
 		WorkerNodes: workerNodeBytes,
 		SSH:         cluster.SSH,
+		Standalone:  cluster.Status.Standalone,
 	}
 
 	if result.RowsAffected == 0 {
@@ -373,9 +375,13 @@ func (d *Store) DeleteCluster(name, provider string) error {
 }
 
 // ListCluster list cluster.
-func (d *Store) ListCluster() ([]*ClusterState, error) {
+func (d *Store) ListCluster(provider string) ([]*ClusterState, error) {
 	clusterList := make([]*ClusterState, 0)
-	result := d.DB.Find(&clusterList)
+	db := d.DB
+	if provider != "" {
+		db = db.Where("provider = ?", provider)
+	}
+	result := db.Find(&clusterList)
 	return clusterList, result.Error
 }
 

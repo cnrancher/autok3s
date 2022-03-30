@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,6 +18,10 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
 	"github.com/cnrancher/autok3s/pkg/utils"
+
+	"github.com/rancher/wrangler/pkg/slice"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // providerName is the name of this provider.
@@ -99,7 +104,28 @@ func (p *Native) JoinK3sNode() (err error) {
 		p.SSHKeyPath = defaultSSHKeyPath
 	}
 
-	return p.JoinNodes(p.assembleNodeStatus, p.syncNodes, false, p.rollbackInstance)
+	c, err := p.assembleNodeStatus(&p.SSH)
+	if err != nil {
+		return err
+	}
+
+	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+	if err != nil {
+		return err
+	}
+	if state == nil && p.IP != "" {
+		// if cluster is not exist then save it
+		c.Status.Status = common.StatusRunning
+		c.Status.Standalone = true
+		err = common.DefaultDB.SaveCluster(c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return p.JoinNodes(func(ssh *types.SSH) (*types.Cluster, error) {
+		return c, nil
+	}, p.syncNodes, false, p.rollbackInstance)
 }
 
 func (p *Native) rollbackInstance(ids []string) error {
@@ -119,7 +145,7 @@ func (p *Native) rollbackInstance(ids []string) error {
 // CreateCheck check create command and flags.
 func (p *Native) CreateCheck() error {
 	if p.MasterIps == "" {
-		return fmt.Errorf("[%s] cluster must have one master when create", p.GetProviderName())
+		return fmt.Errorf("[%s] calling preflight error: cluster must have one master when create", p.GetProviderName())
 	}
 
 	// check file exists.
@@ -128,7 +154,7 @@ func (p *Native) CreateCheck() error {
 		if strings.HasPrefix(sshPrivateKey, "~/") {
 			baseDir := getUserHomeDir()
 			if baseDir == "" {
-				return fmt.Errorf("[%s] failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
+				return fmt.Errorf("[%s] calling preflight error: failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
 			}
 			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
 		}
@@ -144,7 +170,7 @@ func (p *Native) CreateCheck() error {
 	}
 
 	if state != nil && state.Status != common.StatusFailed {
-		return fmt.Errorf("[%s] cluster %s is already exist", p.GetProviderName(), p.Name)
+		return fmt.Errorf("[%s] calling preflight error: cluster %s is already exist", p.GetProviderName(), p.Name)
 	}
 
 	return nil
@@ -153,7 +179,15 @@ func (p *Native) CreateCheck() error {
 // JoinCheck check join command and flags.
 func (p *Native) JoinCheck() error {
 	if p.MasterIps == "" && p.WorkerIps == "" {
-		return fmt.Errorf("[%s] cluster must have one node when join", p.GetProviderName())
+		return fmt.Errorf("[%s] calling preflight error: cluster must have one node when join", p.GetProviderName())
+	}
+	// check --ip if cluster is not exist(for previous version)
+	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+	if err != nil {
+		return err
+	}
+	if state == nil && p.IP == "" {
+		return fmt.Errorf("[%s] calling preflight error: cluster %s is not exist", p.Provider, p.Name)
 	}
 	// check file exists.
 	if p.SSHKeyPath != "" {
@@ -161,7 +195,7 @@ func (p *Native) JoinCheck() error {
 		if strings.HasPrefix(sshPrivateKey, "~/") {
 			baseDir := getUserHomeDir()
 			if baseDir == "" {
-				return fmt.Errorf("[%s] failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
+				return fmt.Errorf("[%s] calling preflight error: failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
 			}
 			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
 		}
@@ -184,7 +218,7 @@ func (p *Native) SSHK3sNode(ip string) error {
 		Options:  p.Options,
 		Status:   p.Status,
 	}
-	return p.Connect(ip, &p.SSH, c, p.getInstanceNodes, p.isInstanceRunning, nil)
+	return p.Connect(ip, &p.SSH, c, p.syncInstanceNodes, p.isInstanceRunning, nil)
 }
 
 // DescribeCluster describe cluster info.
@@ -194,7 +228,7 @@ func (p *Native) DescribeCluster(kubecfg string) *types.ClusterInfo {
 		Name:     p.Name,
 		Provider: p.GetProviderName(),
 	}
-	return p.Describe(kubecfg, c, p.getInstanceNodes)
+	return p.Describe(kubecfg, c, p.syncInstanceNodes)
 }
 
 // GetCluster returns cluster status.
@@ -208,7 +242,7 @@ func (p *Native) GetCluster(kubecfg string) *types.ClusterInfo {
 		return c
 	}
 
-	return p.GetClusterStatus(kubecfg, c, p.getInstanceNodes)
+	return p.GetClusterStatus(kubecfg, c, p.syncInstanceNodes)
 }
 
 // IsClusterExist determine if the cluster exists.
@@ -320,6 +354,80 @@ func (p *Native) syncNodesMap(ipList []string, master bool, ssh *types.SSH) {
 	}
 }
 
+func (p *Native) syncInstanceNodes() ([]types.Node, error) {
+	nodes, err := p.getInstanceNodes()
+	if err != nil {
+		return nil, err
+	}
+	client, err := cluster.GetClusterConfig(p.ContextName, filepath.Join(common.CfgPath, common.KubeCfgFile))
+	if err != nil {
+		return nodes, nil
+	}
+	nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil || nodeList == nil {
+		return nodes, nil
+	}
+	if len(nodes) == len(nodeList.Items) {
+		return nodes, nil
+	}
+	masterNodes := p.Status.MasterNodes
+	workerNodes := p.Status.WorkerNodes
+	for _, node := range nodeList.Items {
+		var internalIP, externalIP string
+		addressList := node.Status.Addresses
+		for _, address := range addressList {
+			switch address.Type {
+			case v1.NodeInternalIP:
+				internalIP = address.Address
+			case v1.NodeExternalIP:
+				externalIP = address.Address
+			default:
+				continue
+			}
+		}
+		isExists := false
+		for _, insNode := range nodes {
+			if slice.ContainsString(insNode.PublicIPAddress, externalIP) {
+				isExists = true
+				break
+			}
+		}
+		if !isExists {
+			// save node information
+			_, isMaster := node.Labels["node-role.kubernetes.io/master"]
+			insID := strings.Replace(externalIP, ".", "-", -1)
+			instanceNode := types.Node{
+				InstanceID:        insID,
+				InstanceStatus:    "-",
+				InternalIPAddress: []string{internalIP},
+				PublicIPAddress:   []string{externalIP},
+				Master:            isMaster,
+				Standalone:        true,
+			}
+			if isMaster {
+				masterNodes = append(masterNodes, instanceNode)
+			} else {
+				workerNodes = append(workerNodes, instanceNode)
+			}
+			nodes = append(nodes, instanceNode)
+		}
+	}
+	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+	if err != nil {
+		return nodes, err
+	}
+
+	// sync cluster nodes
+	masterBytes, _ := json.Marshal(masterNodes)
+	workerBytes, _ := json.Marshal(workerNodes)
+	state.MasterNodes = masterBytes
+	state.WorkerNodes = workerBytes
+	state.Master = strconv.Itoa(len(masterNodes))
+	state.Worker = strconv.Itoa(len(workerNodes))
+	err = common.DefaultDB.SaveClusterState(state)
+	return nodes, err
+}
+
 func (p *Native) getInstanceNodes() ([]types.Node, error) {
 	nodes := []types.Node{}
 	_, err := p.MergeConfig()
@@ -333,6 +441,11 @@ func (p *Native) getInstanceNodes() ([]types.Node, error) {
 }
 
 func (p *Native) uninstallCluster(f bool) (string, error) {
+	// don't uninstall cluster if it's not handled by autok3s
+	if p.Status.Standalone {
+		p.Logger.Infof("[%s] cluster %s is not handled by autok3s, we won't uninstall the cluster automatically", p.GetProviderName(), p.Name)
+		return p.ContextName, nil
+	}
 	warnMsg := p.UninstallK3sNodes(p.Status.MasterNodes)
 	warnMsg = append(warnMsg, p.UninstallK3sNodes(p.Status.WorkerNodes)...)
 	if len(warnMsg) > 0 {

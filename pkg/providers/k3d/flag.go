@@ -195,16 +195,18 @@ func (p *K3d) MergeClusterOptions() error {
 	if err != nil {
 		return err
 	}
-	stateOption, err := p.GetProviderOptions(opt)
-	if err != nil {
-		return err
-	}
-	option := stateOption.(*k3d.Options)
+	if opt != nil {
+		stateOption, err := p.GetProviderOptions(opt)
+		if err != nil {
+			return err
+		}
+		option := stateOption.(*k3d.Options)
 
-	// merge options.
-	source := reflect.ValueOf(&p.Options).Elem()
-	target := reflect.ValueOf(option).Elem()
-	utils.MergeConfig(source, target)
+		// merge options.
+		source := reflect.ValueOf(&p.Options).Elem()
+		target := reflect.ValueOf(option).Elem()
+		utils.MergeConfig(source, target)
+	}
 
 	return nil
 }

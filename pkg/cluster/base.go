@@ -450,7 +450,8 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 	}
 
 	p.syncExistNodes()
-	c.Status = p.Status
+	c.Status.MasterNodes = p.Status.MasterNodes
+	c.Status.WorkerNodes = p.Status.WorkerNodes
 
 	added := &types.Cluster{
 		Metadata: c.Metadata,
@@ -498,11 +499,12 @@ func (p *ProviderBase) MergeConfig() ([]byte, error) {
 		return nil, err
 	}
 	if state == nil {
-		return nil, fmt.Errorf("[%s] cluster %s is not exist", p.Provider, p.Name)
+		return nil, nil
 	}
 	p.overwriteMetadata(state)
 	p.Status = types.Status{
-		Status: state.Status,
+		Status:     state.Status,
+		Standalone: state.Standalone,
 	}
 	masterNodes := make([]types.Node, 0)
 	err = json.Unmarshal(state.MasterNodes, &masterNodes)
@@ -630,6 +632,8 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 func (p *ProviderBase) GetClusterStatus(kubeCfg string, c *types.ClusterInfo, describeFunc func() ([]types.Node, error)) *types.ClusterInfo {
 	p.Logger = common.NewLogger(common.Debug, nil)
 
+	c.Master = p.Master
+	c.Worker = p.Worker
 	client, err := GetClusterConfig(p.ContextName, kubeCfg)
 	if err != nil {
 		p.Logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.Provider, p.ContextName, err)
@@ -717,8 +721,8 @@ func (p *ProviderBase) SaveCredential(secrets map[string]string) error {
 }
 
 // ListClusters list clusters.
-func ListClusters() ([]*types.ClusterInfo, error) {
-	stateList, err := common.DefaultDB.ListCluster()
+func ListClusters(providerName string) ([]*types.ClusterInfo, error) {
+	stateList, err := common.DefaultDB.ListCluster(providerName)
 	if err != nil {
 		return nil, err
 	}
@@ -795,10 +799,10 @@ func (p *ProviderBase) syncExistNodes() {
 
 // Describe describe cluster info.
 func (p *ProviderBase) Describe(kubeCfg string, c *types.ClusterInfo, describeInstance func() ([]types.Node, error)) *types.ClusterInfo {
+	c.Master = p.Master
+	c.Worker = p.Worker
 	if kubeCfg == "" {
 		c.Status = common.StatusMissing
-		c.Master = p.Master
-		c.Worker = p.Worker
 		return c
 	}
 	p.Logger = common.NewLogger(common.Debug, nil)
@@ -827,6 +831,7 @@ func (p *ProviderBase) Describe(kubeCfg string, c *types.ClusterInfo, describeIn
 				InstanceStatus:          instance.InstanceStatus,
 				InternalIP:              instance.InternalIPAddress,
 				ExternalIP:              instance.PublicIPAddress,
+				Standalone:              instance.Standalone,
 				Status:                  types.ClusterStatusUnknown,
 				ContainerRuntimeVersion: types.ClusterStatusUnknown,
 				Version:                 types.ClusterStatusUnknown,

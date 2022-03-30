@@ -136,41 +136,43 @@ func (p *Native) MergeClusterOptions() error {
 	if err != nil {
 		return err
 	}
-	stateOption, err := p.GetProviderOptions(opt)
-	if err != nil {
-		return err
-	}
-	option := stateOption.(*native.Options)
-	// merge options.
-	if p.MasterIps != "" {
-		mergedMasterIps := []string{}
-		masterIps := []string{}
-		if option.MasterIps != "" {
-			masterIps = strings.Split(option.MasterIps, ",")
+	if opt != nil {
+		stateOption, err := p.GetProviderOptions(opt)
+		if err != nil {
+			return err
 		}
-		optionMasterIps := strings.Split(p.MasterIps, ",")
-		for _, ip := range optionMasterIps {
-			if !slice.ContainsString(masterIps, ip) {
-				mergedMasterIps = append(mergedMasterIps, ip)
+		option := stateOption.(*native.Options)
+		// merge options.
+		if p.MasterIps != "" {
+			mergedMasterIps := []string{}
+			masterIps := []string{}
+			if option.MasterIps != "" {
+				masterIps = strings.Split(option.MasterIps, ",")
 			}
-		}
-		p.MasterIps = strings.Join(append(masterIps, mergedMasterIps...), ",")
-	}
-
-	if p.WorkerIps != "" {
-		mergedWorkerIps := []string{}
-		workerIps := []string{}
-		if option.WorkerIps != "" {
-			workerIps = strings.Split(option.WorkerIps, ",")
-		}
-		optionWorkerIps := strings.Split(p.WorkerIps, ",")
-		for _, ip := range optionWorkerIps {
-			if !slice.ContainsString(workerIps, ip) {
-				mergedWorkerIps = append(mergedWorkerIps, ip)
+			optionMasterIps := strings.Split(p.MasterIps, ",")
+			for _, ip := range optionMasterIps {
+				if !slice.ContainsString(masterIps, ip) {
+					mergedMasterIps = append(mergedMasterIps, ip)
+				}
 			}
+			p.MasterIps = strings.Join(append(masterIps, mergedMasterIps...), ",")
 		}
 
-		p.WorkerIps = strings.Join(append(workerIps, mergedWorkerIps...), ",")
+		if p.WorkerIps != "" {
+			mergedWorkerIps := []string{}
+			workerIps := []string{}
+			if option.WorkerIps != "" {
+				workerIps = strings.Split(option.WorkerIps, ",")
+			}
+			optionWorkerIps := strings.Split(p.WorkerIps, ",")
+			for _, ip := range optionWorkerIps {
+				if !slice.ContainsString(workerIps, ip) {
+					mergedWorkerIps = append(mergedWorkerIps, ip)
+				}
+			}
+
+			p.WorkerIps = strings.Join(append(workerIps, mergedWorkerIps...), ",")
+		}
 	}
 
 	return nil

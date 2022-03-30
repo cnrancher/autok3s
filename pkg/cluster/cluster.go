@@ -332,6 +332,34 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 	// sync master & worker numbers.
 	merged.Master = strconv.Itoa(len(merged.MasterNodes))
 	merged.Worker = strconv.Itoa(len(merged.WorkerNodes))
+
+	if p.Provider == "native" {
+		// check cluster context exists
+		kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
+		clientConfig, err := clientcmd.LoadFromFile(kubeCfg)
+		if err != nil {
+			return err
+		}
+		contexts := clientConfig.Contexts
+		if _, ok := contexts[p.ContextName]; !ok {
+			// get k3s cluster config.
+			cfg, err := p.execute(&types.Node{
+				PublicIPAddress: []string{merged.IP},
+				SSH:             merged.SSH,
+				Master:          true,
+			}, []string{catCfgCommand})
+			if err == nil {
+				// merge current cluster to kube config.
+				if err := SaveCfg(cfg, merged.IP, p.ContextName); err != nil {
+					p.Logger.Warnf("[%s] can't save kubeconfig file with error: %v", merged.Provider, err)
+				}
+				_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, filepath.Join(common.CfgPath, common.KubeCfgFile))
+			} else {
+				p.Logger.Warnf("[%s] can't get kubeconfig file from master %s", merged.Provider, merged.IP)
+			}
+		}
+	}
+
 	merged.Status.Status = common.StatusRunning
 	// write current cluster to state file.
 	if err = common.DefaultDB.SaveCluster(merged); err != nil {
@@ -536,7 +564,9 @@ func (p *ProviderBase) initWorker(wg *sync.WaitGroup, errChan chan error, k3sScr
 		}
 	}
 
-	sortedExtraArgs += fmt.Sprintf(" --node-external-ip %s", worker.PublicIPAddress[0])
+	if len(worker.PublicIPAddress) > 0 {
+		sortedExtraArgs += fmt.Sprintf(" --node-external-ip %s", worker.PublicIPAddress[0])
+	}
 	sortedExtraArgs += " " + extraArgs
 
 	p.Logger.Infof("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror, cluster.IP,
