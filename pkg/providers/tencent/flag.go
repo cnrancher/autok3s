@@ -236,6 +236,13 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			EnvVar: "CVM_INSTANCE_TYPE",
 		},
 		{
+			Name:   "instance-charge-type",
+			P:      &p.InstanceChargeType,
+			V:      p.InstanceChargeType,
+			Usage:  "Specify the charge type of VM instance, see: https://cloud.tencent.com/document/product/213/15730",
+			EnvVar: "CVM_INSTANCE_CHARGE_TYPE",
+		},
+		{
 			Name:   "disk-category",
 			P:      &p.SystemDiskType,
 			V:      p.SystemDiskType,

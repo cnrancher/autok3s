@@ -90,6 +90,7 @@ func newProvider() *Tencent {
 		Options: tencent.Options{
 			ImageID:                 imageID,
 			InstanceType:            instanceType,
+			InstanceChargeType:      instanceChargeType,
 			SystemDiskSize:          diskSize,
 			SystemDiskType:          diskCategory,
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
@@ -747,7 +748,7 @@ func (p *Tencent) runInstances(num int, master bool, password string) error {
 	request.Placement = &cvm.Placement{
 		Zone: tencentCommon.StringPtr(p.Zone),
 	}
-	request.InstanceChargeType = tencentCommon.StringPtr(instanceChargeType)
+	request.InstanceChargeType = tencentCommon.StringPtr(p.InstanceChargeType)
 	request.SecurityGroupIds = tencentCommon.StringPtrs(strings.Split(p.SecurityGroupIds, ","))
 	request.VirtualPrivateCloud = &cvm.VirtualPrivateCloud{
 		SubnetId: tencentCommon.StringPtr(p.SubnetID),
