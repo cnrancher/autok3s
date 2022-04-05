@@ -32,6 +32,7 @@ type Options struct {
 	SubnetID                string   `json:"subnet,omitempty" yaml:"subnet,omitempty"`
 	ImageID                 string   `json:"image,omitempty" yaml:"image,omitempty"`
 	InstanceType            string   `json:"instance-type,omitempty" yaml:"instance-type,omitempty"`
+	InstanceChargeType      string   `json:"instance-charge-type,omitempty" yaml:"instance-charge-type,omitempty"`
 	SystemDiskType          string   `json:"disk-category,omitempty" yaml:"disk-category,omitempty"`
 	SystemDiskSize          string   `json:"disk-size,omitempty" yaml:"disk-size,omitempty"`
 	InternetMaxBandwidthOut string   `json:"internet-max-bandwidth-out,omitempty" yaml:"internet-max-bandwidth-out,omitempty"`
