@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	k3sInstallScript         = "http://rancher-mirror.cnrancher.com/k3s/k3s-install.sh"
+	k3sInstallScript         = "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh"
 	accessKeyID              = "access-key"
 	accessKeySecret          = "access-secret"
 	imageID                  = "ubuntu_18_04_x64_20G_alibase_20200618.vhd"
