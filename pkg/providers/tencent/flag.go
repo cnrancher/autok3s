@@ -293,6 +293,12 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			V:     p.CloudControllerManager,
 			Usage: "Enable cloud-controller-manager component, for more information, please check https://github.com/TencentCloud/tencentcloud-cloud-controller-manager/blob/master/docs/getting-started.md",
 		},
+		{
+			Name:  "user-data-path",
+			P:     &p.UserDataPath,
+			V:     p.UserDataPath,
+			Usage: "Set user data, i.e.( --user-data-path /file/path ), see: https://cloud.tencent.com/document/product/213/17525",
+		},
 	}
 
 	return fs
