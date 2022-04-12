@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
@@ -601,6 +602,12 @@ func (p *Tencent) deleteInstance(f bool) (string, error) {
 
 // CreateCheck check create command and flags.
 func (p *Tencent) CreateCheck() error {
+	if p.UserDataPath != "" {
+		_, err := os.Stat(p.UserDataPath)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("[%s] calling preflight error: file %s is not exist, msg: %v", p.GetProviderName(), p.UserDataPath, err)
+		}
+	}
 	if p.KeypairID != "" && p.SSHKeyPath == "" {
 		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeypairID)
 	}
@@ -742,6 +749,8 @@ func (p *Tencent) runInstances(num int, master bool, password string) error {
 	diskSize, _ := strconv.ParseInt(p.SystemDiskSize, 10, 64)
 	bandwidth, _ := strconv.ParseInt(p.InternetMaxBandwidthOut, 10, 64)
 
+	userdata, _ := ioutil.ReadFile(p.UserDataPath)
+	request.UserData = tencentCommon.StringPtr(base64.StdEncoding.EncodeToString(userdata))
 	request.InstanceCount = tencentCommon.Int64Ptr(int64(num))
 	request.ImageId = tencentCommon.StringPtr(p.ImageID)
 	request.InstanceType = tencentCommon.StringPtr(p.InstanceType)

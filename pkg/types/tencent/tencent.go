@@ -40,6 +40,7 @@ type Options struct {
 	NetworkRouteTableName   string   `json:"router,omitempty" yaml:"network-route-table-name,omitempty"`
 	Tags                    []string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	CloudControllerManager  bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
+	UserDataPath            string   `json:"user-data-path,omitempty" yaml:"user-data-path,omitempty"`
 }
 
 // CloudControllerManager struct for tencent cloud-controller-manager.
