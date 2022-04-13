@@ -21,7 +21,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/rancher/k3s/pkg/agent/templates"
+	templates "github.com/rancher/wharfie/pkg/registries"
 	"github.com/sirupsen/logrus"
 	yamlv3 "gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
