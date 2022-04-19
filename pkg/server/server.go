@@ -42,6 +42,7 @@ func Start() http.Handler {
 		responsewriter.FrameOptions,
 		responsewriter.CacheMiddleware("json", "js", "css", "svg", "png", "woff", "woff2"),
 		ui.ServeNotFound,
+		ui.ServeJavascript,
 	}
 	router.PathPrefix("/ui/").Handler(middleware.Handler(http.StripPrefix("/ui/", ui.Serve())))
 
