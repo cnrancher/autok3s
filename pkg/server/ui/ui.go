@@ -55,6 +55,17 @@ func ServeNotFound(next http.Handler) http.Handler {
 	return serveAssetNotFound(next)
 }
 
+func ServeJavascript(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// This is used to enforce application/javascript MIME on Windows (https://github.com/cnrancher/autok3s/issues/426)
+		// refer to: https://github.com/golang/go/issues/32350
+		if strings.HasSuffix(r.URL.Path, ".js") {
+			rw.Header().Set("Content-Type", "application/javascript")
+		}
+		next.ServeHTTP(rw, r)
+	})
+}
+
 func serveAsset() http.Handler {
 	handler := fsFunc(func(name string) (fs.File, error) {
 		assetPath := path.Join(localUI, name)
