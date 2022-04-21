@@ -79,6 +79,14 @@ curl -sS https://rancher-mirror.rancher.cn/autok3s/install.sh  | sh
 autok3s -d serve
 ```
 
+## Uninstall
+
+To uninstall autok3s cli, please execute command below:
+
+```bash
+/usr/local/bin/autok3s-uninstall.sh
+```
+
 ## Demo Video
 
 In the demo, we install K3s by k3d provider in around 1 minute, and
