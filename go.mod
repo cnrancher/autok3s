@@ -152,7 +152,7 @@ require (
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.1 // indirect
+	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.3 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/longhorn/longhorn-manager v1.2.3-rc2 // indirect
