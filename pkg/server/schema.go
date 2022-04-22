@@ -3,11 +3,10 @@ package server
 import (
 	"net/http"
 
-	"github.com/cnrancher/autok3s/pkg/server/store/explorer"
-
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/server/store/cluster"
 	"github.com/cnrancher/autok3s/pkg/server/store/credential"
+	"github.com/cnrancher/autok3s/pkg/server/store/explorer"
 	"github.com/cnrancher/autok3s/pkg/server/store/kubectl"
 	"github.com/cnrancher/autok3s/pkg/server/store/provider"
 	"github.com/cnrancher/autok3s/pkg/server/store/template"
@@ -29,6 +28,8 @@ func initProvider(s *types.APISchemas) {
 }
 
 func initCluster(s *types.APISchemas) {
+	s.MustImportAndCustomize(autok3stypes.KubeconfigOutput{}, nil)
+	s.MustImportAndCustomize(autok3stypes.EnableExplorerOutput{}, nil)
 	s.MustImportAndCustomize(autok3stypes.Cluster{}, func(schema *types.APISchema) {
 		schema.Store = &cluster.Store{}
 		common.DefaultDB.Register()
@@ -38,10 +39,11 @@ func initCluster(s *types.APISchemas) {
 			Input: "cluster",
 		}
 		schema.ResourceActions["enable-explorer"] = wranglertypes.Action{
-			Input: "cluster",
+			Output: "enableExplorerOutput",
 		}
-		schema.ResourceActions["disable-explorer"] = wranglertypes.Action{
-			Input: "cluster",
+		schema.ResourceActions["disable-explorer"] = wranglertypes.Action{}
+		schema.ResourceActions["download-kubeconfig"] = wranglertypes.Action{
+			Output: "kubeconfigOutput",
 		}
 		schema.Formatter = cluster.Formatter
 		schema.ActionHandlers = cluster.HandleCluster()

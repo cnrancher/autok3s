@@ -55,3 +55,13 @@ type ClusterTemplate struct {
 	IsDefault      bool        `json:"is-default"`
 	Status         string      `json:"status"`
 }
+
+// KubeconfigOutput is specified cluster kubeconfig for user download
+type KubeconfigOutput struct {
+	Config string `json:"config"`
+}
+
+// EnableExplorerOutput struct for enable-explorer action
+type EnableExplorerOutput struct {
+	Data string `json:"data"`
+}

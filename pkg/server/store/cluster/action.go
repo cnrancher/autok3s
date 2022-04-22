@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,19 +9,24 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
+	autok3stypes "github.com/cnrancher/autok3s/pkg/types/apis"
 
 	"github.com/gorilla/mux"
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/wrangler/pkg/schemas/validation"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
-	actionJoin            = "join"
-	linkNodes             = "nodes"
-	actionEnableExplorer  = "enable-explorer"
-	actionDisableExplorer = "disable-explorer"
+	actionJoin               = "join"
+	linkNodes                = "nodes"
+	actionEnableExplorer     = "enable-explorer"
+	actionDisableExplorer    = "disable-explorer"
+	actionDownloadKubeconfig = "download-kubeconfig"
 )
 
 // Formatter cluster's formatter.
@@ -33,10 +37,14 @@ func Formatter(request *types.APIRequest, resource *types.RawResource) {
 
 // HandleCluster cluster's action handler.
 func HandleCluster() map[string]http.Handler {
+	kubeconfigAction := downloadKubeconfig{}
+	explorerAction := explorer{}
+	joinAction := join{}
 	return map[string]http.Handler{
-		actionJoin:            joinHandler(),
-		actionEnableExplorer:  enableExplorer(),
-		actionDisableExplorer: disableExplorer(),
+		actionJoin:               joinAction,
+		actionEnableExplorer:     explorerAction,
+		actionDisableExplorer:    explorerAction,
+		actionDownloadKubeconfig: kubeconfigAction,
 	}
 }
 
@@ -49,65 +57,56 @@ func LinkCluster(request *types.APIRequest) (types.APIObject, error) {
 	return request.Schema.Store.ByID(request, request.Schema, request.Name)
 }
 
-func joinHandler() http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		clusterID := vars["name"]
-		if clusterID == "" {
-			rw.WriteHeader(http.StatusUnprocessableEntity)
-			_, _ = rw.Write([]byte("clusterID cannot be empty"))
-			return
-		}
-		state, err := common.DefaultDB.GetClusterByID(clusterID)
-		if err != nil || state == nil {
-			rw.WriteHeader(http.StatusNotFound)
-			_, _ = rw.Write([]byte(fmt.Sprintf("cluster %s is not found", clusterID)))
-			return
-		}
-		provider, err := providers.GetProvider(state.Provider)
-		if err != nil {
-			rw.WriteHeader(http.StatusNotFound)
-			_, _ = rw.Write([]byte(fmt.Sprintf("provider %s is not found", state.Provider)))
-			return
-		}
-		provider.SetMetadata(&state.Metadata)
-		_ = provider.SetOptions(state.Options)
+type join struct{}
 
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			_, _ = rw.Write([]byte(err.Error()))
-			return
-		}
-		err = provider.SetConfig(body)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			_, _ = rw.Write([]byte(err.Error()))
-			return
-		}
-		err = provider.MergeClusterOptions()
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			_, _ = rw.Write([]byte(err.Error()))
-			return
-		}
-		id := provider.GenerateClusterName()
-		if err = provider.JoinCheck(); err != nil {
-			rw.WriteHeader(http.StatusUnprocessableEntity)
-			_, _ = rw.Write([]byte(err.Error()))
-			return
-		}
+func (j join) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	apiRequest := types.GetAPIContext(req.Context())
+	clusterID := apiRequest.Name
+	if clusterID == "" {
+		apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, "clusterID cannot be empty"))
+		return
+	}
+	state, err := common.DefaultDB.GetClusterByID(clusterID)
+	if err != nil || state == nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found", clusterID)))
+		return
+	}
+	provider, err := providers.GetProvider(state.Provider)
+	if err != nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.NotFound, fmt.Sprintf("provider %s is not found", state.Provider)))
+		return
+	}
+	provider.SetMetadata(&state.Metadata)
+	_ = provider.SetOptions(state.Options)
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+		return
+	}
+	err = provider.SetConfig(body)
+	if err != nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+		return
+	}
+	err = provider.MergeClusterOptions()
+	if err != nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+		return
+	}
+	id := provider.GenerateClusterName()
+	if err = provider.JoinCheck(); err != nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, err.Error()))
+		return
+	}
 
-		provider.RegisterCallbacks(id, "update", common.DefaultDB.BroadcastObject)
-		go func() {
-			err := provider.JoinK3sNode()
-			if err != nil {
-				logrus.Errorf("join cluster error: %v", err)
-			}
-		}()
-
-		rw.WriteHeader(http.StatusOK)
-	})
+	provider.RegisterCallbacks(id, "update", common.DefaultDB.BroadcastObject)
+	go func() {
+		err := provider.JoinK3sNode()
+		if err != nil {
+			logrus.Errorf("join cluster error: %v", err)
+		}
+	}()
+	apiRequest.WriteResponse(http.StatusOK, types.APIObject{})
 }
 
 func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
@@ -134,50 +133,99 @@ func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (
 	}, nil
 }
 
-func enableExplorer() http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		clusterID := vars["name"]
-		if clusterID == "" {
-			e := map[string]interface{}{
-				"type":    "error",
-				"message": "clusterID cannot be empty",
-			}
-			eb, _ := json.Marshal(e)
-			rw.WriteHeader(http.StatusUnprocessableEntity)
-			_, _ = rw.Write(eb)
-			return
-		}
+type explorer struct{}
+
+func (e explorer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	apiRequest := types.GetAPIContext(req.Context())
+	clusterID := apiRequest.Name
+	if clusterID == "" {
+		apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, "clusterID cannot be empty"))
+		return
+	}
+	action := apiRequest.Action
+	switch action {
+	case actionEnableExplorer:
 		port, err := common.EnableExplorer(context.Background(), clusterID)
 		if err != nil {
-			e := map[string]interface{}{
-				"type":    "error",
-				"message": err.Error(),
-			}
-			eb, _ := json.Marshal(e)
-			rw.WriteHeader(http.StatusInternalServerError)
-			_, _ = rw.Write(eb)
+			apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
 			return
 		}
-		rw.WriteHeader(http.StatusOK)
-		_, _ = rw.Write([]byte(fmt.Sprintf("{\"data\": \"%s\"}", fmt.Sprintf("kube-explorer for cluster %s will listen on 127.0.0.1:%d...", clusterID, port))))
-	})
+		apiRequest.WriteResponse(http.StatusOK, types.APIObject{
+			Type: "enableExplorerOutput",
+			Object: &autok3stypes.EnableExplorerOutput{
+				Data: fmt.Sprintf("kube-explorer for cluster %s will listen on 127.0.0.1:%d...", clusterID, port),
+			},
+		})
+	case actionDisableExplorer:
+		err := common.DisableExplorer(clusterID)
+		if err != nil {
+			apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+			return
+		}
+		apiRequest.WriteResponse(http.StatusOK, types.APIObject{})
+	default:
+		apiRequest.WriteError(apierror.NewAPIError(validation.ActionNotAvailable, fmt.Sprintf("invalid action %s", action)))
+	}
 }
 
-func disableExplorer() http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		vars := mux.Vars(req)
-		clusterID := vars["name"]
-		if clusterID == "" {
-			rw.WriteHeader(http.StatusUnprocessableEntity)
-			_, _ = rw.Write([]byte("clusterID cannot be empty"))
-			return
+type downloadKubeconfig struct{}
+
+func (d downloadKubeconfig) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	apiRequest := types.GetAPIContext(req.Context())
+	vars := mux.Vars(req)
+	clusterID := vars["name"]
+	if clusterID == "" {
+		apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, "clusterID cannot be empty"))
+		return
+	}
+	kubeconfigPath := filepath.Join(common.CfgPath, common.KubeCfgFile)
+	cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: clusterID,
+		}).RawConfig()
+	if err != nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+		return
+	}
+	// generate current config for cluster
+	currentCfg := api.Config{
+		Kind:           cfg.Kind,
+		APIVersion:     cfg.APIVersion,
+		Preferences:    cfg.Preferences,
+		CurrentContext: clusterID,
+	}
+	if clusterCfg, ok := cfg.Clusters[clusterID]; ok {
+		currentCfg.Clusters = map[string]*api.Cluster{
+			clusterID: clusterCfg,
 		}
-		if err := common.DisableExplorer(clusterID); err != nil {
-			rw.WriteHeader(http.StatusNotFound)
-			_, _ = rw.Write([]byte(err.Error()))
-			return
+	}
+	if authCfg, ok := cfg.AuthInfos[clusterID]; ok {
+		currentCfg.AuthInfos = map[string]*api.AuthInfo{
+			clusterID: authCfg,
 		}
-		rw.WriteHeader(http.StatusOK)
+	}
+	if contextCfg, ok := cfg.Contexts[clusterID]; ok {
+		currentCfg.Contexts = map[string]*api.Context{
+			clusterID: contextCfg,
+		}
+	}
+	if extensionCfg, ok := cfg.Extensions[clusterID]; ok {
+		currentCfg.Extensions = map[string]runtime.Object{
+			clusterID: extensionCfg,
+		}
+	}
+
+	result, err := clientcmd.Write(currentCfg)
+	if err != nil {
+		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+		return
+	}
+
+	apiRequest.WriteResponse(http.StatusOK, types.APIObject{
+		Type: "kubeconfigOutput",
+		Object: &autok3stypes.KubeconfigOutput{
+			Config: string(result),
+		},
 	})
 }
