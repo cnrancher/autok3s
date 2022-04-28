@@ -46,6 +46,12 @@ type Explorer struct {
 	Port        int    `json:"port"`
 }
 
+// Setting struct
+type Setting struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 type templateEvent struct {
 	Name   string
 	Object *Template
@@ -632,6 +638,42 @@ func (d *Store) DeleteExplorer(clusterID string) error {
 // ListExplorer return all kube-explorer settings
 func (d *Store) ListExplorer() ([]*Explorer, error) {
 	list := make([]*Explorer, 0)
+	result := d.DB.Find(&list)
+	return list, result.Error
+}
+
+// GetSetting return specified setting by name
+func (d *Store) GetSetting(name string) (*Setting, error) {
+	s := &Setting{}
+	result := d.DB.Where("name = ?", name).Find(s)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, nil
+	}
+	return s, nil
+}
+
+// SaveSetting save settings
+func (d *Store) SaveSetting(s *Setting) error {
+	e, err := d.GetSetting(s.Name)
+	if err != nil {
+		return err
+	}
+	if e != nil {
+		// update setting
+		result := d.DB.Where("name = ? ", s.Name).Omit("name").Save(s)
+		return result.Error
+	}
+	// save setting
+	result := d.DB.Create(s)
+	return result.Error
+}
+
+// ListSettings list all settings
+func (d *Store) ListSettings() ([]*Setting, error) {
+	list := make([]*Setting, 0)
 	result := d.DB.Find(&list)
 	return list, result.Error
 }

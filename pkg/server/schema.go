@@ -9,6 +9,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/server/store/explorer"
 	"github.com/cnrancher/autok3s/pkg/server/store/kubectl"
 	"github.com/cnrancher/autok3s/pkg/server/store/provider"
+	"github.com/cnrancher/autok3s/pkg/server/store/settings"
 	"github.com/cnrancher/autok3s/pkg/server/store/template"
 	"github.com/cnrancher/autok3s/pkg/server/store/websocket"
 	wkube "github.com/cnrancher/autok3s/pkg/server/store/websocket/kubectl"
@@ -104,5 +105,13 @@ func initExplorer(s *types.APISchemas) {
 		schema.Formatter = formatter.Formatter
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{http.MethodGet}
+	})
+}
+
+func initSettings(s *types.APISchemas) {
+	s.MustImportAndCustomize(common.Setting{}, func(schema *types.APISchema) {
+		schema.Store = &settings.Store{}
+		schema.CollectionMethods = []string{http.MethodGet}
+		schema.ResourceMethods = []string{http.MethodPut, http.MethodGet}
 	})
 }

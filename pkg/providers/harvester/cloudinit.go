@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/cnrancher/autok3s/pkg/utils"
+
 	"github.com/ghodss/yaml"
 	"github.com/harvester/harvester/pkg/builder"
 	"github.com/imdario/mergo"
@@ -89,7 +91,7 @@ func (h *Harvester) mergeCloudInit() (string, string, error) {
 		userData = string(userDataByte)
 	}
 	if h.UserData != "" {
-		userDataByte, err := mergeYaml([]byte(userData), []byte(stringSupportBase64(h.UserData)))
+		userDataByte, err := mergeYaml([]byte(userData), []byte(utils.StringSupportBase64(h.UserData)))
 		if err != nil {
 			return "", "", err
 		}
@@ -97,7 +99,7 @@ func (h *Harvester) mergeCloudInit() (string, string, error) {
 	}
 	userData = userDataHeader + userData
 	if h.NetworkData != "" {
-		networkData = stringSupportBase64(h.NetworkData)
+		networkData = utils.StringSupportBase64(h.NetworkData)
 	}
 	return userData, networkData, nil
 }

@@ -2,7 +2,6 @@ package harvester
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -724,15 +723,4 @@ func getStateFormVMI(vmi *kubevirtv1.VirtualMachineInstance) string {
 	default:
 		return "None"
 	}
-}
-
-func stringSupportBase64(value string) string {
-	if value == "" {
-		return value
-	}
-	valueByte, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		valueByte = []byte(value)
-	}
-	return string(valueByte)
 }

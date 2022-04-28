@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -162,4 +163,16 @@ func waitForBackoff(fn func() (bool, error), backoff wait.Backoff) error {
 		return err
 	}
 	return nil
+}
+
+func StringSupportBase64(value string) string {
+	if value == "" {
+		return value
+	}
+	valueByte, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		logrus.Debugf("failed decode string %s, got error: %v", value, err)
+		valueByte = []byte(value)
+	}
+	return string(valueByte)
 }
