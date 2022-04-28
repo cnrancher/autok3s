@@ -100,9 +100,18 @@ var (
 			);`,
 		`CREATE TABLE IF NOT EXISTS explorers
 			(
-				context_name not null primary key,
+				context_name TEXT not null primary key,
 				enabled bool,
 				port int
+			);`,
+		`CREATE TABLE IF NOT EXISTS settings
+			(
+				name TEXT not null primary key,
+				value BLOB
+			);`,
+		`INSERT INTO settings(name,value)
+			SELECT 'whitelist-domain', ''
+			WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='whitelist-domain'
 			);`,
 	}
 )

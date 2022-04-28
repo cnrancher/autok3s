@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cnrancher/autok3s/pkg/utils"
+
 	harvsterv1 "github.com/harvester/harvester/pkg/apis/harvesterhci.io/v1beta1"
 	harvclient "github.com/harvester/harvester/pkg/generated/clientset/versioned"
 	"github.com/harvester/harvester/pkg/generated/clientset/versioned/scheme"
@@ -82,7 +84,7 @@ func (h *Harvester) getRestConfig() (*rest.Config, error) {
 	if h.KubeConfigContent == "" {
 		return kubeconfig.GetNonInteractiveClientConfig(h.KubeConfigFile).ClientConfig()
 	}
-	return clientcmd.RESTConfigFromKubeConfig([]byte(stringSupportBase64(h.KubeConfigContent)))
+	return clientcmd.RESTConfigFromKubeConfig([]byte(utils.StringSupportBase64(h.KubeConfigContent)))
 }
 
 func (h *Harvester) getClient() (*Client, error) {
