@@ -5,7 +5,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
