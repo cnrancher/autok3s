@@ -31,18 +31,17 @@ func TestMergeConfig(t *testing.T) {
 	config.Clusters["test1"] = &api.Cluster{}
 	config.Clusters["test2"] = &api.Cluster{}
 	_ = clientcmd.WriteToFile(config, path)
+	cm := ConfigFileManager{}
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		cm := ConfigFileManager{}
 		err = cm.OverwriteCfg(path, "test1", cm.RemoveCfg)
 		assert.Nil(t, err)
 	}()
 
 	go func() {
 		defer wg.Done()
-		cm := ConfigFileManager{}
 		err = cm.OverwriteCfg(path, "test2", cm.RemoveCfg)
 		assert.Nil(t, err)
 	}()
