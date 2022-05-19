@@ -1,23 +1,22 @@
 ---
 kind: pipeline
+type: docker
 name: lint
 platform:
   os: linux
   arch: amd64
 steps:
   - name: commit-message
-    image: outillage/commitsar
+    image: aevea/commitsar:0.18.0
     commands:
       - commitsar -d /drone/src -v
   - name: code
-    image: maiwj/drone-dapper:v0.4.2
+    image: rancher/dapper:v0.5.8
     privileged: true
     environment:
-      BY: dapper
-      DIRTY_CHECK: true
+      DIRTY_CHECK: "true"
     commands:
-      - make autok3s lint
-      - make autok3s build only
+      - dapper build
     volumes:
       - name: docker
         path: /var/run/docker.sock
@@ -32,56 +31,47 @@ trigger:
       - pull_request
 node:
   instance: agent-amd64
+
 ---
 kind: pipeline
-name: package-arm64
+type: docker
+name: package
 platform:
   os: linux
-  arch: arm64
+  arch: amd64
 steps:
-  - name: build-arm64
-    image: maiwj/drone-dapper:v0.4.2
+  - name: code
+    image: rancher/dapper:v0.5.8
     environment:
-      BY: dapper
-      ARCH: arm64
       TAG: "${DRONE_TAG}"
-      DAPPER_FILE: Dockerfile-package.dapper
     commands:
-      - make autok3s build
+      - dapper cross_build
     volumes:
       - name: docker
         path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-  - name: compress-arm64
-    image: maiwj/drone-dapper:v0.4.2
+
+  - name: install-buildx-support
+    image: tonistiigi/binfmt
     privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-arm64_linux.tar.xz
-      - tar -xvf upx-3.96-arm64_linux.tar.xz
-      - cp upx-3.96-arm64_linux/upx /usr/bin/
-      - upx dist/autok3s_*
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
+    entrypoint:
+      - /usr/bin/binfmt
+    command:
+      - --install
+      - all
     when:
       event:
         - tag
-    depends_on:
-      - build-arm64
+
   - name: docker-publish-arm64
-    image: plugins/docker
+    image: thegeeklab/drone-docker-buildx
+    privileged: true
     settings:
-      build_args:
-        - ARCH=arm64
-        - "VERSION=${DRONE_TAG}-linux-arm64"
-      custom_dns: 1.1.1.1
+      platforms: linux/amd64,linux/arm64/v8
       dockerfile: Dockerfile
       repo: cnrancher/autok3s
-      tag: "${DRONE_TAG}-linux-arm64"
+      tags:
+        - ${DRONE_TAG}
+        - latest
       username:
         from_secret: docker_username
       password:
@@ -89,18 +79,17 @@ steps:
     when:
       event:
         - tag
-    depends_on:
-      - compress-arm64
+
   - name: docker-publish-latest-arm64
-    image: plugins/docker
+    image: thegeeklab/drone-docker-buildx
+    privileged: true
     settings:
+      platforms: linux/amd64,linux/arm64/v8
       build_args:
-        - ARCH=arm64
-        - "VERSION=latest-linux-arm64"
-      custom_dns: 1.1.1.1
+        - "VERSION=latest"
       dockerfile: Dockerfile
       repo: cnrancher/autok3s
-      tag: "latest-linux-arm64"
+      tag: "latest"
       username:
         from_secret: docker_username
       password:
@@ -111,152 +100,7 @@ steps:
       ref:
         exclude:
           - "refs/tags/*rc*"
-    depends_on:
-      - compress-arm64
-volumes:
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-trigger:
-  event:
-    include:
-      - tag
-node:
-  instance: agent-arm64
-depends_on:
-  - lint
----
-kind: pipeline
-name: package-amd64
-platform:
-  os: linux
-  arch: amd64
-steps:
-  - name: build-amd64
-    image: maiwj/drone-dapper:v0.4.2
-    environment:
-      BY: dapper
-      ARCH: amd64
-      TAG: "${DRONE_TAG}"
-      DAPPER_FILE: Dockerfile-package.dapper
-    commands:
-      - make autok3s build
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-  - name: compress-amd64
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz
-      - tar -xvf upx-3.96-amd64_linux.tar.xz
-      - cp upx-3.96-amd64_linux/upx /usr/bin/
-      - upx dist/autok3s_*
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-    depends_on:
-      - build-amd64
-  - name: docker-publish-amd64
-    image: plugins/docker
-    settings:
-      build_args:
-        - ARCH=amd64
-        - "VERSION=${DRONE_TAG}-linux-amd64"
-      custom_dns: 1.1.1.1
-      dockerfile: Dockerfile
-      repo: cnrancher/autok3s
-      tag: "${DRONE_TAG}-linux-amd64"
-      username:
-        from_secret: docker_username
-      password:
-        from_secret: docker_password
-    when:
-      event:
-        - tag
-    depends_on:
-      - compress-amd64
-  - name: docker-publish-latest-amd64
-    image: plugins/docker
-    settings:
-      build_args:
-        - ARCH=amd64
-        - "VERSION=latest-linux-amd64"
-      custom_dns: 1.1.1.1
-      dockerfile: Dockerfile
-      repo: cnrancher/autok3s
-      tag: "latest-linux-amd64"
-      username:
-        from_secret: docker_username
-      password:
-        from_secret: docker_password
-    when:
-      event:
-        - tag
-      ref:
-        exclude:
-          - "refs/tags/*rc*"
-    depends_on:
-      - compress-amd64
-volumes:
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-trigger:
-  event:
-    include:
-      - tag
-node:
-  instance: agent-amd64
-depends_on:
-  - lint
----
-kind: pipeline
-name: cross-build
-platform:
-  os: linux
-  arch: amd64
-steps:
-  - name: build-cross
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-      CROSS: true
-    commands:
-      - make autok3s cross_build
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-  - name: compress
-    image: maiwj/drone-dapper:v0.4.2
-    privileged: true
-    environment:
-      BY: dapper
-    commands:
-      - wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz
-      - tar -xvf upx-3.96-amd64_linux.tar.xz
-      - cp upx-3.96-amd64_linux/upx /usr/bin/
-      - upx dist/autok3s_*
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-    depends_on:
-      - build-cross
+
   - name: github_binary_release
     image: ibuildthecloud/github-release:v0.0.1
     settings:
@@ -272,8 +116,7 @@ steps:
     when:
       event:
         - tag
-    depends_on:
-      - compress
+
 volumes:
   - name: docker
     host:
@@ -285,77 +128,11 @@ trigger:
 node:
   instance: agent-amd64
 depends_on:
-  - lint
+  - "lint"
+
 ---
 kind: pipeline
-name: manifest
-
-platform:
-  os: linux
-  arch: amd64
-
-steps:
-  - name: push-manifest
-    image: maiwj/drone-dapper:v0.4.2
-    environment:
-      BY: dapper
-      CROSS: true
-      DOCKER_USERNAME:
-        from_secret: docker_username
-      DOCKER_PASSWORD:
-        from_secret: docker_password
-      REPO: cnrancher
-      TAG: "${DRONE_TAG}"
-      WITHOUT_MANIFEST: false
-    commands:
-      - make autok3s deploy only
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-  - name: push-manifest-latest
-    image: maiwj/drone-dapper:v0.4.2
-    environment:
-      BY: dapper
-      CROSS: true
-      DOCKER_USERNAME:
-        from_secret: docker_username
-      DOCKER_PASSWORD:
-        from_secret: docker_password
-      REPO: cnrancher
-      TAG: latest
-      WITHOUT_MANIFEST: false
-    commands:
-      - make autok3s deploy only
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-    when:
-      event:
-        - tag
-      ref:
-        exclude:
-          - "refs/tags/*rc*"
-volumes:
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-
-trigger:
-  event:
-    include:
-      - tag
-
-node:
-  instance: agent-amd64
-
-depends_on:
-  - package-amd64
-  - package-arm64
----
-kind: pipeline
+type: docker
 name: publish-release
 platform:
   os: linux
@@ -401,4 +178,4 @@ trigger:
 node:
   instance: agent-amd64
 depends_on:
-  - cross-build
+  - package

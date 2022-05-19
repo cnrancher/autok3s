@@ -59,10 +59,12 @@ Scenario 1 - Run with docker:
 # Standard Linux (Recommended)
 $ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.9
 
-# MacOS 
+# MacOS
 $ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.4.9
 ```
+
 Scenario 2 - Run with docker-compose
+
 ```bash
 # AutoK3s is available at: http://autok3s.vcap.me (vcap.me resolves to 127.0.0.1).
 # The cli and container uses the same `AUTOK3S_CONFIG` directory.
@@ -96,14 +98,13 @@ Watch the demo:
 
 ![](docs/assets/autok3s-v0.4.7-demo.gif)
 
-
 ## Developers' Guide
 
 Use `dapper` to manage project compilation, testing and packaging.
 
-- compilation: `BY=dapper make autok3s build`
-- testing: `BY=dapper make autok3s unit`
-- packing: `BY=dapper make autok3s package only`
+- compilation: `make autok3s build`
+- testing: `make autok3s unit`
+- packing: `make autok3s package only`
 
 Install `dapper` please follow the [dapper](https://github.com/rancher/dapper) project.
 

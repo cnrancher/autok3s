@@ -7,4 +7,5 @@ readonly SUPPORTED_PLATFORMS=(
   windows/amd64
   windows/386
   darwin/amd64
+  darwin/arm64
 )

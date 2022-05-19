@@ -33,3 +33,4 @@ static/
 upx*.tar.xz
 upx*/
 .vscode/
+.dapper

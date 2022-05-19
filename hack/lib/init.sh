@@ -18,8 +18,8 @@ source "${ROOT_DIR}/hack/lib/mockgen.sh"
 source "${ROOT_DIR}/hack/lib/lint.sh"
 source "${ROOT_DIR}/hack/lib/docker.sh"
 source "${ROOT_DIR}/hack/lib/dapper.sh"
-source "${ROOT_DIR}/hack/lib/manifest-tool.sh"
 source "${ROOT_DIR}/hack/lib/ginkgo.sh"
+source "${ROOT_DIR}/hack/lib/upx.sh"
 
 autok3s::log::install_errexit
 autok3s::version::get_version_vars
