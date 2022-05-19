@@ -1,57 +1,37 @@
-FROM techknowlogick/xgo:base
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-        xz-utils unzip netcat wget \
-        --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-# -- for make rules
-## install golang
-RUN wget --no-check-certificate -O - https://golang.org/dl/go1.17.5.linux-amd64.tar.gz | tar -xz -C /usr/local
-
-# Fix any stock package issues
-RUN ln -s /usr/include/asm-generic /usr/include/asm && \
-    mkdir -p /go/src /go/bin && chmod -R 777 /go
-ENV GOPATH=/go
-ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
-
-## install docker client
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg \
-    && rm -rf /var/lib/apt/lists/*; \
-    \
-    curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - >/dev/null; \
-    echo "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/debian buster stable" > /etc/apt/sources.list.d/docker.list; \
-    \
-    apt-get update -qq && apt-get install -y --no-install-recommends \
-        docker-ce-cli=5:19.03.* \
-    && rm -rf /var/lib/apt/lists/*; \
-    docker --version
-
+FROM registry.suse.com/bci/golang:1.17
+ARG PROXY
+ARG GOPROXY
+RUN zypper -n install netcat wget curl
+RUN zypper install -y -f docker
 ## install golangci-lint
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.39.0; \
-        golangci-lint --version; \
+    export HTTPS_PROXY=${PROXY}; \
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.44.0; \
+    golangci-lint --version; \
     fi
 ## install mockgen
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
-        GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.3; \
-        mockgen --version; \
+    GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.3; \
+    mockgen --version; \
     fi
 ## install ginkgo
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
-        GO111MODULE=on go get github.com/onsi/ginkgo/ginkgo@v1.13.0; \
-        ginkgo version; \
+    GO111MODULE=on go get github.com/onsi/ginkgo/ginkgo@v1.13.0; \
+    ginkgo version; \
+    fi
+## install upx
+RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
+    export HTTPS_PROXY=${PROXY}; \
+    curl -sSL https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz | tar -xvJf - -C /tmp/; \
+    mv /tmp/upx-3.96-amd64_linux/upx /usr/bin/ && rm -rf /tmp/upx-3.96-amd64_linux; \
     fi
 # -- for make rules
 
 # -- for dapper
 ENV DAPPER_RUN_ARGS --privileged --network host
 ENV GO111MODULE=on
-ENV CROSS=false
-ENV DAPPER_ENV CROSS CLUSTER_TYPE DOCKER_USERNAME DOCKER_PASSWORD WITHOUT_MANIFEST ONLY_MANIFEST IGNORE_MISSING DRONE_TAG REPO TAG OS ARCH IMAGE_NAME DIRTY_CHECK
+ENV AUTOK3S_DEV_MODE=true
+ENV DAPPER_ENV CROSS DRONE_TAG REPO TAG OS ARCH IMAGE_NAME DIRTY_CHECK
 ENV DAPPER_SOURCE /go/src/github.com/cnrancher/autok3s/
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
@@ -59,4 +39,4 @@ ENV HOME ${DAPPER_SOURCE}
 # -- for dapper
 
 WORKDIR ${DAPPER_SOURCE}
-ENTRYPOINT ["make", "-se", "autok3s"]
+ENTRYPOINT ["hack/make-rules/autok3s.sh"]

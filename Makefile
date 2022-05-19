@@ -14,7 +14,7 @@ help:
 	#
 	# Stage:
 	#   a "stage" consists of serial actions, actions follow as below:
-	#     mod -> lint -> build -> containerize -> deploy -> test -> verify -> e2e
+	#     mod -> lint -> build -> containerize -> test -> verify -> e2e
 	#   for convenience, the name of the "action" also represents the current "stage".
 	#   choosing to execute a certain "stage" will execute all actions in the previous sequence.
 	#
@@ -24,12 +24,11 @@ help:
 	#                          roll back to `go fmt` and `go vet` if the installation fails.
 	#   -         build, b  :  compile code.
 	#   -       package, p  :  package docker image.
-	#   -        deploy, d  :  push docker image.
 	#   -          unit, u  :  run unit tests.
 	#   -        verify, v  :  run integration tests.
 	#   -           e2e, e  :  run e2e tests.
 	#   only executing the corresponding "action" of a "stage" needs the `only` suffix.
-	#   integrate with dapper via `BY=dapper`.
+	#   running make process by rancher/dapper, or running locally by `AUTOK3S_DEV_MODE=true` .
 	#
 	# Example:
 	#   -   make autok3s  :  execute `build` stage for autok3s.

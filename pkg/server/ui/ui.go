@@ -2,7 +2,6 @@ package ui
 
 import (
 	"crypto/tls"
-	"embed"
 	"io"
 	"io/fs"
 	"net/http"
@@ -11,12 +10,12 @@ import (
 	"strings"
 )
 
-//go:embed static
-var assets embed.FS
+const (
+	localUI        = "./static"
+	uiDefaultIndex = "https://autok3s-ui.s3-ap-southeast-2.amazonaws.com/static/index.html"
+)
 
 var (
-	localUI        = "./static"
-	uiIndex        = "https://autok3s-ui.s3-ap-southeast-2.amazonaws.com/static/index.html"
 	insecureClient = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -35,8 +34,7 @@ func (f fsFunc) Open(name string) (fs.File, error) {
 
 // Serve serve ui component.
 func Serve() http.Handler {
-	mode := os.Getenv("AUTOK3S_UI_MODE")
-	if mode == "dev" {
+	if uiMode() == "dev" {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			_ = serveIndex(writer)
 		})
@@ -46,8 +44,7 @@ func Serve() http.Handler {
 
 // ServeNotFound server ui component, not found will be return index.html.
 func ServeNotFound(next http.Handler) http.Handler {
-	mode := os.Getenv("AUTOK3S_UI_MODE")
-	if mode == "dev" {
+	if uiMode() == "dev" {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			_ = serveIndex(writer)
 		})
@@ -94,9 +91,9 @@ func serveAssetNotFound(next http.Handler) http.Handler {
 }
 
 func serveIndex(resp io.Writer) error {
-	uiPath := os.Getenv("AUTOK3S_UI_INDEX")
-	if uiPath != "" {
-		uiIndex = uiPath
+	uiIndex := os.Getenv("AUTOK3S_UI_INDEX")
+	if uiIndex == "" {
+		uiIndex = uiDefaultIndex
 	}
 	r, err := insecureClient.Get(uiIndex)
 	if err != nil {
@@ -106,4 +103,12 @@ func serveIndex(resp io.Writer) error {
 
 	_, err = io.Copy(resp, r.Body)
 	return err
+}
+
+func uiMode() string {
+	mode := os.Getenv("AUTOK3S_UI_MODE")
+	if mode == "" {
+		return DefaultMode
+	}
+	return mode
 }
