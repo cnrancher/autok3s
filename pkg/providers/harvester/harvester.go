@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
-	kubevirtv1 "kubevirt.io/client-go/api/v1"
+	kubevirtv1 "kubevirt.io/api/core/v1"
 )
 
 const (
@@ -419,7 +419,7 @@ func (h *Harvester) runInstances(num int, master bool, ssh *types.SSH) error {
 			Labels(h.setVMLabels(master)).
 			PVCDisk(rootDiskName, builder.DiskBusVirtio, false, false, 1, h.DiskSize, "", pvcOption).
 			CloudInitDisk(builder.CloudInitDiskName, builder.DiskBusVirtio, false, 0, *cloudInitSource).
-			EvictionStrategy(true).DefaultPodAntiAffinity().Run(false)
+			EvictionStrategy(true).DefaultPodAntiAffinity().RunStrategy(kubevirtv1.RunStrategyRerunOnFailure)
 
 		if h.KeypairName != "" {
 			vmBuilder = vmBuilder.SSHKey(h.KeypairName)
