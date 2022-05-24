@@ -974,3 +974,73 @@ func DescribeClusterNodes(client *kubernetes.Clientset, instanceNodes []types.Cl
 	}
 	return instanceNodes, nil
 }
+
+func (p *ProviderBase) Upgrade(cluster *types.Cluster) error {
+	p.Logger.Infof("[%s] executing upgrade k3s cluster logic...", p.Provider)
+	if len(cluster.MasterNodes) <= 0 || len(cluster.MasterNodes[0].InternalIPAddress) <= 0 {
+		return errors.New("[cluster] master node internal ip address can not be empty")
+	}
+
+	provider, err := providers.GetProvider(p.Provider)
+	if err != nil {
+		return err
+	}
+	masterExtraArgs := cluster.MasterExtraArgs
+	workerExtraArgs := cluster.WorkerExtraArgs
+
+	if cluster.DataStore != "" {
+		cluster.Cluster = false
+		masterExtraArgs += " --datastore-endpoint " + cluster.DataStore
+	}
+
+	if cluster.Network != "" {
+		masterExtraArgs += fmt.Sprintf(" --flannel-backend=%s", cluster.Network)
+	}
+
+	if cluster.ClusterCidr != "" {
+		masterExtraArgs += " --cluster-cidr " + cluster.ClusterCidr
+	}
+
+	var tlsSans string
+	for _, tlsSan := range cluster.TLSSans {
+		tlsSans = tlsSans + fmt.Sprintf(" --tls-san %s", tlsSan)
+	}
+	// upgrade server nodes
+	for index, node := range cluster.MasterNodes {
+		extraArgs := masterExtraArgs
+		providerExtraArgs := provider.GenerateMasterExtraArgs(cluster, node)
+		if providerExtraArgs != "" {
+			extraArgs += providerExtraArgs
+		}
+		if index == 0 {
+			if cluster.Cluster {
+				extraArgs += " --cluster-init"
+			}
+		}
+		p.Logger.Infof("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, cluster.InstallScript, cluster.Mirror, cluster.Token,
+			tlsSans, node.PublicIPAddress[0], strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+
+		if _, err := p.execute(&node, []string{fmt.Sprintf(initCommand, cluster.InstallScript, cluster.Mirror,
+			cluster.Token, tlsSans, node.PublicIPAddress[0], strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
+			return err
+		}
+	}
+
+	// upgrade worker nodes
+	for _, node := range cluster.WorkerNodes {
+		extraArgs := workerExtraArgs
+		providerExtraArgs := provider.GenerateWorkerExtraArgs(cluster, node)
+		if providerExtraArgs != "" {
+			extraArgs += providerExtraArgs
+		}
+		p.Logger.Infof("[cluster] k3s worker command: %s", fmt.Sprintf(joinCommand, cluster.InstallScript, cluster.Mirror, cluster.IP,
+			cluster.Token, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
+
+		if _, err := p.execute(&node, []string{fmt.Sprintf(joinCommand, cluster.InstallScript, cluster.Mirror, cluster.IP,
+			cluster.Token, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel))}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

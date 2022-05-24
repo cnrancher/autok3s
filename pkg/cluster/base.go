@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -1027,4 +1028,74 @@ func (p *ProviderBase) RegisterCallbacks(name, event string, fn func(interface{}
 		Event:       event,
 		Fn:          fn,
 	}
+}
+
+func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, version string) error {
+	if p.Provider == "k3d" {
+		return errors.New("the upgrade cluster for K3d provider is not supported yet")
+	}
+	state, err := common.DefaultDB.GetCluster(clusterName, p.Provider)
+	if err != nil {
+		return err
+	}
+	if state == nil {
+		return fmt.Errorf("cluster %s is not exist", clusterName)
+	}
+	p.Name = clusterName
+	p.ContextName = state.ContextName
+	logFile, err := common.GetLogFile(state.ContextName)
+	if err != nil {
+		return err
+	}
+	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger.Infof("[%s] begin to upgrade cluster %s...", p.Provider, clusterName)
+	state.Status = common.StatusUpgrading
+	// save cluster.
+	err = common.DefaultDB.SaveClusterState(state)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		// update cluster status
+		state.Status = common.StatusRunning
+		_ = common.DefaultDB.SaveClusterState(state)
+		// remove upgrade state file and save running state.
+		_ = logFile.Close()
+		if p.Callbacks != nil {
+			if process, ok := p.Callbacks[state.ContextName]; ok && process.Event == "update" {
+				logEvent := &common.LogEvent{
+					Name:        process.Event,
+					ContextName: state.ContextName,
+				}
+				process.Fn(logEvent)
+			}
+		}
+	}()
+
+	c := common.ConvertToCluster(state)
+	masterNodes := make([]types.Node, 0)
+	err = json.Unmarshal(state.MasterNodes, &masterNodes)
+	if err != nil {
+		return err
+	}
+	workerNodes := make([]types.Node, 0)
+	err = json.Unmarshal(state.WorkerNodes, &workerNodes)
+	if err != nil {
+		return err
+	}
+	c.Status.MasterNodes = masterNodes
+	c.Status.WorkerNodes = workerNodes
+	if installScript != "" {
+		c.InstallScript = installScript
+		state.InstallScript = installScript
+	}
+	if channel != "" {
+		c.K3sChannel = channel
+		state.K3sChannel = channel
+	}
+	c.K3sVersion = version
+	state.K3sVersion = version
+
+	return p.Upgrade(&c)
 }

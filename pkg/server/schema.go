@@ -30,6 +30,7 @@ func initProvider(s *types.APISchemas) {
 func initCluster(s *types.APISchemas) {
 	s.MustImportAndCustomize(autok3stypes.KubeconfigOutput{}, nil)
 	s.MustImportAndCustomize(autok3stypes.EnableExplorerOutput{}, nil)
+	s.MustImportAndCustomize(autok3stypes.UpgradeInput{}, nil)
 	s.MustImportAndCustomize(autok3stypes.Cluster{}, func(schema *types.APISchema) {
 		schema.Store = &cluster.Store{}
 		common.DefaultDB.Register()
@@ -44,6 +45,9 @@ func initCluster(s *types.APISchemas) {
 		schema.ResourceActions["disable-explorer"] = wranglertypes.Action{}
 		schema.ResourceActions["download-kubeconfig"] = wranglertypes.Action{
 			Output: "kubeconfigOutput",
+		}
+		schema.ResourceActions["upgrade"] = wranglertypes.Action{
+			Input: "upgradeInput",
 		}
 		schema.Formatter = cluster.Formatter
 		schema.ActionHandlers = cluster.HandleCluster()

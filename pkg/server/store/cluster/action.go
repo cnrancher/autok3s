@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +28,7 @@ const (
 	actionEnableExplorer     = "enable-explorer"
 	actionDisableExplorer    = "disable-explorer"
 	actionDownloadKubeconfig = "download-kubeconfig"
+	actionUpgrade            = "upgrade"
 )
 
 // Formatter cluster's formatter.
@@ -45,6 +47,7 @@ func HandleCluster() map[string]http.Handler {
 		actionEnableExplorer:     explorerAction,
 		actionDisableExplorer:    explorerAction,
 		actionDownloadKubeconfig: kubeconfigAction,
+		actionUpgrade:            joinAction,
 	}
 }
 
@@ -76,36 +79,61 @@ func (j join) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		apiRequest.WriteError(apierror.NewAPIError(validation.NotFound, fmt.Sprintf("provider %s is not found", state.Provider)))
 		return
 	}
-	provider.SetMetadata(&state.Metadata)
-	_ = provider.SetOptions(state.Options)
+
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
 		return
 	}
-	err = provider.SetConfig(body)
-	if err != nil {
-		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
-		return
-	}
-	err = provider.MergeClusterOptions()
-	if err != nil {
-		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
-		return
-	}
-	id := provider.GenerateClusterName()
-	if err = provider.JoinCheck(); err != nil {
-		apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, err.Error()))
+	provider.RegisterCallbacks(clusterID, "update", common.DefaultDB.BroadcastObject)
+	action := apiRequest.Action
+	switch action {
+	case actionJoin:
+		provider.SetMetadata(&state.Metadata)
+		_ = provider.SetOptions(state.Options)
+
+		err = provider.SetConfig(body)
+		if err != nil {
+			apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+			return
+		}
+		err = provider.MergeClusterOptions()
+		if err != nil {
+			apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
+			return
+		}
+		if err = provider.JoinCheck(); err != nil {
+			apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, err.Error()))
+			return
+		}
+		go func() {
+			err := provider.JoinK3sNode()
+			if err != nil {
+				logrus.Errorf("join cluster error: %v", err)
+			}
+		}()
+	case actionUpgrade:
+		if state.Provider == "k3d" {
+			apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, "the upgrade cluster for K3d provider is not supported yet"))
+			return
+		}
+		upgradeInput := &autok3stypes.UpgradeInput{}
+		err = json.Unmarshal(body, upgradeInput)
+		if err != nil {
+			apiRequest.WriteError(apierror.NewAPIError(validation.InvalidOption, err.Error()))
+			return
+		}
+		go func() {
+			err = provider.UpgradeK3sCluster(state.Name, upgradeInput.InstallScript, upgradeInput.K3sChannel, upgradeInput.K3sVersion)
+			if err != nil {
+				logrus.Errorf("failed to upgrade cluster %s: %v", clusterID, err)
+			}
+		}()
+	default:
+		apiRequest.WriteError(apierror.NewAPIError(validation.ActionNotAvailable, fmt.Sprintf("invalid action %s", action)))
 		return
 	}
 
-	provider.RegisterCallbacks(id, "update", common.DefaultDB.BroadcastObject)
-	go func() {
-		err := provider.JoinK3sNode()
-		if err != nil {
-			logrus.Errorf("join cluster error: %v", err)
-		}
-	}()
 	apiRequest.WriteResponse(http.StatusOK, types.APIObject{})
 }
 

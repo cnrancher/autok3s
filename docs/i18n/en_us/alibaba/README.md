@@ -285,6 +285,20 @@ Login to a specific k3s cluster node via ssh, i.e. myk3s.
 autok3s ssh --provider alibaba --name myk3s
 ```
 
+## Upgrade K3s Cluster
+
+The following command will help you to upgrade your K3s cluster version to latest version.
+
+```
+autok3s upgrade --provider aws --name myk3s --k3s-channel latest
+```
+
+If you want to upgrade K3s cluster to a specified version, you can use `--k3s-version` to overrides `--k3s-channel`.
+
+```
+autok3s upgrade --provider aws --name myk3s --k3s-version v1.22.4+k3s1
+```
+
 ## Other Usages
 
 Please run `autok3s <sub-command> --provider alibaba --help` commands, to discover other usages of AutoK3s.
