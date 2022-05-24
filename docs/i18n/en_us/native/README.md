@@ -234,6 +234,20 @@ If the ssh config is different between the existing nodes and current nodes(join
 autok3s ssh --provider native --name myk3s <ip> --ssh-user ubuntu --ssh-key-path ~/.ssh/id_rsa
 ```
 
+## Upgrade K3s Cluster
+
+The following command will help you to upgrade your K3s cluster version to latest version.
+
+```
+autok3s upgrade --provider aws --name myk3s --k3s-channel latest
+```
+
+If you want to upgrade K3s cluster to a specified version, you can use `--k3s-version` to overrides `--k3s-channel`.
+
+```
+autok3s upgrade --provider aws --name myk3s --k3s-version v1.22.4+k3s1
+```
+
 ## Other Usages
 
 More usage details please running `autok3s <sub-command> --provider native --help` commands.

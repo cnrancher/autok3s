@@ -217,14 +217,15 @@ func toClusterEvent(state *clusterEvent, schemaID string) apitypes.APIEvent {
 		Object: apitypes.APIObject{
 			Type:   schemaID,
 			ID:     state.Object.ContextName,
-			Object: toCluster(state.Object),
+			Object: ConvertToCluster(state.Object),
 		},
 	}
 }
 
-func toCluster(state *ClusterState) types.Cluster {
+func ConvertToCluster(state *ClusterState) types.Cluster {
 	c := types.Cluster{
 		Metadata: state.Metadata,
+		SSH:      state.SSH,
 		Status: types.Status{
 			Status: state.Status,
 		},
