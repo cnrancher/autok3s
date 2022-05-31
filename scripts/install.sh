@@ -302,32 +302,6 @@ create_symlinks() {
     fi
 }
 
-# --- create kill process script ---
-create_killprocess() {
-    echo "Creating kill script ${BINLOCATION}/autok3s-killall.sh"
-    $SUDO tee ${BINLOCATION}/autok3s-killall.sh >/dev/null << \EOF
-#!/bin/sh
-[ $(id -u) -eq 0 ] || exec sudo $0 $@
-killtree() {
-    kill -9 $(
-        { set +x; } 2>/dev/null;
-        for pid in $@; do
-            echo $pid
-        done
-        set -x;
-    ) 2>/dev/null
-}
-
-pstree() {
-    ps -e -o pid= -o args= | sed -e 's/^ *//; s/\s\s*/\t/;' | grep -E "kube-explorer|autok3s" | cut -f1
-}
-
-killtree $({ set +x; } 2>/dev/null; pstree; set -x)
-EOF
-    $SUDO chmod 755 ${BINLOCATION}/autok3s-killall.sh
-    $SUDO chown root:root ${BINLOCATION}/autok3s-killall.sh
-}
-
 # --- create uninstall script ---
 create_uninstall() {
     echo "Creating uninstall script ${BINLOCATION}/autok3s-uninstall.sh"
@@ -342,11 +316,15 @@ fi
 
 remove_uninstall() {
     rm -f ${BINLOCATION}/autok3s-uninstall.sh
-    rm -f ${BINLOCATION}/autok3s-killall.sh
 }
 trap remove_uninstall EXIT
 
-${BINLOCATION}/autok3s-killall.sh
+pids=\$(ps -e -o pid= -o args= | sed -e 's/^ *//; s/\s\s*/\t/;' | grep -E "kube-explorer|autok3s " | grep -v grep | cut -f1)
+set +m
+for pid in \$pids; do
+        kill -9 \$pid 2>&1
+done
+set -m
 
 rm -f ${BINLOCATION}/autok3s
 rm -f ${BINLOCATION}/kube-explorer
@@ -360,5 +338,4 @@ hasCli
 getPackage
 getKubeExplorer
 create_symlinks
-create_killprocess
 create_uninstall
