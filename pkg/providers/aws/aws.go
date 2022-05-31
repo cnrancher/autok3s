@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
@@ -39,7 +40,6 @@ const (
 	defaultSecurityGroupName = "autok3s"
 	defaultDeviceName        = "/dev/sda1"
 	requestSpotInstance      = false
-	defaultSpotPrice         = "0.50"
 )
 
 const (
@@ -51,8 +51,6 @@ type Amazon struct {
 	*cluster.ProviderBase `json:",inline"`
 	typesaws.Options      `json:",inline"`
 	client                *ec2.EC2
-
-	spotInstanceRequestIDs []string
 }
 
 func init() {
@@ -76,7 +74,6 @@ func newProvider() *Amazon {
 			RequestSpotInstance:    requestSpotInstance,
 			CloudControllerManager: false,
 		},
-		spotInstanceRequestIDs: []string{},
 	}
 }
 
@@ -241,13 +238,6 @@ func (p *Amazon) rollbackInstance(ids []string) error {
 	if err := p.terminateInstance(ids); err != nil {
 		return err
 	}
-
-	// cancel unfulfilled spot instance request
-	if len(p.spotInstanceRequestIDs) > 0 {
-		if err := p.cancelSpotInstance(); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -265,6 +255,16 @@ func (p *Amazon) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	if p.SecurityGroup == "" {
 		if err := p.configSecurityGroup(); err != nil {
 			return nil, err
+		}
+	}
+
+	if p.UserDataPath != "" {
+		userDataBytes, err := ioutil.ReadFile(p.UserDataPath)
+		if err != nil {
+			return nil, err
+		}
+		if len(userDataBytes) > 0 {
+			p.UserDataContent = base64.StdEncoding.EncodeToString(userDataBytes)
 		}
 	}
 
@@ -350,89 +350,38 @@ func (p *Amazon) runInstances(num int, master bool, ssh *types.SSH) error {
 		}
 	}
 
-	var instanceList []*ec2.Instance
-	if p.RequestSpotInstance {
-		if p.SpotPrice == "" {
-			p.SpotPrice = defaultSpotPrice
-		}
-		req := ec2.RequestSpotInstancesInput{
-			LaunchSpecification: &ec2.RequestSpotLaunchSpecification{
-				ImageId: &p.AMI,
-				Placement: &ec2.SpotPlacement{
-					AvailabilityZone: &p.Zone,
-				},
-				KeyName:             &p.KeypairName,
-				InstanceType:        &p.InstanceType,
-				NetworkInterfaces:   netSpecs,
-				IamInstanceProfile:  iamProfile,
-				BlockDeviceMappings: []*ec2.BlockDeviceMapping{bdm},
-			},
-			InstanceCount: aws.Int64(int64(num)),
-			SpotPrice:     &p.SpotPrice,
-		}
-
-		spotInstanceRequest, err := p.client.RequestSpotInstances(&req)
-		if err != nil {
-			return fmt.Errorf("[%s] failed request spot instance: %v", p.GetProviderName(), err)
-		}
-		for _, spotRequest := range spotInstanceRequest.SpotInstanceRequests {
-			requestID := spotRequest.SpotInstanceRequestId
-			p.spotInstanceRequestIDs = append(p.spotInstanceRequestIDs, aws.StringValue(requestID))
-			p.Logger.Infof("[%s] waiting for spot instance full filled", p.GetProviderName())
-			err = p.client.WaitUntilSpotInstanceRequestFulfilled(&ec2.DescribeSpotInstanceRequestsInput{
-				SpotInstanceRequestIds: []*string{requestID},
-			})
-			if err != nil {
-				return err
-			}
-
-			p.Logger.Infof("[%s] resolve instance information by spot request id %s", p.GetProviderName(), *requestID)
-
-			spotInstance, err := p.client.DescribeSpotInstanceRequests(&ec2.DescribeSpotInstanceRequestsInput{
-				SpotInstanceRequestIds: []*string{requestID},
-			})
-			if err != nil {
-				return err
-			}
-			if spotInstance != nil && spotInstance.SpotInstanceRequests != nil {
-				instanceIDs := make([]*string, 0)
-				for _, spotIns := range spotInstance.SpotInstanceRequests {
-					instanceIDs = append(instanceIDs, spotIns.InstanceId)
-				}
-				output, err := p.client.DescribeInstances(&ec2.DescribeInstancesInput{
-					InstanceIds: instanceIDs,
-				})
-				if err != nil {
-					return err
-				}
-				for _, ins := range output.Reservations {
-					instanceList = append(instanceList, ins.Instances[0])
-				}
-			}
-		}
-	} else {
-		input := &ec2.RunInstancesInput{
-			ImageId:  &p.AMI,
-			MinCount: aws.Int64(int64(num)),
-			MaxCount: aws.Int64(int64(num)),
-			Placement: &ec2.Placement{
-				AvailabilityZone: &p.Zone,
-			},
-			KeyName:             &p.KeypairName,
-			InstanceType:        &p.InstanceType,
-			NetworkInterfaces:   netSpecs,
-			IamInstanceProfile:  iamProfile,
-			BlockDeviceMappings: []*ec2.BlockDeviceMapping{bdm},
-		}
-
-		inst, err := p.client.RunInstances(input)
-
-		if err != nil || len(inst.Instances) != num {
-			return fmt.Errorf("[%s] calling runInstances error. region: %s, zone: %s, msg: [%v]",
-				p.GetProviderName(), p.Region, p.Zone, err)
-		}
-		instanceList = inst.Instances
+	input := &ec2.RunInstancesInput{
+		ImageId:  &p.AMI,
+		MinCount: aws.Int64(int64(num)),
+		MaxCount: aws.Int64(int64(num)),
+		Placement: &ec2.Placement{
+			AvailabilityZone: &p.Zone,
+		},
+		KeyName:             &p.KeypairName,
+		InstanceType:        &p.InstanceType,
+		NetworkInterfaces:   netSpecs,
+		IamInstanceProfile:  iamProfile,
+		BlockDeviceMappings: []*ec2.BlockDeviceMapping{bdm},
+		UserData:            aws.String(p.UserDataContent),
 	}
+	if p.RequestSpotInstance {
+		input.InstanceMarketOptions = &ec2.InstanceMarketOptionsRequest{
+			MarketType: aws.String("spot"),
+		}
+		if p.SpotPrice != "" {
+			input.InstanceMarketOptions.SpotOptions = &ec2.SpotMarketOptions{
+				MaxPrice: aws.String(p.SpotPrice),
+			}
+		}
+	}
+
+	inst, err := p.client.RunInstances(input)
+
+	if err != nil || len(inst.Instances) != num {
+		return fmt.Errorf("[%s] calling runInstances error. region: %s, zone: %s, msg: [%v]",
+			p.GetProviderName(), p.Region, p.Zone, err)
+	}
+	instanceList := inst.Instances
 
 	ids := make([]*string, 0)
 	for _, ins := range instanceList {
@@ -795,6 +744,13 @@ func (p *Amazon) CreateCheck() error {
 			p.SubnetID = *subnets.Subnets[0].SubnetId
 		}
 	}
+	// check user-data
+	if p.UserDataPath != "" {
+		if _, err := os.Stat(p.UserDataPath); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -1224,16 +1180,6 @@ func (p *Amazon) terminateInstance(ids []string) error {
 		}
 	}
 	return nil
-}
-
-func (p *Amazon) cancelSpotInstance() error {
-	if p.client == nil {
-		p.newClient()
-	}
-	_, err := p.client.CancelSpotInstanceRequests(&ec2.CancelSpotInstanceRequestsInput{
-		SpotInstanceRequestIds: aws.StringSlice(p.spotInstanceRequestIDs),
-	})
-	return err
 }
 
 func (p *Amazon) isInstanceRunning(state string) bool {

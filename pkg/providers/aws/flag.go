@@ -294,5 +294,17 @@ func (p *Amazon) sharedFlags() []types.Flag {
 			V:     p.CloudControllerManager,
 			Usage: "Enable cloud-controller-manager component, for more information, please check https://github.com/kubernetes/cloud-provider-aws/blob/master/docs/getting_started.md",
 		},
+		{
+			Name:  "user-data-content",
+			P:     &p.UserDataContent,
+			V:     p.UserDataContent,
+			Usage: "The user data content to make available to the instance, must be base64-encoded text. For more information, see running commands on your Linux instance at launch: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html",
+		},
+		{
+			Name:  "user-data-path",
+			P:     &p.UserDataPath,
+			V:     p.UserDataPath,
+			Usage: "The user data to make available to the instance, provide user data file path. For more information, see running commands on your Linux instance at launch: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html",
+		},
 	}
 }

@@ -85,12 +85,6 @@ func NewBaseProvider() *ProviderBase {
 func (p *ProviderBase) GetCreateOptions() []types.Flag {
 	return []types.Flag{
 		{
-			Name:  "ui",
-			P:     &p.UI,
-			V:     p.UI,
-			Usage: "(deprecated) Enable K3s UI(kubernetes/dashboard). Will remove at v0.5.0. For how to login to UI, please see: https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md",
-		},
-		{
 			Name:  "cluster",
 			P:     &p.Cluster,
 			V:     p.Cluster,

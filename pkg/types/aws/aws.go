@@ -20,4 +20,6 @@ type Options struct {
 	SpotPrice                    string   `json:"spot-price,omitempty" yaml:"spot-price,omitempty"`
 	Tags                         []string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	CloudControllerManager       bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
+	UserDataContent              string   `json:"user-data-content,omitempty" yaml:"user-data-content,omitempty"`
+	UserDataPath                 string   `json:"user-data-path,omitempty" yaml:"user-data-path,omitempty"`
 }
