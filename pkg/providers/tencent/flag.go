@@ -299,6 +299,12 @@ func (p *Tencent) sharedFlags() []types.Flag {
 			V:     p.UserDataPath,
 			Usage: "Set user data, i.e.( --user-data-path /file/path ), see: https://cloud.tencent.com/document/product/213/17525",
 		},
+		{
+			Name:  "user-data-content",
+			P:     &p.UserDataContent,
+			V:     p.UserDataContent,
+			Usage: "Set user data content, must be base64-encoded text. see: https://cloud.tencent.com/document/product/213/17525",
+		},
 	}
 
 	return fs

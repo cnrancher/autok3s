@@ -418,7 +418,7 @@ func (h *Harvester) runInstances(num int, master bool, ssh *types.SSH) error {
 			Labels(h.setVMLabels(master)).
 			PVCDisk(rootDiskName, builder.DiskBusVirtio, false, false, 1, h.DiskSize, "", pvcOption).
 			CloudInitDisk(builder.CloudInitDiskName, builder.DiskBusVirtio, false, 0, *cloudInitSource).
-			EvictionStrategy(true).DefaultPodAntiAffinity().RunStrategy(kubevirtv1.RunStrategyRerunOnFailure)
+			EvictionStrategy(true).DefaultPodAntiAffinity().Run(false)
 
 		if h.KeypairName != "" {
 			vmBuilder = vmBuilder.SSHKey(h.KeypairName)
