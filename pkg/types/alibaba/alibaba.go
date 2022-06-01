@@ -27,6 +27,8 @@ type Options struct {
 	EIP                     bool     `json:"eip,omitempty" yaml:"eip,omitempty"`
 	Tags                    []string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	CloudControllerManager  bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
+	UserDataPath            string   `json:"user-data-path,omitempty" yaml:"user-data-path,omitempty"`
+	UserDataContent         string   `json:"user-data-content,omitempty" yaml:"user-data-content,omitempty"`
 }
 
 // Terway struct for alibaba terway.

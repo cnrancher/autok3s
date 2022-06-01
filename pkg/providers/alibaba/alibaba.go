@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
@@ -355,6 +356,7 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 	request.SecurityGroupId = p.SecurityGroup
 	request.Amount = requests.NewInteger(num)
 	request.UniqueSuffix = requests.NewBoolean(false)
+	request.UserData = p.UserDataContent
 	// check `--eip` value
 	if !p.EIP {
 		bandwidth, err := strconv.Atoi(p.InternetMaxBandwidthOut)
@@ -685,6 +687,13 @@ func (p *Alibaba) CreateCheck() error {
 
 	if p.Region != defaultRegion && p.Zone == defaultZoneID && p.VSwitch == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set `--zone` in specified region %s to create default vswitch or set exist `--vswitch` in specified region", p.GetProviderName(), p.Region)
+	}
+
+	if p.UserDataPath != "" {
+		_, err = os.Stat(p.UserDataPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1026,6 +1035,16 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		}
 
 		p.VpcCIDR = vpcCIDR
+	}
+
+	if p.UserDataPath != "" {
+		userDataBytes, err := ioutil.ReadFile(p.UserDataPath)
+		if err != nil {
+			return nil, err
+		}
+		if len(userDataBytes) > 0 {
+			p.UserDataContent = base64.StdEncoding.EncodeToString(userDataBytes)
+		}
 	}
 
 	// run ecs master instances.

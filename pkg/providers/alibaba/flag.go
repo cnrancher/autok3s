@@ -286,6 +286,18 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			V:     p.TerwayMaxPoolSize,
 			Usage: "Max pool size for terway ENI mode",
 		},
+		{
+			Name:  "user-data-path",
+			P:     &p.UserDataPath,
+			V:     p.UserDataPath,
+			Usage: "file path of user data to make available to the ECS instance. For more information, see: https://help.aliyun.com/document_detail/108461.html",
+		},
+		{
+			Name:  "user-data-content",
+			P:     &p.UserDataContent,
+			V:     p.UserDataContent,
+			Usage: "user data content, must be base64-encoded text. For more information, see: https://help.aliyun.com/document_detail/108461.html",
+		},
 	}
 
 	return fs

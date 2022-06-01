@@ -443,6 +443,16 @@ func (p *Tencent) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		p.Logger.Infof("[%s] launching instance with auto-generated password...", p.GetProviderName())
 	}
 
+	if p.UserDataPath != "" {
+		userDataBytes, err := ioutil.ReadFile(p.UserDataPath)
+		if err != nil {
+			return nil, err
+		}
+		if len(userDataBytes) > 0 {
+			p.UserDataContent = base64.StdEncoding.EncodeToString(userDataBytes)
+		}
+	}
+
 	// run ecs master instances.
 	if masterNum > 0 {
 		p.Logger.Infof("[%s] %d number of master instances will be created", p.GetProviderName(), masterNum)
@@ -604,8 +614,8 @@ func (p *Tencent) deleteInstance(f bool) (string, error) {
 func (p *Tencent) CreateCheck() error {
 	if p.UserDataPath != "" {
 		_, err := os.Stat(p.UserDataPath)
-		if os.IsNotExist(err) {
-			return fmt.Errorf("[%s] calling preflight error: file %s is not exist, msg: %v", p.GetProviderName(), p.UserDataPath, err)
+		if err != nil {
+			return err
 		}
 	}
 	if p.KeypairID != "" && p.SSHKeyPath == "" {
@@ -749,8 +759,7 @@ func (p *Tencent) runInstances(num int, master bool, password string) error {
 	diskSize, _ := strconv.ParseInt(p.SystemDiskSize, 10, 64)
 	bandwidth, _ := strconv.ParseInt(p.InternetMaxBandwidthOut, 10, 64)
 
-	userdata, _ := ioutil.ReadFile(p.UserDataPath)
-	request.UserData = tencentCommon.StringPtr(base64.StdEncoding.EncodeToString(userdata))
+	request.UserData = tencentCommon.StringPtr(p.UserDataContent)
 	request.InstanceCount = tencentCommon.Int64Ptr(int64(num))
 	request.ImageId = tencentCommon.StringPtr(p.ImageID)
 	request.InstanceType = tencentCommon.StringPtr(p.InstanceType)
