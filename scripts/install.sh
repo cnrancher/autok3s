@@ -14,6 +14,10 @@ BINLOCATION=${BINLOCATION:-'/usr/local/bin'}
 KUBEEXPLORER_REPO=${KUBEEXPLORER_REPO:-'kube-explorer'}
 KUBEEXPLORER_DOWNLOAD_URL=https://github.com/$OWNER/$KUBEEXPLORER_REPO/releases/download
 KUBEEXPLORER_VERSION=v0.2.9
+SUDO=sudo
+if [ $(id -u) -eq 0 ]; then
+    SUDO=
+fi
 
 #   - INSTALL_AUTOK3S_MIRROR
 #     For Chinese users, set INSTALL_AUTOK3S_MIRROR=cn to use the mirror address to accelerate
@@ -139,71 +143,27 @@ getPackage() {
 
     curl -sSL $url --output "$targetFile"
 
-    if [ "$?" = "0" ]; then
-
-        if [ "$VERIFY_CHECKSUM" = "1" ]; then
-            checkHash
-        fi
-
-    chmod +x "$targetFile"
+    if [ "$VERIFY_CHECKSUM" = "1" ]; then
+        checkHash
+    fi
 
     echo "Download complete."
 
-    if [ ! -w "$BINLOCATION" ]; then
+    $SUDO mv -f $targetFile $BINLOCATION/$REPO
+    $SUDO chmod +x $BINLOCATION/$REPO
 
-            echo
-            echo "============================================================"
-            echo "  The script was run as a user who is unable to write"
-            echo "  to $BINLOCATION. To complete the installation the"
-            echo "  following commands may need to be run manually."
-            echo "============================================================"
-            echo
-            echo "  sudo cp $REPO$suffix $BINLOCATION/$REPO"
+    if [ -e "$targetFile" ]; then
+        rm "$targetFile"
+    fi
 
-            if [ -n "$ALIAS_NAME" ]; then
-                echo "  sudo ln -sf $BINLOCATION/$REPO $BINLOCATION/$ALIAS_NAME"
-            fi
-
-            echo
-
-        else
-
-            echo
-            echo "Running with sufficient permissions to attempt to move $REPO to $BINLOCATION"
-
-            if [ ! -w "$BINLOCATION/$REPO" ] && [ -f "$BINLOCATION/$REPO" ]; then
-
-            echo
-            echo "================================================================"
-            echo "  $BINLOCATION/$REPO already exists and is not writeable"
-            echo "  by the current user.  Please adjust the binary ownership"
-            echo "  or run sh/bash with sudo."
-            echo "================================================================"
-            echo
-            exit 1
-
-            fi
-
-            mv $targetFile $BINLOCATION/$REPO
-
-            if [ "$?" = "0" ]; then
-                echo "New version of $REPO installed to $BINLOCATION"
-            fi
-
-            if [ -e "$targetFile" ]; then
-                rm "$targetFile"
-            fi
-
-            if [ -n "$ALIAS_NAME" ]; then
-                if [ ! -L $BINLOCATION/$ALIAS_NAME ]; then
-                    ln -s $BINLOCATION/$REPO $BINLOCATION/$ALIAS_NAME
-                    echo "Creating alias '$ALIAS_NAME' for '$REPO'."
-                fi
-            fi
-
-            ${SUCCESS_CMD}
+    if [ -n "$ALIAS_NAME" ]; then
+        if [ ! -L $BINLOCATION/$ALIAS_NAME ]; then
+            $SUDO ln -s $BINLOCATION/$REPO $BINLOCATION/$ALIAS_NAME
+            echo "Creating alias '$ALIAS_NAME' for '$REPO'."
         fi
     fi
+
+    ${SUCCESS_CMD}
 }
 
 getKubeExplorer() {
@@ -240,51 +200,13 @@ getKubeExplorer() {
     echo "Downloading package $url as $targetFile"
 
     curl -sSL $url --output "$targetFile"
-
-    chmod +x "$targetFile"
-
     echo "Download complete."
 
-    if [ ! -w "$BINLOCATION" ]; then
+    $SUDO mv $targetFile $BINLOCATION/$KUBEEXPLORER_REPO
+    $SUDO chmod +x $BINLOCATION/$KUBEEXPLORER_REPO
 
-        echo
-        echo "============================================================"
-        echo "  The script was run as a user who is unable to write"
-        echo "  to $BINLOCATION. To complete the installation the"
-        echo "  following commands may need to be run manually."
-        echo "============================================================"
-        echo
-        echo "  sudo cp $KUBEEXPLORER_REPO$suffix $BINLOCATION/$KUBEEXPLORER_REPO"
-        echo
-
-    else
-
-        echo
-        echo "Running with sufficient permissions to attempt to move $KUBEEXPLORER_REPO to $BINLOCATION"
-
-        if [ ! -w "$BINLOCATION/$KUBEEXPLORER_REPO" ] && [ -f "$BINLOCATION/$KUBEEXPLORER_REPO" ]; then
-
-            echo
-            echo "================================================================"
-            echo "  $BINLOCATION/$KUBEEXPLORER_REPO already exists and is not writeable"
-            echo "  by the current user.  Please adjust the binary ownership"
-            echo "  or run sh/bash with sudo."
-            echo "================================================================"
-            echo
-            exit 1
-
-        fi
-
-        mv $targetFile $BINLOCATION/$KUBEEXPLORER_REPO
-
-        if [ "$?" = "0" ]; then
-            echo "New version of $KUBEEXPLORER_REPO installed to $BINLOCATION"
-        fi
-
-        if [ -e "$targetFile" ]; then
-            rm "$targetFile"
-        fi
-
+    if [ -e "$targetFile" ]; then
+        rm "$targetFile"
     fi
 }
 
@@ -331,7 +253,6 @@ rm -f ${BINLOCATION}/kube-explorer
 
 EOF
     $SUDO chmod 755 ${BINLOCATION}/autok3s-uninstall.sh
-    $SUDO chown root:root ${BINLOCATION}/autok3s-uninstall.sh
 }
 
 hasCli
