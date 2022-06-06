@@ -228,15 +228,26 @@ func (d downloadKubeconfig) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 			clusterID: clusterCfg,
 		}
 	}
-	if authCfg, ok := cfg.AuthInfos[clusterID]; ok {
-		currentCfg.AuthInfos = map[string]*api.AuthInfo{
-			clusterID: authCfg,
-		}
-	}
 	if contextCfg, ok := cfg.Contexts[clusterID]; ok {
 		currentCfg.Contexts = map[string]*api.Context{
 			clusterID: contextCfg,
 		}
+	}
+	if authCfg, ok := cfg.AuthInfos[clusterID]; ok {
+		currentCfg.AuthInfos = map[string]*api.AuthInfo{
+			clusterID: authCfg,
+		}
+	} else {
+		// if authInfo is not same as cluster ID (e.g. K3d provider), use AuthInfo name to check
+		ctx := currentCfg.Contexts[clusterID]
+		if ctx != nil {
+			if authCfg, ok = cfg.AuthInfos[ctx.AuthInfo]; ok {
+				currentCfg.AuthInfos = map[string]*api.AuthInfo{
+					ctx.AuthInfo: authCfg,
+				}
+			}
+		}
+
 	}
 	if extensionCfg, ok := cfg.Extensions[clusterID]; ok {
 		currentCfg.Extensions = map[string]runtime.Object{
