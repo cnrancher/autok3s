@@ -34,25 +34,26 @@ import (
 )
 
 const (
-	k3sInstallScript         = "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh"
-	secretID                 = "secret-id"
-	secretKey                = "secret-key"
-	imageID                  = "img-pi0ii46r" /* Ubuntu Server 18.04.1 LTS x64 */
-	instanceType             = "SA1.MEDIUM4"  /* CPU:2 Memory:4 */
-	instanceChargeType       = "POSTPAID_BY_HOUR"
-	internetMaxBandwidthOut  = "5"
-	internetChargeType       = "TRAFFIC_POSTPAID_BY_HOUR"
-	diskCategory             = "CLOUD_SSD"
-	diskSize                 = "50"
-	defaultRegion            = "ap-guangzhou"
-	defaultZone              = "ap-guangzhou-3"
-	defaultSecurityGroupName = "autok3s"
-	vpcName                  = "autok3s-tencent-vpc"
-	subnetName               = "autok3s-tencent-subnet"
-	vpcCidrBlock             = "192.168.0.0/16"
-	subnetCidrBlock          = "192.168.3.0/24"
-	ipRange                  = "0.0.0.0/0"
-	defaultUser              = "ubuntu"
+	k3sInstallScript          = "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh"
+	secretID                  = "secret-id"
+	secretKey                 = "secret-key"
+	imageID                   = "img-pi0ii46r" /* Ubuntu Server 18.04.1 LTS x64 */
+	instanceType              = "SA1.MEDIUM4"  /* CPU:2 Memory:4 */
+	defaultInstanceChargeType = "POSTPAID_BY_HOUR"
+	spotInstanceChargeType    = "SPOTPAID"
+	internetMaxBandwidthOut   = "5"
+	internetChargeType        = "TRAFFIC_POSTPAID_BY_HOUR"
+	diskCategory              = "CLOUD_SSD"
+	diskSize                  = "50"
+	defaultRegion             = "ap-guangzhou"
+	defaultZone               = "ap-guangzhou-3"
+	defaultSecurityGroupName  = "autok3s"
+	vpcName                   = "autok3s-tencent-vpc"
+	subnetName                = "autok3s-tencent-subnet"
+	vpcCidrBlock              = "192.168.0.0/16"
+	subnetCidrBlock           = "192.168.3.0/24"
+	ipRange                   = "0.0.0.0/0"
+	defaultUser               = "ubuntu"
 )
 
 // providerName is the name of this provider.
@@ -91,7 +92,7 @@ func newProvider() *Tencent {
 		Options: tencent.Options{
 			ImageID:                 imageID,
 			InstanceType:            instanceType,
-			InstanceChargeType:      instanceChargeType,
+			InstanceChargeType:      defaultInstanceChargeType,
 			SystemDiskSize:          diskSize,
 			SystemDiskType:          diskCategory,
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
@@ -451,6 +452,10 @@ func (p *Tencent) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		if len(userDataBytes) > 0 {
 			p.UserDataContent = base64.StdEncoding.EncodeToString(userDataBytes)
 		}
+	}
+
+	if p.Spot {
+		p.InstanceChargeType = spotInstanceChargeType
 	}
 
 	// run ecs master instances.

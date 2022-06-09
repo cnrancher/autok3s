@@ -42,6 +42,7 @@ type Options struct {
 	CloudControllerManager  bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
 	UserDataPath            string   `json:"user-data-path,omitempty" yaml:"user-data-path,omitempty"`
 	UserDataContent         string   `json:"user-data-content,omitempty" yaml:"user-data-content,omitempty"`
+	Spot                    bool     `json:"spot,omitempty" yaml:"spot,omitempty"`
 }
 
 // CloudControllerManager struct for tencent cloud-controller-manager.

@@ -298,6 +298,24 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			V:     p.UserDataContent,
 			Usage: "user data content, must be base64-encoded text. For more information, see: https://help.aliyun.com/document_detail/108461.html",
 		},
+		{
+			Name:  "spot-strategy",
+			P:     &p.SpotStrategy,
+			V:     p.SpotStrategy,
+			Usage: "the bidding policy for the pay-as-you-go instance, valid values NoSpot, SpotWithPriceLimit, SpotAsPriceGo, default is NoSpot, see: https://www.alibabacloud.com/help/zh/elastic-compute-service/latest/preemptible-instances-overview#section-pgb-zcy-wgb",
+		},
+		{
+			Name:  "spot-duration",
+			P:     &p.SpotDuration,
+			V:     p.SpotDuration,
+			Usage: "the protection period(hours) of the preemptible instance, Valid values: 0, 1, 2, 3, 4, 5, and 6, default value 1. see: https://www.alibabacloud.com/help/zh/elastic-compute-service/latest/preemptible-instances-overview#section-xfb-ucm-r5s",
+		},
+		{
+			Name:  "spot-price-limit",
+			P:     &p.SpotPriceLimit,
+			V:     p.SpotPriceLimit,
+			Usage: "the maximum hourly price of the instance, this parameter is valid only when the --spot-strategy parameter is set to SpotWithPriceLimit. see: https://www.alibabacloud.com/help/zh/elastic-compute-service/latest/preemptible-instances-overview#section-mdc-jt5-ydb",
+		},
 	}
 
 	return fs

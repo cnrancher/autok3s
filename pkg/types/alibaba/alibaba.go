@@ -29,6 +29,9 @@ type Options struct {
 	CloudControllerManager  bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
 	UserDataPath            string   `json:"user-data-path,omitempty" yaml:"user-data-path,omitempty"`
 	UserDataContent         string   `json:"user-data-content,omitempty" yaml:"user-data-content,omitempty"`
+	SpotStrategy            string   `json:"spot-strategy,omitempty" yaml:"spot-strategy,omitempty"`
+	SpotDuration            int      `json:"spot-duration,omitempty" yaml:"spot-duration,omitempty"`
+	SpotPriceLimit          float64  `json:"spot-price-limit,omitempty" yaml:"spot-price-limit,omitempty"`
 }
 
 // Terway struct for alibaba terway.

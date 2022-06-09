@@ -52,6 +52,8 @@ const (
 	defaultSecurityGroupName = "autok3s"
 	vpcStatusAvailable       = "Available"
 	defaultUser              = "root"
+	defaultSpotStrategy      = "NoSpot"
+	defaultSpotDuration      = 1
 )
 
 // providerName is the name of this provider.
@@ -97,6 +99,8 @@ func newProvider() *Alibaba {
 			Zone:                    defaultZoneID,
 			EIP:                     false,
 			CloudControllerManager:  false,
+			SpotStrategy:            defaultSpotStrategy,
+			SpotDuration:            defaultSpotDuration,
 		},
 	}
 }
@@ -357,6 +361,9 @@ func (p *Alibaba) runInstances(num int, master bool, password string) error {
 	request.Amount = requests.NewInteger(num)
 	request.UniqueSuffix = requests.NewBoolean(false)
 	request.UserData = p.UserDataContent
+	request.SpotStrategy = p.SpotStrategy
+	request.SpotDuration = requests.NewInteger(p.SpotDuration)
+	request.SpotPriceLimit = requests.NewFloat(p.SpotPriceLimit)
 	// check `--eip` value
 	if !p.EIP {
 		bandwidth, err := strconv.Atoi(p.InternetMaxBandwidthOut)
