@@ -17,13 +17,13 @@ docker pull cnrancher/rancher:$PANDARIA_VERSION
 
 kubectl create namespace cattle-system
 ec2_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-helm install rancher rancher-latest/rancher \
+helm install rancher pandaria/rancher \
   --namespace cattle-system \
   --set hostname=$ec2_ip.sslip.io \
   --set replicas=1 \
   --set ingress.enabled=false \
   --set ingress.tls.source=rancher \
-  --set bootstrapPassword=Rancher@123456
+  --set bootstrapPassword=Rancher@123456 \
   --version $PANDARIA_VERSION
 
 kubectl create -f - <<EOF
