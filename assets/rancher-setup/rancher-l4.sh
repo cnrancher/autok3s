@@ -18,7 +18,9 @@ helm install rancher rancher-latest/rancher \
   --set replicas=1 \
   --set ingress.enabled=false \
   --set ingress.tls.source=rancher \
-  --set bootstrapPassword=Rancher@123456
+  --set bootstrapPassword=Rancher@123456 \
+  --set extraEnv[0].name=CATTLE_PROMETHEUS_METRICS \
+  --set-string extraEnv[0].value=true
 
 kubectl create -f - <<EOF
 apiVersion: v1

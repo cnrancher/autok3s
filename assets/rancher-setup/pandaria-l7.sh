@@ -28,4 +28,6 @@ helm install rancher pandaria/rancher \
   --set hostname=$ec2_ip.sslip.io \
   --set replicas=1 \
   --set bootstrapPassword=Rancher@123456 \
+  --set extraEnv[0].name=CATTLE_PROMETHEUS_METRICS \
+  --set-string extraEnv[0].value=true \
   --version $PANDARIA_VERSION
