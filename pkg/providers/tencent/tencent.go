@@ -1094,10 +1094,6 @@ func (p *Tencent) configNetwork() error {
 
 		args.Filters = []*vpc.Filter{
 			{
-				Values: tencentCommon.StringPtrs([]string{subnetName}),
-				Name:   tencentCommon.StringPtr("subnet-name"),
-			},
-			{
 				Name:   tencentCommon.StringPtr("tag:autok3s"),
 				Values: tencentCommon.StringPtrs([]string{"true"}),
 			},
@@ -1108,16 +1104,20 @@ func (p *Tencent) configNetwork() error {
 			return err
 		}
 
+		cidr := fmt.Sprintf("192.168.%d.0/24", utils.GenerateRand())
 		if resp != nil && resp.Response != nil && len(resp.Response.SubnetSet) > 0 {
-			p.Logger.Infof("[%s] find existed default subnet %s for vpc %s", p.GetProviderName(), subnetName, vpcName)
+			p.Logger.Infof("[%s] find existed default subnet for vpc %s", p.GetProviderName(), vpcName)
 			for _, subnet := range resp.Response.SubnetSet {
-				if *subnet.Zone == p.Zone {
+				if *subnet.Zone == p.Zone && (*subnet.SubnetName == subnetName || *subnet.SubnetName == fmt.Sprintf("%s-%s", subnetName, p.Zone)) {
 					p.SubnetID = *subnet.SubnetId
 					break
+				} else if *subnet.CidrBlock == cidr {
+					cidr = fmt.Sprintf("192.168.%d.0/24", utils.GenerateRand())
 				}
 			}
-		} else {
-			return p.generateDefaultSubnet()
+		}
+		if p.SubnetID == "" {
+			return p.generateDefaultSubnet(cidr)
 		}
 
 	} else {
@@ -1125,7 +1125,7 @@ func (p *Tencent) configNetwork() error {
 		if err != nil {
 			return err
 		}
-		err = p.generateDefaultSubnet()
+		err = p.generateDefaultSubnet("")
 		if err != nil {
 			return err
 		}
@@ -1156,8 +1156,9 @@ func (p *Tencent) generateDefaultVPC() error {
 	return err
 }
 
-func (p *Tencent) generateDefaultSubnet() error {
-	p.Logger.Infof("[%s] generate default subnet %s for vpc %s in region %s", p.GetProviderName(), subnetName, vpcName, p.Region)
+func (p *Tencent) generateDefaultSubnet(cidr string) error {
+	vsName := fmt.Sprintf("%s-%s", subnetName, p.Zone)
+	p.Logger.Infof("[%s] generate default subnet %s for vpc %s in region %s", p.GetProviderName(), vsName, vpcName, p.Region)
 	request := vpc.NewCreateSubnetRequest()
 
 	request.Tags = []*vpc.Tag{
@@ -1167,9 +1168,12 @@ func (p *Tencent) generateDefaultSubnet() error {
 		},
 	}
 	request.VpcId = tencentCommon.StringPtr(p.VpcID)
-	request.SubnetName = tencentCommon.StringPtr(subnetName)
+	request.SubnetName = tencentCommon.StringPtr(vsName)
 	request.Zone = tencentCommon.StringPtr(p.Zone)
-	request.CidrBlock = tencentCommon.StringPtr(subnetCidrBlock)
+	if cidr == "" {
+		cidr = subnetCidrBlock
+	}
+	request.CidrBlock = tencentCommon.StringPtr(cidr)
 
 	response, err := p.v.CreateSubnet(request)
 	if err != nil {

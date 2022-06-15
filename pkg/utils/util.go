@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	mrand "math/rand"
 	"os"
 	"reflect"
 	"strings"
@@ -175,4 +176,9 @@ func StringSupportBase64(value string) string {
 		valueByte = []byte(value)
 	}
 	return string(valueByte)
+}
+
+func GenerateRand() int {
+	mrand.Seed(time.Now().UnixNano())
+	return mrand.Intn(255)
 }
