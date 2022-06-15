@@ -18,4 +18,7 @@ type Options struct {
 	Tags                   []string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	OpenPorts              []string `json:"open-ports,omitempty" yaml:"open-ports,omitempty"`
 	CloudControllerManager bool     `json:"cloud-controller-manager" yaml:"cloud-controller-manager"`
+	StartupScriptContent   string   `json:"startup-script-content,omitempty" yaml:"startup-script-content,omitempty"`
+	StartupScriptPath      string   `json:"startup-script-path,omitempty" yaml:"startup-script-path,omitempty"`
+	StartupScriptURL       string   `json:"startup-script-url,omitempty" yaml:"startup-script-url,omitempty"`
 }
