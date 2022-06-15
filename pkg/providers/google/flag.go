@@ -289,5 +289,23 @@ func (p *Google) sharedFlags() []types.Flag {
 			V:     p.CloudControllerManager,
 			Usage: "Enable gcp-cloud-provider component",
 		},
+		{
+			Name:  "startup-script-path",
+			P:     &p.StartupScriptPath,
+			V:     p.StartupScriptPath,
+			Usage: "File path of startup script that contains commands that run when a virtual machine (VM) instance boots, only support scripts for Linux VMs. see: https://cloud.google.com/compute/docs/instances/startup-scripts/linux#order_of_execution_of_linux_startup_scripts",
+		},
+		{
+			Name:  "startup-script-url",
+			P:     &p.StartupScriptURL,
+			V:     p.StartupScriptURL,
+			Usage: "Set url for a bash or non-bash startup script that is stored in Cloud Storage, only support scripts for Linux VMs. see: https://cloud.google.com/compute/docs/instances/startup-scripts/linux#passing-storage",
+		},
+		{
+			Name:  "startup-script-content",
+			P:     &p.StartupScriptContent,
+			V:     p.StartupScriptContent,
+			Usage: "Set contents of startup script directly to the VM, must be base64-encoded text. Only support scripts for Linux VMs, see: https://cloud.google.com/compute/docs/instances/startup-scripts/linux#order_of_execution_of_linux_startup_scripts",
+		},
 	}
 }

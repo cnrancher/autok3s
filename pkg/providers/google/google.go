@@ -324,6 +324,14 @@ func (p *Google) CreateCheck() error {
 		return fmt.Errorf("[%s] GCE project id %s is not found: %v", p.GetProviderName(), p.Project, err)
 	}
 
+	// check startup script file exist
+	if p.StartupScriptPath != "" {
+		_, err = os.Stat(p.StartupScriptPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -403,6 +411,21 @@ func (p *Google) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	// open firewall ports for VM
 	if err = p.ensureFirewall(); err != nil {
 		return nil, err
+	}
+
+	// set startup script
+	if p.StartupScriptContent != "" {
+		scriptByte, err := base64.StdEncoding.DecodeString(p.StartupScriptContent)
+		if err != nil {
+			return nil, err
+		}
+		p.StartupScriptContent = string(scriptByte)
+	} else if p.StartupScriptPath != "" {
+		userDataBytes, err := ioutil.ReadFile(p.StartupScriptPath)
+		if err != nil {
+			return nil, err
+		}
+		p.StartupScriptContent = string(userDataBytes)
 	}
 
 	// create instance
@@ -506,6 +529,7 @@ func (p *Google) startInstance(num int, master bool) error {
 		Scheduling: &raw.Scheduling{
 			Preemptible: p.Preemptible,
 		},
+		Metadata: &raw.Metadata{},
 	}
 
 	if strings.Contains(p.Subnetwork, "/subnetworks/") {
@@ -520,6 +544,24 @@ func (p *Google) startInstance(num int, master bool) error {
 			Name: "External NAT",
 		}
 		instance.NetworkInterfaces[0].AccessConfigs = append(instance.NetworkInterfaces[0].AccessConfigs, cfg)
+	}
+
+	if p.StartupScriptContent != "" || p.StartupScriptURL != "" {
+		if instance.Metadata.Items == nil {
+			instance.Metadata.Items = []*raw.MetadataItems{}
+		}
+		if p.StartupScriptContent != "" {
+			instance.Metadata.Items = append(instance.Metadata.Items, &raw.MetadataItems{
+				Key:   "startup-script",
+				Value: &p.StartupScriptContent,
+			})
+		}
+		if p.StartupScriptURL != "" {
+			instance.Metadata.Items = append(instance.Metadata.Items, &raw.MetadataItems{
+				Key:   "startup-script-url",
+				Value: &p.StartupScriptURL,
+			})
+		}
 	}
 
 	for i := 0; i < num; i++ {
@@ -728,16 +770,16 @@ func (p *Google) uploadKeyPair(instance *raw.Instance, sshKeyPath string) error 
 
 	metaDataValue := fmt.Sprintf("%s:%s %s\n", p.SSHUser, strings.TrimSpace(string(sshKey)), p.SSHUser)
 
-	op, err := p.client.Instances.SetMetadata(p.Project, p.Zone, instance.Name, &raw.Metadata{
-		Fingerprint: instance.Metadata.Fingerprint,
-		Items: []*raw.MetadataItems{
-			{
-				Key:   "sshKeys",
-				Value: &metaDataValue,
-			},
-		},
-	}).Do()
+	meta := instance.Metadata
+	if meta.Items == nil {
+		meta.Items = []*raw.MetadataItems{}
+	}
+	meta.Items = append(meta.Items, &raw.MetadataItems{
+		Key:   "sshKeys",
+		Value: &metaDataValue,
+	})
 
+	op, err := p.client.Instances.SetMetadata(p.Project, p.Zone, instance.Name, meta).Do()
 	if err != nil {
 		return err
 	}
