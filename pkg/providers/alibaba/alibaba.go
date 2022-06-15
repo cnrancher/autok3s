@@ -1277,16 +1277,20 @@ func (p *Alibaba) isVSwitchAvailable() (bool, error) {
 	return false, nil
 }
 
-func (p *Alibaba) generateDefaultVSwitch() error {
-	p.Logger.Infof("[%s] generate default vswitch %s for vpc %s in region %s, zone %s", p.GetProviderName(), vSwitchName, vpcName, p.Region, p.Zone)
+func (p *Alibaba) generateDefaultVSwitch(cidr string) error {
+	vsName := fmt.Sprintf("%s-%s", vSwitchName, p.Zone)
+	p.Logger.Infof("[%s] generate default vswitch %s for vpc %s in region %s, zone %s", p.GetProviderName(), vsName, vpcName, p.Region, p.Zone)
 	request := vpc.CreateCreateVSwitchRequest()
 	request.Scheme = "https"
 
 	request.RegionId = p.Region
 	request.ZoneId = p.Zone
-	request.CidrBlock = vSwitchCidrBlock
+	if cidr == "" {
+		cidr = vSwitchCidrBlock
+	}
+	request.CidrBlock = cidr
 	request.VpcId = p.Vpc
-	request.VSwitchName = vSwitchName
+	request.VSwitchName = vsName
 	request.Description = "default vswitch created by autok3s"
 
 	response, err := p.v.CreateVSwitch(request)
@@ -1342,26 +1346,28 @@ func (p *Alibaba) configNetwork() error {
 		req := vpc.CreateDescribeVSwitchesRequest()
 		req.Scheme = "https"
 		req.RegionId = p.Region
-		req.ZoneId = p.Zone
-		req.VSwitchName = vSwitchName
+		//req.ZoneId = p.Zone
 		req.VpcId = defaultVPC.VpcId
 		resp, err := p.v.DescribeVSwitches(req)
 		if err != nil {
 			return err
 		}
+		randCidr := fmt.Sprintf("10.%d.0.0/20", utils.GenerateRand())
 		if resp != nil && resp.TotalCount > 0 {
 			vswitchList := resp.VSwitches.VSwitch
-			// check zone.
 			for _, vswitch := range vswitchList {
-				if vswitch.ZoneId == p.Zone {
+				// check zone and name for default vswitch and regenerate default cidr block if random cidr is exists.
+				if vswitch.ZoneId == p.Zone && (vswitch.VSwitchName == vSwitchName || vswitch.VSwitchName == fmt.Sprintf("%s-%s", vSwitchName, p.Zone)) {
 					p.VSwitch = vswitch.VSwitchId
 					break
+				} else if vswitch.CidrBlock == randCidr {
+					randCidr = fmt.Sprintf("10.%d.0.0/20", utils.GenerateRand())
 				}
 			}
 		}
 
 		if p.VSwitch == "" {
-			err = p.generateDefaultVSwitch()
+			err = p.generateDefaultVSwitch(randCidr)
 			if err != nil {
 				return err
 			}
@@ -1373,7 +1379,7 @@ func (p *Alibaba) configNetwork() error {
 		if err != nil {
 			return err
 		}
-		err = p.generateDefaultVSwitch()
+		err = p.generateDefaultVSwitch("")
 		if err != nil {
 			return err
 		}
