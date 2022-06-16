@@ -58,9 +58,6 @@ steps:
     command:
       - --install
       - all
-    when:
-      event:
-        - tag
 
   - name: docker-publish-arm64
     image: thegeeklab/drone-docker-buildx
@@ -76,9 +73,6 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
-    when:
-      event:
-        - tag
 
   - name: docker-publish-latest-arm64
     image: thegeeklab/drone-docker-buildx
@@ -95,32 +89,45 @@ steps:
       password:
         from_secret: docker_password
     when:
-      event:
-        - tag
       ref:
         exclude:
           - "refs/tags/*rc*"
 
+  - name: fetch-all-tags
+    image: alpine/git
+    commands:
+      - git fetch --tags
+
+  - name: notary-output
+    image: aevea/release-notary:0.9.2
+    pull: if-not-exists
+    commands:
+      - hack/make-rules/release-note.sh /release-note/note.txt
+    volumes:
+      - name: release-note
+        path: /release-note
+
   - name: github_binary_release
-    image: ibuildthecloud/github-release:v0.0.1
+    image: plugins/github-release
     settings:
+      note: /release-note/note.txt
       api_key:
         from_secret: github_token
       prerelease: true
       checksum:
         - sha256
-      checksum_file: CHECKSUMsum.txt
-      checksum_flatten: true
       files:
         - "dist/autok3s_*"
-    when:
-      event:
-        - tag
+    volumes:
+      - name: release-note
+        path: /release-note
 
 volumes:
   - name: docker
     host:
       path: /var/run/docker.sock
+  - name: release-note
+    temp: {}
 trigger:
   event:
     include:
@@ -129,53 +136,3 @@ node:
   instance: agent-amd64
 depends_on:
   - "lint"
-
----
-kind: pipeline
-type: docker
-name: publish-release
-platform:
-  os: linux
-  arch: amd64
-steps:
-  - name: release-note
-    image: maiwj/drone-releaser:v0.1.0
-    commands:
-      - /changelog.sh
-    volumes:
-      - name: release-note
-        path: /release-note
-  - name: release
-    image: plugins/github-release
-    settings:
-      api_key:
-        from_secret: github_token
-      prerelease: true
-      overwrite: true
-      note: /release-note/CHANGELOG.md
-    volumes:
-      - name: release-note
-        path: /release-note
-    when:
-      event:
-        exclude:
-          - push
-volumes:
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-  - name: release-note
-    temp: {}
-trigger:
-  ref:
-    include:
-      - "refs/heads/master"
-      - "refs/heads/release/v*"
-      - "refs/tags/v*"
-  event:
-    include:
-      - tag
-node:
-  instance: agent-amd64
-depends_on:
-  - package
