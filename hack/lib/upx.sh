@@ -19,7 +19,8 @@ function autok3s::upx::run() {
       autok3s::log::info "darwin arm64 binary doesn't work well with upx, skipping compressing this binary."
       continue
     fi
-    upx -1 ${ROOT_DIR}/dist/$file;
+    # Fix issue: https://github.com/cnrancher/autok3s/issues/456.
+    upx -9 ${ROOT_DIR}/dist/$file;
   done
 }
 
