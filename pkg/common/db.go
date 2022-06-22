@@ -1,8 +1,6 @@
 package common
 
 import (
-	"path/filepath"
-
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/glebarez/sqlite"
@@ -118,10 +116,10 @@ var (
 
 // InitStorage initializes database storage.
 func InitStorage() error {
-	if err := utils.EnsureFileExist(filepath.Join(CfgPath, DBFolder), DBFile); err != nil {
+	dataSource := GetDataSource()
+	if err := utils.EnsureFileExist(dataSource); err != nil {
 		return err
 	}
-	dataSource := GetDataSource()
 	db, err := gorm.Open(sqlite.Open(dataSource), &gorm.Config{})
 	if err != nil {
 		return err
