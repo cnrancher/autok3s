@@ -55,7 +55,6 @@ replace (
 replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 
 require (
-	github.com/Jason-ZW/autok3s-geo v0.0.0-20220207061948-3abc3068deea
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.38.65

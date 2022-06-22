@@ -6,8 +6,6 @@ import (
 	"net/http"
 
 	"github.com/cnrancher/autok3s/pkg/common"
-
-	"github.com/Jason-ZW/autok3s-geo/pkg/types"
 )
 
 const (
@@ -20,7 +18,7 @@ func ReportMetrics() {
 
 	client := &http.Client{}
 
-	b, err := json.Marshal(types.GeoIP{})
+	b, err := json.Marshal(map[string]string{})
 	if err != nil {
 		logger.Debugf("failed to collected usage metrics: %s", err.Error())
 		return
