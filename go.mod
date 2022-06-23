@@ -130,7 +130,7 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/fvbommel/sortorder v1.0.2 // indirect
-	github.com/glebarez/go-sqlite v1.16.0 // indirect
+	github.com/glebarez/go-sqlite v1.17.3 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
@@ -240,10 +240,10 @@ require (
 	kubevirt.io/containerized-data-importer-api v1.41.0 // indirect
 	kubevirt.io/controller-lifecycle-operator-sdk v0.2.1 // indirect
 	kubevirt.io/kubevirt v0.49.0 // indirect
-	modernc.org/libc v1.14.12 // indirect
+	modernc.org/libc v1.16.8 // indirect
 	modernc.org/mathutil v1.4.1 // indirect
-	modernc.org/memory v1.0.7 // indirect
-	modernc.org/sqlite v1.16.0 // indirect
+	modernc.org/memory v1.1.1 // indirect
+	modernc.org/sqlite v1.17.3 // indirect
 	sigs.k8s.io/cluster-api v0.4.4 // indirect
 	sigs.k8s.io/controller-runtime v0.9.7 // indirect
 	sigs.k8s.io/kustomize/api v0.8.8 // indirect

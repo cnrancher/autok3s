@@ -81,13 +81,22 @@ type Store struct {
 
 // NewClusterDB new cluster store.
 func NewClusterDB(ctx context.Context) (*Store, error) {
-	db, err := GetDB()
+	gormDB, err := GetDB()
 	if err != nil {
 		return nil, err
 	}
-	db.WithContext(ctx)
+	gormDB.WithContext(ctx)
+
+	// Fix: SQLite "database is locked (5) (SQLITE_BUSY)".
+	// Fix: https://github.com/cnrancher/autok3s/issues/460.
+	db, err := gormDB.DB()
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+
 	return &Store{
-		DB:          db,
+		DB:          gormDB,
 		broadcaster: NewBroadcaster(),
 	}, nil
 }
