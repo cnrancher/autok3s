@@ -11,9 +11,12 @@ helm repo update
 # no effect, just for compatibility with rancher helm template
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.1/cert-manager.crds.yaml
 
-#docker login -u xxx -p xxx
 PANDARIA_VERSION=""
-docker pull cnrancher/rancher:$PANDARIA_VERSION
+
+#docker login -u xxx -p xxx
+#docker pull cnrancher/rancher:$PANDARIA_VERSION
+
+#k3s crictl pull --creds <user>:<key> cnrancher/rancher:${PANDARIA_VERSION}
 
 kubectl create namespace cattle-system
 ec2_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
