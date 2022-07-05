@@ -77,7 +77,6 @@ require (
 	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/rancher/apiserver v0.0.0-20211025232108-df28932a5627
 	github.com/rancher/k3d/v5 v5.2.2
-	github.com/rancher/wharfie v0.5.1
 	github.com/rancher/wrangler v0.8.11-0.20211214201934-f5aa5d9f2e81
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0
@@ -99,6 +98,11 @@ require (
 	k8s.io/kubectl v0.22.3
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	kubevirt.io/api v0.0.0-20220111180619-bd15f69822b9
+)
+
+require (
+	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/common v0.32.0
 )
 
 require (
@@ -142,7 +146,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
-	github.com/google/go-containerregistry v0.6.1-0.20211111182346-7a6ee45528a9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
@@ -189,9 +192,7 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.32.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/rancher/lasso v0.0.0-20210709145333-6c6cd7fd6607 // indirect
 	github.com/rancher/system-upgrade-controller/pkg/apis v0.0.0-20210727200656-10b094e30007 // indirect

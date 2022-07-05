@@ -9,20 +9,17 @@ import (
 )
 
 // NewLogger returns new logger struct.
-func NewLogger(debug bool, w *os.File) *logrus.Logger {
-	logger := logrus.New()
-	if debug {
-		logger.SetLevel(logrus.DebugLevel)
-	}
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
+func NewLogger(w *os.File) (logger *logrus.Logger) {
 	if w != nil {
 		mw := io.MultiWriter(os.Stderr, w)
+		logger = logrus.New()
+		InitLogger(logger)
 		logger.SetOutput(mw)
+	} else {
+		logger = logrus.StandardLogger()
 	}
 
-	return logger
+	return
 }
 
 // GetLogPath returns log path.
@@ -44,4 +41,13 @@ func GetLogFile(name string) (logFile *os.File, err error) {
 		logFile, err = os.OpenFile(logFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	}
 	return logFile, err
+}
+
+func InitLogger(logger *logrus.Logger) {
+	if Debug {
+		logger.SetLevel(logrus.DebugLevel)
+	}
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
 }

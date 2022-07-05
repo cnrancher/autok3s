@@ -21,7 +21,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	templates "github.com/rancher/wharfie/pkg/registries"
 	"github.com/sirupsen/logrus"
 	yamlv3 "gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
@@ -711,14 +710,14 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 	}
 	cmd := make([]string, 0)
 	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", registryPath))
-	var registry *templates.Registry
+	var registry *Registry
 	if c.Registry != "" {
 		registry, err = unmarshalRegistryFile(c.Registry)
 		if err != nil {
 			return err
 		}
 	} else if c.RegistryContent != "" {
-		registry = &templates.Registry{}
+		registry = &Registry{}
 		err = yamlv3.Unmarshal([]byte(c.RegistryContent), registry)
 		if err != nil {
 			return err
@@ -748,8 +747,8 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 	return err
 }
 
-func unmarshalRegistryFile(file string) (*templates.Registry, error) {
-	registry := &templates.Registry{}
+func unmarshalRegistryFile(file string) (*Registry, error) {
+	registry := &Registry{}
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -770,7 +769,7 @@ func unmarshalRegistryFile(file string) (*templates.Registry, error) {
 	return registry, nil
 }
 
-func registryTLSMap(registry *templates.Registry) (m map[string]map[string][]byte, err error) {
+func registryTLSMap(registry *Registry) (m map[string]map[string][]byte, err error) {
 	m = make(map[string]map[string][]byte)
 	if registry == nil {
 		err = fmt.Errorf("registry is nil")
@@ -810,7 +809,7 @@ func registryTLSMap(registry *templates.Registry) (m map[string]map[string][]byt
 	return
 }
 
-func saveRegistryTLS(registry *templates.Registry, m map[string]map[string][]byte) (*templates.Registry, []string, error) {
+func saveRegistryTLS(registry *Registry, m map[string]map[string][]byte) (*Registry, []string, error) {
 	cmd := make([]string, 0)
 	for r, c := range m {
 		if r != "" {
@@ -843,7 +842,7 @@ func saveRegistryTLS(registry *templates.Registry, m map[string]map[string][]byt
 	return registry, cmd, nil
 }
 
-func registryToString(registry *templates.Registry) (string, error) {
+func registryToString(registry *Registry) (string, error) {
 	if registry == nil {
 		return "", fmt.Errorf("can't save registry file: registry is nil")
 	}

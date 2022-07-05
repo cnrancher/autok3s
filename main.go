@@ -8,7 +8,9 @@ import (
 
 	"github.com/cnrancher/autok3s/cmd"
 	"github.com/cnrancher/autok3s/pkg/cli/kubectl"
+	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/metrics"
+	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/spf13/cobra"
@@ -19,9 +21,6 @@ var (
 	gitCommit    string
 	gitTreeState string
 	buildDate    string
-
-	metricsEndpoint  = "http://metrics.cnrancher.com:8080/v1/geoIPs"
-	metricsSourceTag = "AutoK3s"
 )
 
 func init() {
@@ -44,6 +43,7 @@ func main() {
 		cmd.SSHCommand(), cmd.DescribeCommand(), cmd.ServeCommand(), cmd.ExplorerCommand(), cmd.UpgradeCommand())
 
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		common.InitLogger(logrus.StandardLogger())
 		metrics.ReportMetrics()
 	}
 

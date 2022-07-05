@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -14,19 +14,17 @@ const (
 )
 
 func ReportMetrics() {
-	logger := common.NewLogger(common.Debug, nil)
-
 	client := &http.Client{}
 
 	b, err := json.Marshal(map[string]string{})
 	if err != nil {
-		logger.Debugf("failed to collected usage metrics: %s", err.Error())
+		logrus.Debugf("failed to collected usage metrics: %s", err.Error())
 		return
 	}
 
 	req, err := http.NewRequest(http.MethodPost, metricsEndpoint, bytes.NewBuffer(b))
 	if err != nil {
-		logger.Debugf("failed to collected usage metrics: %s", err.Error())
+		logrus.Debugf("failed to collected usage metrics: %s", err.Error())
 		return
 	}
 
@@ -35,7 +33,7 @@ func ReportMetrics() {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Debugf("failed to collected usage metrics: %s", err.Error())
+		logrus.Debugf("failed to collected usage metrics: %s", err.Error())
 		return
 	}
 
@@ -44,6 +42,6 @@ func ReportMetrics() {
 	}()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		logger.Debugf("failed to collected usage metrics: %s", resp.Status)
+		logrus.Debugf("failed to collected usage metrics: %s", resp.Status)
 	}
 }
