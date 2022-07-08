@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/cnrancher/autok3s/pkg/metrics"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/apis"
@@ -357,6 +358,9 @@ func (d *Store) SaveCluster(cluster *types.Cluster) error {
 	if result.RowsAffected == 0 {
 		// create cluster
 		result = d.DB.Create(state)
+		if result.Error == nil {
+			metrics.ClusterCount.With(getLabelsFromMeta(state.Metadata)).Inc()
+		}
 		return result.Error
 	}
 	result = d.DB.Model(state).
@@ -387,6 +391,9 @@ func (d *Store) DeleteCluster(name, provider string) error {
 		Name:   apitypes.RemoveAPIEvent,
 		Object: state,
 	})
+	if result.Error == nil {
+		metrics.ClusterCount.With(getLabelsFromMeta(state.Metadata)).Dec()
+	}
 	return result.Error
 }
 
@@ -441,6 +448,9 @@ func (d *Store) FindCluster(name, provider string) ([]*ClusterState, error) {
 // CreateTemplate create template.
 func (d *Store) CreateTemplate(template *Template) error {
 	result := d.DB.Create(template)
+	if result.Error == nil {
+		metrics.TemplateCount.With(getLabelsFromMeta(template.Metadata)).Inc()
+	}
 	return result.Error
 }
 
@@ -466,6 +476,7 @@ func (d *Store) DeleteTemplate(name, provider string) error {
 			Name:   apitypes.RemoveAPIEvent,
 			Object: temp,
 		})
+		metrics.TemplateCount.With(getLabelsFromMeta(temp.Metadata)).Dec()
 	}
 	return result.Error
 }

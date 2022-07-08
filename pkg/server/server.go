@@ -2,9 +2,7 @@ package server
 
 import (
 	"net/http"
-	"strings"
 
-	"github.com/cnrancher/autok3s/pkg/metrics"
 	"github.com/cnrancher/autok3s/pkg/server/proxy"
 	"github.com/cnrancher/autok3s/pkg/server/ui"
 
@@ -35,8 +33,6 @@ func Start() http.Handler {
 	router := mux.NewRouter()
 	router.UseEncodedPath()
 	router.StrictSlash(true)
-
-	router.Use(metricsMiddleware)
 
 	middleware := responsewriter.Chain{
 		responsewriter.Gzip,
@@ -83,13 +79,4 @@ func Start() http.Handler {
 	})
 
 	return router
-}
-
-func metricsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && strings.Contains(r.RequestURI, "/v1/clusters") {
-			metrics.ReportMetrics()
-		}
-		next.ServeHTTP(w, r)
-	})
 }

@@ -1,6 +1,8 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/glebarez/sqlite"
@@ -111,6 +113,13 @@ var (
 			SELECT 'whitelist-domain', ''
 			WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='whitelist-domain'
 			);`,
+		fmt.Sprintf(
+			`INSERT INTO settings(name,value) SELECT '%s', 'promote' WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='%s');`,
+			enableMetricsSettingName, enableMetricsSettingName),
+		fmt.Sprintf(
+			`INSERT INTO settings(name,value) SELECT '%s', '' WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='%s');`,
+			uuidSettingName, uuidSettingName,
+		),
 	}
 )
 

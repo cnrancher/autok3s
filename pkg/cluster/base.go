@@ -564,7 +564,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 	isConfirmed := true
 
 	if !force {
-		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.Provider, p.Name))
+		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.Provider, p.Name), false)
 	}
 	if isConfirmed {
 		logFile, err := common.GetLogFile(p.ContextName)
