@@ -10,6 +10,10 @@ steps:
     image: aevea/commitsar:0.18.0
     commands:
       - commitsar -d /drone/src -v
+    when:
+      event:
+        include:
+          - "pull_request"
   - name: code
     image: rancher/dapper:v0.5.8
     privileged: true
