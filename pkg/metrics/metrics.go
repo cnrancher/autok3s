@@ -1,51 +1,85 @@
 package metrics
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
+	"context"
+	"strings"
+	"sync"
+	"time"
 
-	"github.com/cnrancher/autok3s/pkg/common"
-
-	"github.com/Jason-ZW/autok3s-geo/pkg/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
+	"github.com/prometheus/common/expfmt"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	metricsEndpoint  = "http://metrics.cnrancher.com:8080/v1/geoIPs"
-	metricsSourceTag = "AutoK3s"
+	// metricsEndpoint will send metrics to https://telemetry.rancher.cn/metrics/job/autok3s
+	metricsEndpoint = "https://telemetry.rancher.cn"
+	jobName         = "autok3s"
 )
 
-func ReportMetrics() {
-	logger := common.NewLogger(common.Debug, nil)
+var (
+	ClusterCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: "autok3s",
+		Name:      "cluster_count",
+		Help:      "the cluster count for the current autok3s setup, label by provider and k3s version.",
+	}, []string{"provider", "k3sversion", "install_uuid"})
 
-	client := &http.Client{}
+	TemplateCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: "autok3s",
+		Name:      "cluster_template_count",
+		Help:      "the cluster template count for the current autok3s setup, label by provider and k3s version.",
+	}, []string{"provider", "k3sversion", "install_uuid"})
 
-	b, err := json.Marshal(types.GeoIP{})
-	if err != nil {
-		logger.Debugf("failed to collected usage metrics: %s", err.Error())
+	Active = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: "autok3s",
+		Name:      "up",
+		Help:      "the autok3s running status",
+	}, []string{"install_uuid"})
+
+	defaultRegistry = prometheus.NewRegistry()
+	enableFunc      func() bool
+	once            = &sync.Once{}
+	pusher          *push.Pusher
+)
+
+func init() {
+	defaultRegistry.MustRegister(ClusterCount, TemplateCount, Active)
+	pusher = push.New(metricsEndpoint, jobName).
+		Format(expfmt.FmtText).
+		Gatherer(defaultRegistry)
+}
+
+func SetupEnableFunc(f func() bool) {
+	once.Do(func() {
+		enableFunc = f
+	})
+}
+
+func Report() {
+	if enableFunc == nil || !enableFunc() {
 		return
 	}
-
-	req, err := http.NewRequest(http.MethodPost, metricsEndpoint, bytes.NewBuffer(b))
-	if err != nil {
-		logger.Debugf("failed to collected usage metrics: %s", err.Error())
-		return
+	logrus.Debug("Reporting metrics")
+	if err := pusher.Push(); err != nil {
+		// telegraf always returns 204 instead of 200/202
+		if !strings.Contains(err.Error(), "unexpected status code 204") {
+			logrus.Debugf("failed to push metrics to telemetry, %v", err)
+		}
 	}
+}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Req-Source", metricsSourceTag)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		logger.Debugf("failed to collected usage metrics: %s", err.Error())
-		return
-	}
-
-	defer func() {
-		_ = resp.Body.Close()
+func ReportEach(ctx context.Context, interval time.Duration) {
+	t := time.NewTicker(interval)
+	go func() {
+		for {
+			select {
+			case <-t.C:
+				Report()
+			case <-ctx.Done():
+				t.Stop()
+				return
+			}
+		}
 	}()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		logger.Debugf("failed to collected usage metrics: %s", resp.Status)
-	}
 }

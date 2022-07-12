@@ -1,7 +1,7 @@
 package common
 
 import (
-	"path/filepath"
+	"fmt"
 
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -113,15 +113,22 @@ var (
 			SELECT 'whitelist-domain', ''
 			WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='whitelist-domain'
 			);`,
+		fmt.Sprintf(
+			`INSERT INTO settings(name,value) SELECT '%s', 'promote' WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='%s');`,
+			enableMetricsSettingName, enableMetricsSettingName),
+		fmt.Sprintf(
+			`INSERT INTO settings(name,value) SELECT '%s', '' WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='%s');`,
+			uuidSettingName, uuidSettingName,
+		),
 	}
 )
 
 // InitStorage initializes database storage.
 func InitStorage() error {
-	if err := utils.EnsureFileExist(filepath.Join(CfgPath, DBFolder), DBFile); err != nil {
+	dataSource := GetDataSource()
+	if err := utils.EnsureFileExist(dataSource); err != nil {
 		return err
 	}
-	dataSource := GetDataSource()
 	db, err := gorm.Open(sqlite.Open(dataSource), &gorm.Config{})
 	if err != nil {
 		return err

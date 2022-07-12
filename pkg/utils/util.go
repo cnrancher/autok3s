@@ -14,6 +14,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -56,21 +57,16 @@ func UniqueArray(origin []string) (unique []string) {
 }
 
 // AskForConfirmation ask for confirmation form os.Stdin.
-func AskForConfirmation(s string) bool {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Printf("%s [y/n]: ", s)
-		response, err := reader.ReadString('\n')
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		response = strings.ToLower(strings.TrimSpace(response))
-		if response == "y" || response == "yes" {
-			return true
-		} else if response == "n" || response == "no" {
-			return false
-		}
+func AskForConfirmation(s string, def bool) (rtn bool) {
+	prompt := survey.Confirm{
+		Message: s,
+		Default: def,
 	}
+
+	if err := survey.AskOne(&prompt, &rtn); err != nil {
+		logrus.Warnf("failed to confirm, %v", err)
+	}
+	return
 }
 
 // AskForSelectItem ask for select item from the given map key.

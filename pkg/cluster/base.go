@@ -318,7 +318,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 			}
 		}
 	}()
-	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger = common.NewLogger(logFile)
 	p.Logger.Infof("[%s] begin to create cluster %s...", p.Provider, p.Name)
 	c.Status.Status = common.StatusCreating
 	// save cluster.
@@ -423,7 +423,7 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 		}
 	}()
 
-	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger = common.NewLogger(logFile)
 	p.Logger.Infof("[%s] begin to join nodes for %v...", p.Provider, p.Name)
 	state.Status = common.StatusUpgrading
 	err = common.DefaultDB.SaveClusterState(state)
@@ -564,7 +564,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 	isConfirmed := true
 
 	if !force {
-		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.Provider, p.Name))
+		isConfirmed = utils.AskForConfirmation(fmt.Sprintf("[%s] are you sure to delete cluster %s", p.Provider, p.Name), false)
 	}
 	if isConfirmed {
 		logFile, err := common.GetLogFile(p.ContextName)
@@ -580,7 +580,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 		if err != nil && !force {
 			return fmt.Errorf("[%s] failed to get cluster %s, got error %v", p.Provider, p.Name, err)
 		}
-		p.Logger = common.NewLogger(common.Debug, logFile)
+		p.Logger = common.NewLogger(logFile)
 		p.Logger.Infof("[%s] begin to delete cluster %v...", p.Provider, p.Name)
 		if state != nil {
 			state.Status = common.StatusRemoving
@@ -625,7 +625,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 
 // GetClusterStatus get cluster status.
 func (p *ProviderBase) GetClusterStatus(kubeCfg string, c *types.ClusterInfo, describeFunc func() ([]types.Node, error)) *types.ClusterInfo {
-	p.Logger = common.NewLogger(common.Debug, nil)
+	p.Logger = logrus.StandardLogger()
 
 	c.Master = p.Master
 	c.Worker = p.Worker
@@ -800,7 +800,7 @@ func (p *ProviderBase) Describe(kubeCfg string, c *types.ClusterInfo, describeIn
 		c.Status = common.StatusMissing
 		return c
 	}
-	p.Logger = common.NewLogger(common.Debug, nil)
+	p.Logger = logrus.StandardLogger()
 	client, err := GetClusterConfig(p.ContextName, kubeCfg)
 	if err != nil {
 		p.Logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.Provider, p.Name, err)
@@ -859,7 +859,7 @@ func (p *ProviderBase) Describe(kubeCfg string, c *types.ClusterInfo, describeIn
 // Connect ssh & connect to the K3S node.
 func (p *ProviderBase) Connect(ip string, ssh *types.SSH, c *types.Cluster, getStatus func() ([]types.Node, error),
 	isRunning func(status string) bool, customConnect func(id string, cluster *types.Cluster) error) error {
-	p.Logger = common.NewLogger(common.Debug, nil)
+	p.Logger = logrus.StandardLogger()
 	p.Logger.Infof("[%s] executing ssh logic...", p.Provider)
 
 	if getStatus == nil {
@@ -1041,7 +1041,7 @@ func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, ve
 	if err != nil {
 		return err
 	}
-	p.Logger = common.NewLogger(common.Debug, logFile)
+	p.Logger = common.NewLogger(logFile)
 	p.Logger.Infof("[%s] begin to upgrade cluster %s...", p.Provider, clusterName)
 	state.Status = common.StatusUpgrading
 	// save cluster.

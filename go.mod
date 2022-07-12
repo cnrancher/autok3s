@@ -55,11 +55,10 @@ replace (
 replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 
 require (
-	github.com/Jason-ZW/autok3s-geo v0.0.0-20220207061948-3abc3068deea
 	github.com/alexellis/go-execute v0.0.0-20200124154445-8697e4e28c5e
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.38.65
-	github.com/creack/pty v1.1.11
+	github.com/creack/pty v1.1.17
 	github.com/docker/docker v20.10.10+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/ghodss/yaml v1.0.0
@@ -78,7 +77,6 @@ require (
 	github.com/opencontainers/runc v1.1.2 // indirect
 	github.com/rancher/apiserver v0.0.0-20211025232108-df28932a5627
 	github.com/rancher/k3d/v5 v5.2.2
-	github.com/rancher/wharfie v0.5.1
 	github.com/rancher/wrangler v0.8.11-0.20211214201934-f5aa5d9f2e81
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0
@@ -100,6 +98,14 @@ require (
 	k8s.io/kubectl v0.22.3
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	kubevirt.io/api v0.0.0-20220111180619-bd15f69822b9
+)
+
+require (
+	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/pborman/uuid v1.2.1
+	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/common v0.32.0
+	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 )
 
 require (
@@ -143,7 +149,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
-	github.com/google/go-containerregistry v0.6.1-0.20211111182346-7a6ee45528a9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
@@ -159,15 +164,18 @@ require (
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.3 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/longhorn/longhorn-manager v1.2.4 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
+	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -185,14 +193,11 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/openshift/custom-resource-status v0.0.0-20200602122900-c002fd1547ca // indirect
-	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.32.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/rancher/lasso v0.0.0-20210709145333-6c6cd7fd6607 // indirect
 	github.com/rancher/system-upgrade-controller/pkg/apis v0.0.0-20210727200656-10b094e30007 // indirect
@@ -216,8 +221,7 @@ require (
 	go.uber.org/zap v1.19.0 // indirect
 	go4.org/intern v0.0.0-20210108033219-3eb7198706b2 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20201222180813-1025295fd063 // indirect
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
