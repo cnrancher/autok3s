@@ -504,6 +504,10 @@ func (p *ProviderBase) initMaster(k3sScript, k3sMirror, dockerMirror, tlsSans, i
 		}
 	}
 
+	if cluster.SystemDefaultRegistry != "" {
+		extraArgs += fmt.Sprintf(" --system-default-registry %s", cluster.SystemDefaultRegistry)
+	}
+
 	p.Logger.Infof("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, k3sScript, k3sMirror, cluster.Token,
 		tlsSans, ip, strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
 
@@ -535,6 +539,10 @@ func (p *ProviderBase) initAdditionalMaster(k3sScript, k3sMirror, dockerMirror, 
 	}
 
 	sortedExtraArgs += " " + extraArgs
+
+	if cluster.SystemDefaultRegistry != "" {
+		sortedExtraArgs += fmt.Sprintf(" --system-default-registry %s", cluster.SystemDefaultRegistry)
+	}
 
 	p.Logger.Infof("[cluster] k3s additional master command: %s", fmt.Sprintf(joinCommand, k3sScript, k3sMirror,
 		ip, cluster.Token, strings.TrimSpace(sortedExtraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
@@ -605,6 +613,10 @@ func (p *ProviderBase) joinMaster(k3sScript, k3sMirror, dockerMirror,
 		if err := p.handleRegistry(&full, merged); err != nil {
 			return err
 		}
+	}
+
+	if merged.SystemDefaultRegistry != "" {
+		sortedExtraArgs += fmt.Sprintf(" --system-default-registry %s", merged.SystemDefaultRegistry)
 	}
 
 	sortedExtraArgs += " " + extraArgs
@@ -1015,6 +1027,9 @@ func (p *ProviderBase) Upgrade(cluster *types.Cluster) error {
 			if cluster.Cluster {
 				extraArgs += " --cluster-init"
 			}
+		}
+		if cluster.SystemDefaultRegistry != "" {
+			extraArgs += fmt.Sprintf(" --system-default-registry %s", cluster.SystemDefaultRegistry)
 		}
 		p.Logger.Infof("[cluster] k3s master command: %s", fmt.Sprintf(initCommand, cluster.InstallScript, cluster.Mirror, cluster.Token,
 			tlsSans, node.PublicIPAddress[0], strings.TrimSpace(extraArgs), genK3sVersion(cluster.K3sVersion, cluster.K3sChannel)))
