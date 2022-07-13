@@ -171,6 +171,12 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Usage: "K3s registry file, see: https://rancher.com/docs/k3s/latest/en/installation/private-registry",
 		},
 		{
+			Name:  "system-default-registry",
+			P:     &p.SystemDefaultRegistry,
+			V:     p.SystemDefaultRegistry,
+			Usage: "K3s private registry to be used for all system images, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config",
+		},
+		{
 			Name:  "datastore",
 			P:     &p.DataStore,
 			V:     p.DataStore,
@@ -550,6 +556,9 @@ func (p *ProviderBase) overwriteMetadata(matched *common.ClusterState) {
 	}
 	if p.Registry == "" {
 		p.Registry = matched.Registry
+	}
+	if p.SystemDefaultRegistry == "" {
+		p.SystemDefaultRegistry = matched.SystemDefaultRegistry
 	}
 	if p.MasterExtraArgs == "" {
 		p.MasterExtraArgs = matched.MasterExtraArgs
