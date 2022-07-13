@@ -64,7 +64,7 @@ func Report() {
 	if err := pusher.Push(); err != nil {
 		// telegraf always returns 204 instead of 200/202
 		if !strings.Contains(err.Error(), "unexpected status code 204") {
-			logrus.Debugf("failed to push metrics to telemetry, %v", err)
+			logrus.Debug("failed to push metrics to telemetry")
 		}
 	}
 }
