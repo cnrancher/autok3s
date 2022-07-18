@@ -18,8 +18,10 @@ const (
 	enableMetricsSettingName = "enable-metrics"
 )
 
-func SetupPrometheusMetrics() {
-	metrics.Active.With(uuidLabels()).Set(1)
+func SetupPrometheusMetrics(version string) {
+	labels := uuidLabels()
+	labels["version"] = version
+	metrics.Active.With(labels).Set(1)
 	clusters, err := DefaultDB.ListCluster("")
 	if err != nil {
 		logrus.Debugf("failed to list cluster from db, %v", err)

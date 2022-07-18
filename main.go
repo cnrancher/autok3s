@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	gitVersion   string
+	gitVersion   = "dev"
 	gitCommit    string
 	gitTreeState string
 	buildDate    string
@@ -45,7 +45,7 @@ func main() {
 	rootCmd.PersistentPreRun = func(c *cobra.Command, args []string) {
 		common.InitLogger(logrus.StandardLogger())
 		common.MetricsPrompt(c)
-		common.SetupPrometheusMetrics()
+		common.SetupPrometheusMetrics(gitVersion)
 		go metrics.Report()
 		if c.Use == cmd.ServeCommand().Use {
 			metrics.ReportEach(c.Context(), 1*time.Hour)
