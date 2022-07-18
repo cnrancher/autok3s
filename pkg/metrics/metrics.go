@@ -35,7 +35,7 @@ var (
 		Subsystem: "autok3s",
 		Name:      "up",
 		Help:      "the autok3s running status",
-	}, []string{"install_uuid"})
+	}, []string{"install_uuid", "version"})
 
 	defaultRegistry = prometheus.NewRegistry()
 	enableFunc      func() bool
