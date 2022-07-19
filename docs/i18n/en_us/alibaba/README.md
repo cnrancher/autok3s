@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This article provides users with the instructions to create and launch a K3s cluster on an Alibaba ECS instance, and to add nodes for an existing K3s cluster on Alibaba ECS instance. In addition, this article provides guidance of advanced usages of running K3s on Alibaba ECS, such as setting up private registry, enabling Alibaba Terway CNI, enabling Alibaba CCM, and enabling UI components.
+This article provides users with the instructions to create and launch a K3s cluster on an Alibaba ECS instance, and to add nodes for an existing K3s cluster on Alibaba ECS instance. In addition, this article provides guidance of advanced usages of running K3s on Alibaba ECS, such as setting up private registry, enabling Alibaba CCM, and enabling UI components.
 
 ## Prerequisites
 
@@ -305,7 +305,7 @@ Please run `autok3s <sub-command> --provider alibaba --help` commands, to discov
 
 ## Advanced Usages
 
-We integrate some advanced components such as private registries, Terway, Alibaba Cloud Controller Manager(CCM) and UI, related to the current provider.
+We integrate some advanced components such as private registries, Alibaba Cloud Controller Manager(CCM) and UI, related to the current provider.
 
 ### Setting up Private Registry
 
@@ -336,16 +336,6 @@ autok3s -d create \
     --master 1 \
     --worker 1 \
     --registry /etc/autok3s/registries.yaml
-```
-
-### Enabling Alibaba Terway CNI Plugin
-
-The instance's type determines the number of EIPs that a K3S cluster can assign to a cluster POD, more detail see [here](https://www.alibabacloud.com/help/zh/doc-detail/97467.htm).
-
-```bash
-autok3s -d create \
-    ... \
-    --terway "eni"
 ```
 
 ### Enabling Alibaba Cloud Controller Manager(CCM)
