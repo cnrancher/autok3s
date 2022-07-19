@@ -275,18 +275,6 @@ func (p *Alibaba) sharedFlags() []types.Flag {
 			Usage: "Enable cloud-controller-manager component, for more information, please check https://github.com/kubernetes/cloud-provider-alibaba-cloud/blob/master/docs/getting-started.md",
 		},
 		{
-			Name:  "terway",
-			P:     &p.Terway,
-			V:     p.Terway,
-			Usage: "Enable terway CNI plugin, currently only support ENI mode. i.e.(--terway eni), see: https://github.com/AliyunContainerService/terway/blob/v1.0.10/docs/usage.md",
-		},
-		{
-			Name:  "terway-max-pool-size",
-			P:     &p.TerwayMaxPoolSize,
-			V:     p.TerwayMaxPoolSize,
-			Usage: "Max pool size for terway ENI mode",
-		},
-		{
 			Name:  "user-data-path",
 			P:     &p.UserDataPath,
 			V:     p.UserDataPath,

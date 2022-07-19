@@ -37,8 +37,6 @@ const (
 	internetMaxBandwidthOut  = "5"
 	diskCategory             = "cloud_ssd"
 	diskSize                 = "40"
-	terway                   = "none"
-	terwayMaxPoolSize        = "5"
 	resourceTypeEip          = "EIP"
 	eipStatusAvailable       = "Available"
 	eipStatusInUse           = "InUse"
@@ -60,9 +58,8 @@ const (
 const providerName = "alibaba"
 
 var (
-	k3sMirror           = "INSTALL_K3S_MIRROR=cn"
-	deployCCMCommand    = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
-	deployTerwayCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/terway.yaml\""
+	k3sMirror        = "INSTALL_K3S_MIRROR=cn"
+	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
 )
 
 // Alibaba provider alibaba struct.
@@ -91,8 +88,6 @@ func newProvider() *Alibaba {
 			DiskCategory:            diskCategory,
 			DiskSize:                diskSize,
 			Image:                   imageID,
-			Terway:                  terway,
-			TerwayMaxPoolSize:       terwayMaxPoolSize,
 			InstanceType:            instanceType,
 			InternetMaxBandwidthOut: internetMaxBandwidthOut,
 			Region:                  defaultRegion,
@@ -119,22 +114,6 @@ func (p *Alibaba) GenerateClusterName() string {
 // GenerateManifest generates manifest deploy command.
 func (p *Alibaba) GenerateManifest() []string {
 	extraManifests := make([]string, 0)
-	if strings.EqualFold(p.Terway, "eni") {
-		// deploy additional Terway manifests.
-		t := &alibaba.Terway{
-			Mode:          p.Terway,
-			AccessKey:     p.AccessKey,
-			AccessSecret:  p.AccessSecret,
-			CIDR:          p.VpcCIDR,
-			SecurityGroup: p.SecurityGroup,
-			VSwitches:     fmt.Sprintf(`{"%s":["%s"]}`, p.Region, p.VSwitch),
-			MaxPoolSize:   p.TerwayMaxPoolSize,
-		}
-		tmpl := fmt.Sprintf(terwayTmpl, t.AccessKey, t.AccessSecret, t.SecurityGroup, t.CIDR,
-			t.VSwitches, t.MaxPoolSize)
-		extraManifests = append(extraManifests, fmt.Sprintf(deployTerwayCommand,
-			base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
-	}
 	if p.CloudControllerManager {
 		// deploy additional Alibaba cloud-controller-manager manifests.
 		aliCCM := &alibaba.CloudControllerManager{
@@ -1034,16 +1013,6 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		p.Logger.Debugf("[%s] launching instance with auto-generated password...", p.GetProviderName())
 	}
 
-	if p.Terway != "none" {
-		vpcCIDR, err := p.getVpcCIDR()
-		if err != nil {
-			return nil, fmt.Errorf("[%s] calling preflight error: vpc %s cidr not be found",
-				p.GetProviderName(), p.Vpc)
-		}
-
-		p.VpcCIDR = vpcCIDR
-	}
-
 	if p.UserDataPath != "" {
 		userDataBytes, err := ioutil.ReadFile(p.UserDataPath)
 		if err != nil {
@@ -1120,10 +1089,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	c.ContextName = p.ContextName
 	c.Mirror = k3sMirror
 
-	if option, ok := c.Options.(alibaba.Options); ok {
-		if strings.EqualFold(option.Terway, "eni") {
-			c.Network = "none"
-		}
+	if _, ok := c.Options.(alibaba.Options); ok {
 		if p.CloudControllerManager {
 			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik"
 		}
