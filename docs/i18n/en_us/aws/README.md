@@ -280,18 +280,7 @@ autok3s -d create -p aws \
 
 ### Enable UI Component
 
-AutoK3s support 2 kinds of UI Component, including [kubernetes/dashboard](https://github.com/kubernetes/dashboard) and [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer).
-
-#### Enable Kubernetes dashboard
-
-You can enable Kubernetes dashboard using following command.
-
-```bash
-autok3s -d create -p aws \
-    ... \
-    --enable dashboard
-```
-If you want to create user token to access dashboard, please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md).
+AutoK3s support [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer) as UI Component.
 
 #### Enable kube-explorer dashboard
 

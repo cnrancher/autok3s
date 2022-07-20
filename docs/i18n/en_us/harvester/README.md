@@ -21,16 +21,17 @@ export HARVESTER_KUBECONFIG_FILE='<your harvester kubeconfig file path>'
 Before using harvester provider, please upload your OS-image to ensure create VMs. For more details about upload images, please refer [here](https://docs.harvesterhci.io/v1.0/upload-image/).
 
 Harvester providers two types of networks:
+
 - Management Network
 - VLAN Network
 
 Harvester uses canal as its default management network. It is a built-in network that can be used directly from the cluster. By default, the management network IP of a VM can only be accessed within the cluster nodes, and the management network IP will not remain unchanged after the VM reboot.
 
-If you're using `autok3s` outside Harvester cluster, you can't use the default Management Network. 
+If you're using `autok3s` outside Harvester cluster, you can't use the default Management Network.
 
 Please prepare a VLAN Network to ensure `autok3s` can access to Harvester VMs. For more details about Network, please refer [here](https://docs.harvesterhci.io/v1.0/networking/harvester-network/)
 
-These two factors will use for `--image-name` and `--network-name` parameters. 
+These two factors will use for `--image-name` and `--network-name` parameters.
 
 If you are creating VMs under different namespaces with image or network, please try like this `--vm-namespace <vm-namespace> --image-name <imageNamespace/imageName> --network-name <networkNamespace/networkName>`
 
@@ -244,18 +245,7 @@ autok3s -d create \
 
 ### Enable UI Component
 
-AutoK3s support 2 kinds of UI Component, including [kubernetes/dashboard](https://github.com/kubernetes/dashboard) and [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer).
-
-#### Enable Kubernetes dashboard
-
-You can enable Kubernetes dashboard using following command.
-
-```bash
-autok3s -d create -p harvester \
-    ... \
-    --enable dashboard
-```
-If you want to create user token to access dashboard, please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md).
+AutoK3s support [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer) as UI Component.
 
 #### Enable kube-explorer dashboard
 
