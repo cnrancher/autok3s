@@ -189,9 +189,6 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 
 	// deploy additional UI manifests.
 	enabledPlugins := map[string]bool{}
-	if cluster.UI {
-		enabledPlugins["dashboard"] = true
-	}
 
 	// deploy plugin
 	if cluster.Enable != nil {
@@ -201,12 +198,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	for plugin := range enabledPlugins {
-		if plugin == "dashboard" {
-			if _, err := p.execute(&cluster.MasterNodes[0], []string{fmt.Sprintf(deployUICommand,
-				base64.StdEncoding.EncodeToString([]byte(dashboardTmpl)), common.K3sManifestsDir)}); err != nil {
-				return err
-			}
-		} else if plugin == "explorer" {
+		if plugin == "explorer" {
 			// start kube-explorer
 			port, err := common.EnableExplorer(context.Background(), cluster.ContextName)
 			if err != nil {

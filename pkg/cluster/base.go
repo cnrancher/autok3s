@@ -100,7 +100,7 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			Name:  "enable",
 			P:     &p.Enable,
 			V:     p.Enable,
-			Usage: "(ui-components) Deploy packaged components (valid items: \"explorer, dashboard\"), e.g.(--enable dashboard), explorer is simplify UI for K3s(cnrnacher/kube-explorer); dashboard is kubernetes/dashboard",
+			Usage: "(ui-components) Deploy packaged components (valid items: \"explorer\"), e.g.(--enable explorer), explorer is simplify UI for K3s(cnrnacher/kube-explorer)",
 		},
 	}
 }

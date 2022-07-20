@@ -554,6 +554,8 @@ func (p *Tencent) deleteInstance(f bool) (string, error) {
 			ui = true
 		}
 	}
+	// This is for backward compatibility as we don't support deploying kubernetes dashboard anymore.
+	// CCM will create elb for kubernetes dashboard so we need to delete dashboard before delete instance/cluster.
 	if ui && p.CloudControllerManager {
 		if err = p.ReleaseManifests(); err != nil {
 			return "", err
