@@ -154,7 +154,8 @@ func (p *Google) remove(force bool) (string, error) {
 			ui = true
 		}
 	}
-
+	// This is for backward compatibility as we don't support deploying kubernetes dashboard anymore.
+	// CCM will create elb for kubernetes dashboard so we need to delete dashboard before delete instance/cluster.
 	if ui && p.CloudControllerManager {
 		p.Logger.Infof("[%s] release manifests", p.GetProviderName())
 		if err := p.ReleaseManifests(); err != nil {
