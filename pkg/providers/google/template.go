@@ -1,5 +1,6 @@
 package google
 
+// See: https://github.com/kubernetes/cloud-provider-gcp/tree/release-1.24.
 const googleCCMTmpl = `
 ---
 apiVersion: v1
@@ -256,7 +257,7 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: cloud-controller-manager
-          image: quay.io/openshift/origin-gcp-cloud-controller-manager:4.10.0
+          image: quay.io/openshift/origin-gcp-cloud-controller-manager:4.12.0
           resources:
             requests:
               cpu: 50m
