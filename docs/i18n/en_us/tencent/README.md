@@ -319,18 +319,7 @@ The cluster route table will not **DELETE AUTOMATICALLY**, please remove router 
 
 ### Enable UI Component
 
-AutoK3s support 2 kinds of UI Component, including [kubernetes/dashboard](https://github.com/kubernetes/dashboard) and [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer).
-
-#### Enable Kubernetes dashboard
-
-You can enable Kubernetes dashboard using following command.
-
-```bash
-autok3s -d create -p aws \
-    ... \
-    --enable dashboard
-```
-If you want to create user token to access dashboard, please following this [docs](https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md).
+AutoK3s support [cnrancher/kube-explorer](https://github.com/cnrancher/kube-explorer) as UI Component.
 
 #### Enable kube-explorer dashboard
 
@@ -347,4 +336,3 @@ You can enable kube-explorer when creating K3s Cluster by UI.
 You can also enable/disable kube-explorer any time from UI, and access kube-explorer dashboard by `dashboard` button.
 
 ![](../../../assets/enable-kube-explorer-by-button.png)
-
