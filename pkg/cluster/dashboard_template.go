@@ -1,6 +1,5 @@
 package cluster
 
-// See: https://raw.githubusercontent.com/kubernetes/dashboard/v2.6.0/aio/deploy/recommended.yaml.
 const dashboardTmpl = `
 # Copyright 2017 The Kubernetes Authors.
 #
@@ -190,12 +189,9 @@ spec:
       labels:
         k8s-app: kubernetes-dashboard
     spec:
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: kubernetes-dashboard
-          image: kubernetesui/dashboard:v2.6.0
+          image: kubernetesui/dashboard:v2.2.0
           imagePullPolicy: Always
           ports:
             - containerPort: 8443
@@ -274,13 +270,12 @@ spec:
     metadata:
       labels:
         k8s-app: dashboard-metrics-scraper
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
     spec:
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: dashboard-metrics-scraper
-          image: kubernetesui/metrics-scraper:v1.0.8
+          image: kubernetesui/metrics-scraper:v1.0.6
           ports:
             - containerPort: 8000
               protocol: TCP
