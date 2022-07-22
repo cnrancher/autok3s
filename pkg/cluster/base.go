@@ -1076,19 +1076,8 @@ func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, ve
 		}
 	}()
 
-	c := common.ConvertToCluster(state)
-	masterNodes := make([]types.Node, 0)
-	err = json.Unmarshal(state.MasterNodes, &masterNodes)
-	if err != nil {
-		return err
-	}
-	workerNodes := make([]types.Node, 0)
-	err = json.Unmarshal(state.WorkerNodes, &workerNodes)
-	if err != nil {
-		return err
-	}
-	c.Status.MasterNodes = masterNodes
-	c.Status.WorkerNodes = workerNodes
+	c := common.ConvertToCluster(state, true)
+
 	if installScript != "" {
 		c.InstallScript = installScript
 		state.InstallScript = installScript

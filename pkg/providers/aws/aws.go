@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -19,11 +21,13 @@ import (
 	typesaws "github.com/cnrancher/autok3s/pkg/types/aws"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
+	"github.com/Masterminds/semver"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -44,6 +48,27 @@ const (
 
 const (
 	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
+)
+
+var (
+	// The aws CCM requires specific version for each k8s version.
+	// This is from https://github.com/kubernetes/cloud-provider-aws/tree/master#compatibility-with-kubernetes, so we can update
+	// the version according to this docs.
+	// The map key should be semver constraint and the value is the aws ccm version
+	ccmVersionMap = map[string]string{
+		">= 1.24": "v1.24.0",
+		"~1.23":   "v1.23.1",
+		"~1.22":   "v1.22.3",
+		"~1.21":   "v1.21.2",
+		"~1.20":   "v1.20.2",
+		"~1.19":   "v1.19.0-alpha.1",
+		"<= 1.18": "v1.18.0-alpha.1",
+	}
+	// extra args for ccm with the k8s version
+	ccmExtraArgs = map[string][]string{
+		">= 1.21": {"--use-service-account-credentials=true"},
+	}
+	ccmTemplate = template.Must(template.New("aws-ccm").Parse(amazonCCMTmpl))
 )
 
 // Amazon provider amazon struct.
@@ -92,7 +117,7 @@ func (p *Amazon) GenerateClusterName() string {
 func (p *Amazon) GenerateManifest() []string {
 	if p.CloudControllerManager {
 		return []string{fmt.Sprintf(deployCCMCommand,
-			base64.StdEncoding.EncodeToString([]byte(amazonCCMTmpl)), common.K3sManifestsDir)}
+			base64.StdEncoding.EncodeToString([]byte(getAWSCCMManifest(p.K3sVersion))), common.K3sManifestsDir)}
 	}
 	return nil
 }
@@ -103,6 +128,32 @@ func (p *Amazon) CreateK3sCluster() (err error) {
 		p.SSHUser = defaultUser
 	}
 	return p.InitCluster(p.Options, p.GenerateManifest, p.generateInstance, nil, p.rollbackInstance)
+}
+
+// UpgradeK3sCluster AWS Customized k3s upgrade
+func (p *Amazon) UpgradeK3sCluster(clusterName, installScript, channel, version string) error {
+	if err := p.ProviderBase.UpgradeK3sCluster(clusterName, installScript, channel, version); err != nil {
+		return err
+	}
+	state, err := common.DefaultDB.GetCluster(clusterName, p.Provider)
+	if err != nil {
+		return err
+	}
+	// following error should never happen
+	if state == nil {
+		return fmt.Errorf("cluster %s is not exist", clusterName)
+	}
+
+	p.SetMetadata(&state.Metadata)
+	_ = p.SetOptions(state.Options)
+
+	if p.CloudControllerManager {
+		c := common.ConvertToCluster(state, true)
+		// using the new version to generate manifest.
+		p.K3sVersion = version
+		return p.DeployExtraManifest(&c, p.GenerateManifest())
+	}
+	return nil
 }
 
 // JoinK3sNode join K3S node.
@@ -1186,4 +1237,56 @@ func (p *Amazon) terminateInstance(ids []string) error {
 
 func (p *Amazon) isInstanceRunning(state string) bool {
 	return state == ec2.InstanceStateNameRunning
+}
+
+func getAWSCCMManifest(k3sversion string) string {
+	ccmVersion, err := getCCMVersion(k3sversion)
+	if err != nil {
+		logrus.Warnf("failed to get CCM version for k3s version %v, skip generating CCM manifest, %v", k3sversion, err)
+		return ""
+	}
+	extraArgs, err := getCCMExtraArgs(k3sversion)
+	if err != nil {
+		logrus.Warnf("failed to get CCM extra args for k3s version %v, assuming no extra args, %v", k3sversion, err)
+		extraArgs = []string{}
+	}
+
+	rtn := bytes.NewBuffer([]byte{})
+	if err := ccmTemplate.Execute(rtn, map[string]interface{}{
+		"Version":   ccmVersion,
+		"ExtraArgs": extraArgs,
+	}); err != nil {
+		logrus.Warnf("failed to execute AWS CCM template, assuming no manifest, %v", err)
+	}
+
+	return rtn.String()
+}
+
+func getCCMVersion(k3sversion string) (string, error) {
+	versionSemver, err := semver.NewVersion(k3sversion)
+	if err != nil {
+		return "", err
+	}
+	for version, targetVersion := range ccmVersionMap {
+		// assume the constrant is validated
+		if cst, _ := semver.NewConstraint(version); cst.Check(versionSemver) {
+			return targetVersion, nil
+		}
+	}
+	// should never meet this condition because the version map covers all k8s version.
+	return ccmVersionMap[">= 1.24"], nil
+}
+
+func getCCMExtraArgs(k3sversion string) ([]string, error) {
+	versionSemver, err := semver.NewVersion(k3sversion)
+	if err != nil {
+		return nil, err
+	}
+	for version := range ccmExtraArgs {
+		// assume the constrant is validated
+		if cst, _ := semver.NewConstraint(version); cst.Check(versionSemver) {
+			return ccmExtraArgs[version], nil
+		}
+	}
+	return []string{}, nil
 }

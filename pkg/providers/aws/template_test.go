@@ -1,6 +1,11 @@
 package aws
 
-const amazonCCMTmpl = `
+import (
+	"testing"
+)
+
+const (
+	testOutput = `
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -145,15 +150,46 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: aws-cloud-controller-manager
-          image: gcr.io/k8s-staging-provider-aws/cloud-controller-manager:{{ .Version }}
+          image: gcr.io/k8s-staging-provider-aws/cloud-controller-manager:v1.23.1
           args:
             - --v=2
             - --cloud-provider=aws
-{{- range $index, $args := .ExtraArgs }}
-            - {{ $args }}
-{{- end }}
+            - --use-service-account-credentials=true
           resources:
             requests:
               cpu: 200m
       hostNetwork: true
 `
+)
+
+func TestParseTemplate(t *testing.T) {
+	manifest := getAWSCCMManifest("v1.23.9+k3s1")
+	if manifest != testOutput {
+		t.Fatal("template doesn't match target output")
+	}
+}
+
+func TestGetCCMVersion(t *testing.T) {
+	type testCase struct {
+		k3sversion string
+		ccmVersion string
+	}
+	for _, c := range []testCase{
+		{
+			k3sversion: "v1.20.15+k3s1",
+			ccmVersion: ccmVersionMap["~1.20"],
+		},
+		{
+			k3sversion: "v1.24.3+k3s1",
+			ccmVersion: ccmVersionMap[">= 1.24"],
+		},
+	} {
+		ccm, err := getCCMVersion(c.k3sversion)
+		if err != nil {
+			t.Fatalf("failed to get CCM version for k3s version %s", c.k3sversion)
+		}
+		if ccm != c.ccmVersion {
+			t.Fatalf("ccm version is not match, want %s, but got %s", c.ccmVersion, ccm)
+		}
+	}
+}
