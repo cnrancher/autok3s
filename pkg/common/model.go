@@ -233,12 +233,12 @@ func toClusterEvent(state *clusterEvent, schemaID string) apitypes.APIEvent {
 		Object: apitypes.APIObject{
 			Type:   schemaID,
 			ID:     state.Object.ContextName,
-			Object: ConvertToCluster(state.Object),
+			Object: ConvertToCluster(state.Object, false),
 		},
 	}
 }
 
-func ConvertToCluster(state *ClusterState) types.Cluster {
+func ConvertToCluster(state *ClusterState, nodeInfo bool) types.Cluster {
 	c := types.Cluster{
 		Metadata: state.Metadata,
 		SSH:      state.SSH,
@@ -258,6 +258,19 @@ func ConvertToCluster(state *ClusterState) types.Cluster {
 		return c
 	}
 	c.Options = opt
+	if nodeInfo {
+		masterNodes := make([]types.Node, 0)
+		if err := json.Unmarshal(state.MasterNodes, &masterNodes); err != nil {
+			logrus.Errorf("failed to unmarshal master node data for cluster %s/%s, %v", state.Provider, state.Name, err)
+		}
+		workerNodes := make([]types.Node, 0)
+		if err := json.Unmarshal(state.WorkerNodes, &workerNodes); err != nil {
+			logrus.Errorf("failed to unmarshal worker node data for cluster %s/%s, %v", state.Provider, state.Name, err)
+		}
+		c.MasterNodes = masterNodes
+		c.WorkerNodes = workerNodes
+	}
+
 	return c
 }
 
