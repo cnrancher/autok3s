@@ -1,5 +1,6 @@
 package alibaba
 
+// See: https://github.com/kubernetes/cloud-provider-alibaba-cloud/blob/master/deploy/v2/cloud-controller-manager.yaml.
 const alibabaCCMTmpl = `
 ---
 apiVersion: v1
@@ -10,32 +11,29 @@ metadata:
   labels:
     app: "alibaba-ccm"
 data:
-  special.keyid: "%s"
-  special.keysecret: "%s"
+  cloud-config.conf: |-
+    {
+        "Global": {
+            "accessKeyID": "%s",
+            "accessKeySecret": "%s"
+        }
+    }
 ---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: system:cloud-controller-manager
-  namespace: kube-system
-  labels:
+  labels: 
     app: "alibaba-ccm"
 rules:
   - apiGroups:
       - ""
     resources:
-      - persistentvolumes
-      - services
-      - secrets
-      - endpoints
-      - serviceaccounts
+      - events
     verbs:
-      - get
-      - list
-      - watch
       - create
-      - update
       - patch
+      - update
   - apiGroups:
       - ""
     resources:
@@ -50,12 +48,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - services/status
-    verbs:
-      - update
-  - apiGroups:
-      - ""
-    resources:
       - nodes/status
     verbs:
       - patch
@@ -63,18 +55,69 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - events
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - services/status
+    verbs:
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
       - endpoints
     verbs:
+      - get
+      - list
+      - watch
       - create
       - patch
       - update
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - update
+      - create
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - update
+      - create
+      - delete
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-controller-manager
+  namespace: kube-system
+  labels: 
+    app: "alibaba-ccm"
 ---
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: system:cloud-controller-manager
-  labels:
+  labels: 
     app: "alibaba-ccm"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -85,160 +128,86 @@ subjects:
     name: cloud-controller-manager
     namespace: kube-system
 ---
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: system:shared-informers
-  labels:
-    app: "alibaba-ccm"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:cloud-controller-manager
-subjects:
-  - kind: ServiceAccount
-    name: shared-informers
-    namespace: kube-system
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: system:cloud-node-controller
-  labels:
-    app: "alibaba-ccm"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:cloud-controller-manager
-subjects:
-  - kind: ServiceAccount
-    name: cloud-node-controller
-    namespace: kube-system
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: system:pvl-controller
-  labels:
-    app: "alibaba-ccm"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:cloud-controller-manager
-subjects:
-  - kind: ServiceAccount
-    name: pvl-controller
-    namespace: kube-system
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: system:route-controller
-  labels:
-    app: "alibaba-ccm"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:cloud-controller-manager
-subjects:
-  - kind: ServiceAccount
-    name: route-controller
-    namespace: kube-system
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: cloud-controller-manager
-  namespace: kube-system
-  labels:
-    app: "alibaba-ccm"
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
     app: "alibaba-ccm"
-    tier: control-plane
   name: cloud-controller-manager
   namespace: kube-system
 spec:
   selector:
     matchLabels:
       app: "alibaba-ccm"
-      tier: control-plane
   template:
     metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
         app: "alibaba-ccm"
-        tier: control-plane
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
-      serviceAccountName: cloud-controller-manager
-      tolerations:
-        - effect: NoSchedule
-          operator: Exists
-          key: node-role.kubernetes.io/master
-        - effect: NoSchedule
-          operator: Exists
-          key: node.cloudprovider.kubernetes.io/uninitialized
-      nodeSelector:
-        node-role.kubernetes.io/master: "true"
       containers:
         - command:
-            -  /cloud-controller-manager
+            - /cloud-controller-manager
             - --kubeconfig=/etc/kubernetes/k3s.yaml
-            - --address=127.0.0.1
-            - --allow-untagged-cloud=true
-            - --leader-elect=true
-            - --cloud-provider=alicloud
+            - --cloud-config=/etc/kubernetes/config/cloud-config.conf
+            - --metrics-bind-addr=0
             - --allocate-node-cidrs=true
             - --cluster-cidr=%s
-            - --use-service-account-credentials=true
-            - --route-reconciliation-period=30s
-            - --v=5
-          image: registry.%s.aliyuncs.com/acs/cloud-controller-manager-amd64:v1.9.3.239-g40d97e1-aliyun
-          env:
-            - name: ACCESS_KEY_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: cloud-config
-                  key: special.keyid
-            - name: ACCESS_KEY_SECRET
-              valueFrom:
-                configMapKeyRef:
-                  name: cloud-config
-                  key: special.keysecret
+          image: registry.%s.aliyuncs.com/acs/cloud-controller-manager-amd64:v2.4.0
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 8
             httpGet:
               host: 127.0.0.1
               path: /healthz
-              port: 10252
+              port: 10258
               scheme: HTTP
             initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
             timeoutSeconds: 15
           name: cloud-controller-manager
           resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
             requests:
-              cpu: 200m
+              cpu: 100m
+              memory: 200Mi
           volumeMounts:
-            - mountPath: /etc/kubernetes/
+            - mountPath: /etc/kubernetes/k3s.yaml
               name: k8s
               readOnly: true
-            - mountPath: /etc/ssl/certs
-              name: certs
-            - mountPath: /etc/pki
-              name: pki
+            - mountPath: /etc/kubernetes/config
+              name: cloud-config
       hostNetwork: true
+      nodeSelector:
+        node-role.kubernetes.io/master: "true"
+      restartPolicy: Always
+      serviceAccountName: cloud-controller-manager
+      tolerations:  
+        - effect: NoSchedule  
+          operator: Exists  
+          key: node-role.kubernetes.io/master 
+        - effect: NoSchedule  
+          operator: Exists  
+          key: node.cloudprovider.kubernetes.io/uninitialized
       volumes:
         - hostPath:
-            path: /etc/rancher/k3s
+            path: /etc/rancher/k3s/k3s.yaml
+            type: File
           name: k8s
-        - hostPath:
-            path: /etc/ssl/certs
-          name: certs
-        - hostPath:
-            path: /etc/pki
-          name: pki
+        - configMap:
+            defaultMode: 420
+            items:
+              - key: cloud-config.conf
+                path: cloud-config.conf
+            name: cloud-config
+          name: cloud-config
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
 `

@@ -121,7 +121,7 @@ func (p *Alibaba) GenerateManifest() []string {
 			AccessKey:    p.AccessKey,
 			AccessSecret: p.AccessSecret,
 		}
-		tmpl := fmt.Sprintf(alibabaCCMTmpl, aliCCM.AccessKey, aliCCM.AccessSecret, p.ClusterCidr, aliCCM.Region)
+		tmpl := fmt.Sprintf(alibabaCCMTmpl, base64.StdEncoding.EncodeToString([]byte(aliCCM.AccessKey)), base64.StdEncoding.EncodeToString([]byte(aliCCM.AccessSecret)), p.ClusterCidr, aliCCM.Region)
 		extraManifests = append(extraManifests, fmt.Sprintf(deployCCMCommand,
 			base64.StdEncoding.EncodeToString([]byte(tmpl)), common.K3sManifestsDir))
 	}
