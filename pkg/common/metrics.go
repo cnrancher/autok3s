@@ -5,6 +5,7 @@ import (
 	"syscall"
 
 	"github.com/cnrancher/autok3s/pkg/metrics"
+	"github.com/cnrancher/autok3s/pkg/settings"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -12,10 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
-)
-
-const (
-	enableMetricsSettingName = "enable-metrics"
 )
 
 func SetupPrometheusMetrics(version string) {
@@ -39,14 +36,8 @@ func SetupPrometheusMetrics(version string) {
 		metrics.TemplateCount.With(getLabelsFromMeta(template.Metadata)).Add(1)
 	}
 	metrics.SetupEnableFunc(func() bool {
-		enable, err := GetTelemetryEnable()
-		if err != nil {
-			return false
-		}
-		if enable != nil && *enable {
-			return true
-		}
-		return false
+		enable := GetTelemetryEnable()
+		return enable != nil && *enable
 	})
 }
 
@@ -55,9 +46,9 @@ func getLabelsFromMeta(meta types.Metadata) prometheus.Labels {
 	if version == "" {
 		version = "unknown"
 	}
-	uuid, err := GetUUID()
-	if err != nil {
-		logrus.Debugf("failed to get install uuid from db, %v", err)
+	uuid := GetUUID()
+	if uuid == "" {
+		logrus.Debugf("failed to get install uuid from db")
 		uuid = "unknown"
 	}
 	return prometheus.Labels{
@@ -67,22 +58,18 @@ func getLabelsFromMeta(meta types.Metadata) prometheus.Labels {
 	}
 }
 
-func GetTelemetryEnable() (*bool, error) {
-	setting, err := DefaultDB.GetSetting(enableMetricsSettingName)
-	if err != nil {
-		return nil, err
-	}
+func GetTelemetryEnable() *bool {
 	var rtn bool
-	switch setting.Value {
+	switch settings.EnableMetrics.Get() {
 	case "true":
 		rtn = true
 	case "false":
 		rtn = false
 	// default case indicates that we should promote to user
 	default:
-		return nil, nil
+		return nil
 	}
-	return &rtn, nil
+	return &rtn
 }
 
 func MetricsPrompt(cmd *cobra.Command) {
@@ -96,7 +83,7 @@ func MetricsPrompt(cmd *cobra.Command) {
 		logrus.Debug("disable promoting telemetry in non-terminal environment")
 		return
 	}
-	if should, _ := GetTelemetryEnable(); should != nil {
+	if should := GetTelemetryEnable(); should != nil {
 		return
 	}
 
@@ -108,16 +95,13 @@ func MetricsPrompt(cmd *cobra.Command) {
 }
 
 func SetTelemetryStatus(enable bool) error {
-	return DefaultDB.SaveSetting(&Setting{
-		Name:  enableMetricsSettingName,
-		Value: strconv.FormatBool(enable),
-	})
+	return settings.EnableMetrics.Set(strconv.FormatBool(enable))
 }
 
 func uuidLabels() map[string]string {
-	uuid, err := GetUUID()
-	if err != nil {
-		logrus.Debugf("failed to get install uuid from db, %v", err)
+	uuid := GetUUID()
+	if uuid == "" {
+		logrus.Debugf("failed to get install uuid from db")
 		uuid = "unknown"
 	}
 	return map[string]string{

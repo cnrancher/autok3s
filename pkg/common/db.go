@@ -1,8 +1,9 @@
 package common
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/cnrancher/autok3s/pkg/settings"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/glebarez/sqlite"
@@ -109,32 +110,29 @@ var (
 				name TEXT not null primary key,
 				value BLOB
 			);`,
-		`INSERT INTO settings(name,value)
-			SELECT 'whitelist-domain', ''
-			WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='whitelist-domain'
-			);`,
-		fmt.Sprintf(
-			`INSERT INTO settings(name,value) SELECT '%s', 'promote' WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='%s');`,
-			enableMetricsSettingName, enableMetricsSettingName),
-		fmt.Sprintf(
-			`INSERT INTO settings(name,value) SELECT '%s', '' WHERE NOT EXISTS(SELECT 1 FROM settings WHERE name='%s');`,
-			uuidSettingName, uuidSettingName,
-		),
 	}
 )
 
 // InitStorage initializes database storage.
-func InitStorage() error {
+func InitStorage(ctx context.Context) error {
 	dataSource := GetDataSource()
 	if err := utils.EnsureFileExist(dataSource); err != nil {
 		return err
 	}
-	db, err := gorm.Open(sqlite.Open(dataSource), &gorm.Config{})
+
+	store, err := NewClusterDB(ctx)
 	if err != nil {
 		return err
 	}
-	setup(db)
-	return db.AutoMigrate(&ClusterState{}, &Template{})
+
+	setup(store.DB)
+	if err := store.DB.AutoMigrate(&ClusterState{}, &Template{}); err != nil {
+		return err
+	}
+
+	DefaultDB = store
+
+	return settings.SetProvider(&DBSettingProvider{})
 }
 
 // GetDB open and returns database.
