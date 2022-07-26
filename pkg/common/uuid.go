@@ -1,11 +1,9 @@
 package common
 
 import (
-	"github.com/pborman/uuid"
-)
+	"github.com/cnrancher/autok3s/pkg/settings"
 
-const (
-	uuidSettingName = "install-uuid"
+	"github.com/pborman/uuid"
 )
 
 var (
@@ -14,29 +12,24 @@ var (
 )
 
 func SetupNewInstall() (er error) {
-	setting, err := DefaultDB.GetSetting(uuidSettingName)
-	if err != nil {
-		return err
-	}
-	if setting.Value != "" {
+	installUUID := settings.InstallUUID.Get()
+	if installUUID != "" {
+		uuidCache = installUUID
 		return nil
 	}
-	setting.Value = uuid.NewRandom().String()
+
+	installUUID = uuid.NewRandom().String()
 	defer func(id string) {
 		if er == nil {
 			uuidCache = id
 		}
-	}(setting.Value)
-	return DefaultDB.SaveSetting(setting)
+	}(installUUID)
+	return settings.InstallUUID.Set(installUUID)
 }
 
-func GetUUID() (string, error) {
+func GetUUID() string {
 	if uuidCache != "" {
-		return uuidCache, nil
+		return uuidCache
 	}
-	setting, err := DefaultDB.GetSetting(uuidSettingName)
-	if err != nil {
-		return "", err
-	}
-	return setting.Value, nil
+	return settings.InstallUUID.Get()
 }

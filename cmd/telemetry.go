@@ -60,10 +60,7 @@ func getValidatedEnable(cmd *cobra.Command) (*bool, error) {
 }
 
 func getCurrentStatus(cmd *cobra.Command) {
-	enable, err := common.GetTelemetryEnable()
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	enable := common.GetTelemetryEnable()
 	status := "promote"
 	if enable != nil {
 		status = strconv.FormatBool(*enable)

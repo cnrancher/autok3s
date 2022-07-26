@@ -75,15 +75,10 @@ func initCfg() {
 		logrus.Errorf("[kubectl] failed to set %s=%s env", clientcmd.RecommendedConfigPathEnvVar, kubeCfg)
 	}
 
-	if err := common.InitStorage(); err != nil {
+	if err := common.InitStorage(cmd.Context()); err != nil {
 		logrus.Fatalln(err)
 	}
 
-	db, err := common.NewClusterDB(cmd.Context())
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-	common.DefaultDB = db
 	common.ExplorerWatchers = map[string]context.CancelFunc{}
 	common.FileManager = &common.ConfigFileManager{}
 
