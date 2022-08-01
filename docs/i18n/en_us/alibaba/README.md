@@ -126,6 +126,8 @@ OutBound    ALL         ALL       ALL                Allow All
 
 Please use `autok3s create` command to create a cluster in your ECS instance.
 
+As `rancher.cn` is under filing, the default `https://rancher-mirror.rancher.cn/autok3s/install.sh` may cause cluster up failure. If the above situation occurs, use the following workaround: `--k3s-install-script=https://rancher-mirror.oss-cn-beijing.aliyuncs.com/autok3s/install.sh`.
+
 ### Normal Cluster
 
 The following command uses Alibaba as cloud provider, creates a K3s cluster named "myk3s", and assign it with 1 master node and 1 worker node:
