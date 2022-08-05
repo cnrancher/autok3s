@@ -1,5 +1,13 @@
 package settings
 
+import (
+	"io"
+	"net/http"
+	"net/url"
+
+	"github.com/pkg/errors"
+)
+
 type Setting struct {
 	Name        string
 	Default     string
@@ -19,6 +27,10 @@ var (
 	WhitelistDomain = newSetting("whitelist-domain", "", "the domains or ips which allowed in autok3s UI proxy")
 	EnableMetrics   = newSetting("enable-metrics", "promote", "Should enable telemetry or not")
 	InstallUUID     = newSetting("install-uuid", "", "The autok3s instance unique install id")
+
+	InstallScript         = newSetting("install-script", "", "The k3s offline install script with base64 encode")
+	ScriptUpdateSource    = newSetting("install-script-source-repo", "https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s/k3s-install.sh", "The install script auto update source, github or aliyun oss")
+	PackageDownloadSource = newSetting("package-download-source", "github", "The airgap package download source, github and aliyunoss are validated.")
 )
 
 func newSetting(
@@ -44,14 +56,35 @@ func SetProvider(p Provider) error {
 
 func (s Setting) Get() string {
 	if provider == nil {
-		return s.Default
+		return settings[s.Name].Default
 	}
 	return provider.Get(s.Name)
 }
 
 func (s Setting) Set(value string) error {
 	if provider == nil {
+		setting := settings[s.Name]
+		setting.Default = value
+		settings[s.Name] = setting
 		return nil
 	}
 	return provider.Set(s.Name, value)
+}
+
+func GetScriptFromSource(writer io.Writer) error {
+	sourceURL := ScriptUpdateSource.Get()
+	if _, err := url.Parse(sourceURL); err != nil {
+		return errors.Wrap(err, "install script source url is not validated.")
+	}
+
+	resp, err := http.Get(sourceURL)
+	if err != nil {
+		return errors.Wrap(err, "failed to make request to install script source url.")
+	}
+	defer resp.Body.Close()
+
+	if _, err := io.Copy(writer, resp.Body); err != nil {
+		return errors.Wrap(err, "failed to copy data to target writer")
+	}
+	return nil
 }

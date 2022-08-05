@@ -11,12 +11,14 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/term"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -177,4 +179,8 @@ func StringSupportBase64(value string) string {
 func GenerateRand() int {
 	mrand.Seed(time.Now().UnixNano())
 	return mrand.Intn(255)
+}
+
+func IsTerm() bool {
+	return term.IsTerminal(int(syscall.Stdin))
 }
