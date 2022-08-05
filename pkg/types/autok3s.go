@@ -28,7 +28,7 @@ type Metadata struct {
 	Worker                string      `json:"worker" yaml:"worker"`
 	Token                 string      `json:"token,omitempty" yaml:"token,omitempty"`
 	IP                    string      `json:"ip,omitempty" yaml:"ip,omitempty"`
-	TLSSans               StringArray `json:"tls-sans,omitempty" yaml:"tls-sans,omitempty" gorm:"type:stringArray"`
+	TLSSans               StringArray `json:"tls-sans,omitempty" yaml:"tls-sans,omitempty" gorm:"type:text"`
 	ClusterCidr           string      `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
 	MasterExtraArgs       string      `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
 	WorkerExtraArgs       string      `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
@@ -161,5 +161,14 @@ func (a StringArray) Value() (driver.Value, error) {
 
 // GormDataType returns gorm data type.
 func (a StringArray) GormDataType() string {
-	return "stringArray"
+	return "string"
+}
+
+func (a StringArray) Contains(target string) bool {
+	for _, content := range a {
+		if target == content {
+			return true
+		}
+	}
+	return false
 }

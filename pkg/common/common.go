@@ -48,6 +48,8 @@ const (
 )
 
 var (
+	// IsCLI means that you are not running serve command.
+	IsCLI = true
 	// Debug used to enable log debug level.
 	Debug = false
 	// CfgPath default config file dir.

@@ -2,7 +2,6 @@ package common
 
 import (
 	"strconv"
-	"syscall"
 
 	"github.com/cnrancher/autok3s/pkg/metrics"
 	"github.com/cnrancher/autok3s/pkg/settings"
@@ -12,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 func SetupPrometheusMetrics(version string) {
@@ -79,7 +77,7 @@ func MetricsPrompt(cmd *cobra.Command) {
 		cmd.Use == "explorer" {
 		return
 	}
-	if !term.IsTerminal(int(syscall.Stdin)) {
+	if !utils.IsTerm() {
 		logrus.Debug("disable promoting telemetry in non-terminal environment")
 		return
 	}

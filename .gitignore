@@ -35,3 +35,6 @@ upx*.tar.xz
 upx*/
 .vscode/
 .dapper
+
+# Others
+pkg/settings/install.sh

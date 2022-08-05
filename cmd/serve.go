@@ -29,6 +29,7 @@ func init() {
 // ServeCommand serve command.
 func ServeCommand() *cobra.Command {
 	serveCmd.Run = func(cmd *cobra.Command, args []string) {
+		common.IsCLI = false
 		router := server.Start()
 
 		// start kube-explorer for K3s clusters

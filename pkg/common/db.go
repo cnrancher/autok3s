@@ -8,6 +8,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var (
@@ -126,7 +127,7 @@ func InitStorage(ctx context.Context) error {
 	}
 
 	setup(store.DB)
-	if err := store.DB.AutoMigrate(&ClusterState{}, &Template{}); err != nil {
+	if err := store.DB.AutoMigrate(&ClusterState{}, &Template{}, &Package{}); err != nil {
 		return err
 	}
 
@@ -138,7 +139,11 @@ func InitStorage(ctx context.Context) error {
 // GetDB open and returns database.
 func GetDB() (*gorm.DB, error) {
 	dataSource := GetDataSource()
-	return gorm.Open(sqlite.Open(dataSource), &gorm.Config{})
+	config := &gorm.Config{}
+	if IsCLI && !Debug {
+		config.Logger = logger.Default.LogMode(logger.Silent)
+	}
+	return gorm.Open(sqlite.Open(dataSource), config)
 }
 
 func setup(db *gorm.DB) {
