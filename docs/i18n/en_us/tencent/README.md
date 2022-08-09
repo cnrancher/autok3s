@@ -95,7 +95,7 @@ OutBound    ALL         ALL       ALL                Allow All
 
 ## Creating a K3s cluster
 
-As `rancher.cn` is under filing, the default `https://rancher-mirror.rancher.cn/autok3s/install.sh` may cause cluster up failure. If the above situation occurs, use the following workaround: `--k3s-install-script=https://rancher-mirror.oss-cn-beijing.aliyuncs.com/autok3s/install.sh`.
+As `rancher.cn` is under filing, the default `https://rancher-mirror.rancher.cn/k3s/k3s-install.sh` may cause cluster up failure. If the above situation occurs, use the following workaround: `--k3s-install-script=https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s/k3s-install.sh`.
 
 ### Normal Cluster
 
