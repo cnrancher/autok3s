@@ -80,7 +80,7 @@ type Provider interface {
 	// callback functions used for execute logic after create/join
 	RegisterCallbacks(name, event string, fn func(interface{}))
 	// UpgradeK3sCluster helps upgrade K3s cluster to specified version
-	UpgradeK3sCluster(clusterName, installScript, channel, version string) error
+	UpgradeK3sCluster(clusterName, installScript, channel, version, packageName, packagePath string) error
 }
 
 // RegisterProvider registers a provider.Factory by name.

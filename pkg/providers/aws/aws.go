@@ -131,8 +131,8 @@ func (p *Amazon) CreateK3sCluster() (err error) {
 }
 
 // UpgradeK3sCluster AWS Customized k3s upgrade
-func (p *Amazon) UpgradeK3sCluster(clusterName, installScript, channel, version string) error {
-	if err := p.ProviderBase.UpgradeK3sCluster(clusterName, installScript, channel, version); err != nil {
+func (p *Amazon) UpgradeK3sCluster(clusterName, installScript, channel, version, packageName, packagePath string) error {
+	if err := p.ProviderBase.UpgradeK3sCluster(clusterName, installScript, channel, version, packageName, packagePath); err != nil {
 		return err
 	}
 	state, err := common.DefaultDB.GetCluster(clusterName, p.Provider)
