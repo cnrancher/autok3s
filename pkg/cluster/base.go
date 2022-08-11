@@ -102,6 +102,18 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			V:     p.Enable,
 			Usage: "(ui-components) Deploy packaged components (valid items: \"explorer\"), e.g.(--enable explorer), explorer is simplify UI for K3s(cnrnacher/kube-explorer)",
 		},
+		{
+			Name:  "package-name",
+			P:     &p.PackageName,
+			V:     p.PackageName,
+			Usage: "The airgap package name from managed package list",
+		},
+		{
+			Name:  "package-path",
+			P:     &p.PackagePath,
+			V:     p.PackagePath,
+			Usage: "The airgap package path. The \"package-name\" flag will be ignored if this flag is also provided",
+		},
 	}
 }
 
@@ -1033,7 +1045,7 @@ func (p *ProviderBase) RegisterCallbacks(name, event string, fn func(interface{}
 	}
 }
 
-func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, version string) error {
+func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, version, packageName, packagePath string) error {
 	if p.Provider == "k3d" {
 		return errors.New("the upgrade cluster for K3d provider is not supported yet")
 	}
@@ -1086,8 +1098,27 @@ func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, ve
 		c.K3sChannel = channel
 		state.K3sChannel = channel
 	}
-	c.K3sVersion = version
-	state.K3sVersion = version
+	if version != "" {
+		c.K3sVersion = version
+		state.K3sVersion = version
+	}
+
+	// if online install specified, clean up offline options and ignore package name/path input
+	if installScript != "" || channel != "" || version != "" {
+		c.PackageName = ""
+		state.PackageName = ""
+		c.PackagePath = ""
+		state.PackagePath = ""
+	} else {
+		if packageName != "" {
+			c.PackageName = packageName
+			state.PackageName = packageName
+		}
+		if packagePath != "" {
+			c.PackagePath = packagePath
+			state.PackagePath = packagePath
+		}
+	}
 
 	return p.Upgrade(&c)
 }

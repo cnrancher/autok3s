@@ -124,7 +124,7 @@ func (j join) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 		go func() {
-			err = provider.UpgradeK3sCluster(state.Name, upgradeInput.InstallScript, upgradeInput.K3sChannel, upgradeInput.K3sVersion)
+			err = provider.UpgradeK3sCluster(state.Name, upgradeInput.InstallScript, upgradeInput.K3sChannel, upgradeInput.K3sVersion, upgradeInput.PackageName, upgradeInput.PackagePath)
 			if err != nil {
 				logrus.Errorf("failed to upgrade cluster %s: %v", clusterID, err)
 			}

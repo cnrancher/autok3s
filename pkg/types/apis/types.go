@@ -70,4 +70,6 @@ type UpgradeInput struct {
 	InstallScript string `json:"k3s-install-script,omitempty"`
 	K3sChannel    string `json:"k3s-channel,omitempty"`
 	K3sVersion    string `json:"k3s-version,omitempty"`
+	PackageName   string `json:"airgap-package-name,omitempty"`
+	PackagePath   string `json:"airgap-package-path,omitempty"`
 }

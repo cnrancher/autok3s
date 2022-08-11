@@ -333,3 +333,7 @@ func (d *SSHDialer) executeCommand(cmd string) error {
 func (d *SSHDialer) Write(b []byte) error {
 	return nil
 }
+
+func (d *SSHDialer) GetClient() *ssh.Client {
+	return d.conn
+}

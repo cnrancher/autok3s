@@ -53,21 +53,6 @@ func TestGetExt(t *testing.T) {
 	name, ext := getExt(toTest)
 	assert.Equal(t, targetName, name)
 	assert.Equal(t, targetExt, ext)
-
-	// targetAMD64Map := map[string][]string{
-	// 	"k3s":               {""},
-	// 	"k3s-airgap-images": {"-amd64.tar.gz", "-amd64.tar"},
-	// 	checksumBaseName:    {"-amd64.txt"},
-	// }
-	// targetARM64Map := map[string][]string{
-	// 	"k3s":               {"-arm64"},
-	// 	"k3s-airgap-images": {"-arm64.tar.gz", "-arm64.tar"},
-	// 	checksumBaseName:    {"-arm64.txt"},
-	// }
-	// amd64Map := getResourceMapWithArch("amd64")
-	// arm64Map := getResourceMapWithArch("arm64")
-	// assert.Equal(t, targetAMD64Map, amd64Map)
-	// assert.Equal(t, targetARM64Map, arm64Map)
 }
 
 func TestSuffixWithArch(t *testing.T) {
