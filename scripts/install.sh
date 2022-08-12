@@ -21,12 +21,12 @@ fi
 
 #   - INSTALL_AUTOK3S_MIRROR
 #     For Chinese users, set INSTALL_AUTOK3S_MIRROR=cn to use the mirror address to accelerate
-#     autok3s binary file download, and the default mirror address is rancher-mirror.rancher.cn
+#     autok3s binary file download, and the default mirror address is rancher-mirror.oss-cn-beijing.aliyuncs.com
 
 if [ "${INSTALL_AUTOK3S_MIRROR}" = cn ]; then
-    AUTOK3S_DOWNLOAD_URL=https://rancher-mirror.rancher.cn/$REPO
+    AUTOK3S_DOWNLOAD_URL=https://rancher-mirror.oss-cn-beijing.aliyuncs.com/$REPO
     version=$(curl -sS $AUTOK3S_DOWNLOAD_URL/channels/latest)
-    KUBEEXPLORER_DOWNLOAD_URL=https://rancher-mirror.rancher.cn/$KUBEEXPLORER_REPO
+    KUBEEXPLORER_DOWNLOAD_URL=https://rancher-mirror.oss-cn-beijing.aliyuncs.com/$KUBEEXPLORER_REPO
 
 else
     AUTOK3S_DOWNLOAD_URL=https://github.com/$OWNER/$REPO/releases/download
