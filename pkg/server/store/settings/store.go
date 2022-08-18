@@ -63,3 +63,8 @@ func (s *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 	}
 	return result, nil
 }
+
+// Watch watches Settings.
+func (s *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
+	return common.DefaultDB.Watch(apiOp, schema), nil
+}

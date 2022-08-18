@@ -33,8 +33,7 @@ func validateName(name string) error {
 	if name == "" {
 		return errNameRequire
 	}
-	pkgs, _ := common.DefaultDB.ListPackages(&name)
-	if len(pkgs) > 0 {
+	if err := common.DefaultDB.PackageExists(name); err == nil {
 		return fmt.Errorf("package name %s already exists", name)
 	}
 	if errs := validation.IsDNS1123Subdomain(name); len(errs) > 0 {

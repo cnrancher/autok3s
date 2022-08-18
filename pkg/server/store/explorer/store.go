@@ -52,18 +52,7 @@ func (s *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 
 // Watch explorer settings change
 func (s *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
-	var (
-		result = make(chan types.APIEvent)
-	)
-
-	go common.DefaultDB.Explorer(apiOp, schema, result)
-
-	go func() {
-		<-apiOp.Context().Done()
-		close(result)
-	}()
-
-	return result, nil
+	return common.DefaultDB.Watch(apiOp, schema), nil
 }
 
 type Formatter struct {

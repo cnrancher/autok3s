@@ -117,7 +117,7 @@ func (d *Downloader) DownloadPackage() (string, error) {
 	if len(toAddArchs) == 0 &&
 		len(toDelArchs) == 0 &&
 		isDone(d.basePath) {
-		d.logger.Info("the package %s is ready, skip downloading resources.", d.pkg.Name)
+		d.logger.Infof("the package %s is ready, skip downloading resources.", d.pkg.Name)
 		return d.basePath, nil
 	}
 	if err := d.writeVersion(); err != nil {
