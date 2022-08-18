@@ -144,16 +144,5 @@ func (c *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 
 // Watch watches template.
 func (c *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
-	var (
-		result = make(chan types.APIEvent)
-	)
-
-	go common.DefaultDB.WatchCluster(apiOp, schema, result)
-
-	go func() {
-		<-apiOp.Context().Done()
-		close(result)
-	}()
-
-	return result, nil
+	return common.DefaultDB.Watch(apiOp, schema), nil
 }

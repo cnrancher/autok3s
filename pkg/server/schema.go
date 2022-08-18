@@ -8,6 +8,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/server/store/credential"
 	"github.com/cnrancher/autok3s/pkg/server/store/explorer"
 	"github.com/cnrancher/autok3s/pkg/server/store/kubectl"
+	"github.com/cnrancher/autok3s/pkg/server/store/pkg"
 	"github.com/cnrancher/autok3s/pkg/server/store/provider"
 	"github.com/cnrancher/autok3s/pkg/server/store/settings"
 	"github.com/cnrancher/autok3s/pkg/server/store/template"
@@ -113,5 +114,21 @@ func initSettings(s *types.APISchemas) {
 		schema.Store = &settings.Store{}
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{http.MethodPut, http.MethodGet}
+	})
+}
+
+func initPackage(s *types.APISchemas) {
+	s.MustImportAndCustomize(common.Package{}, func(schema *types.APISchema) {
+		schema.Store = &pkg.Store{}
+		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
+		schema.ResourceMethods = []string{http.MethodGet, http.MethodDelete, http.MethodPut}
+		schema.CollectionActions["import"] = wranglertypes.Action{
+			Output: "package",
+		}
+		schema.CollectionActions["update-install-script"] = wranglertypes.Action{}
+		schema.Formatter = pkg.Format
+		schema.CollectionFormatter = pkg.CollectionFormat
+		schema.ActionHandlers = pkg.ActionHandlers()
+		schema.LinkHandlers = pkg.LinkHandlers()
 	})
 }

@@ -174,3 +174,7 @@ func (a StringArray) Contains(target string) bool {
 	}
 	return false
 }
+
+func (m *Metadata) GetID() string {
+	return m.ContextName
+}

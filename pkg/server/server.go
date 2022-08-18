@@ -28,6 +28,7 @@ func Start() http.Handler {
 	initTemplates(s.Schemas)
 	initExplorer(s.Schemas)
 	initSettings(s.Schemas)
+	initPackage(s.Schemas)
 
 	apiroot.Register(s.Schemas, []string{"v1"})
 	router := mux.NewRouter()
@@ -64,6 +65,7 @@ func Start() http.Handler {
 	router.PathPrefix("/proxy/explorer/{name}").Handler(proxy.NewExplorerProxy())
 	router.PathPrefix("/meta/proxy").Handler(proxy.NewProxy("/proxy/"))
 	router.PathPrefix("/k8s/proxy").Handler(proxy.NewK8sProxy())
+	router.Path("/{prefix}/{type}").Queries("action", "{action}").Handler(s)
 	router.Path("/{prefix}/{type}").Handler(s)
 	router.Path("/{prefix}/{type}/{name}").Queries("link", "{link}").Handler(s)
 	router.Path("/{prefix}/{type}/{name}").Queries("action", "{action}").Handler(s)

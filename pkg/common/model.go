@@ -3,6 +3,8 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"reflect"
+	"strconv"
 
 	"github.com/cnrancher/autok3s/pkg/metrics"
 	"github.com/cnrancher/autok3s/pkg/providers"
@@ -10,8 +12,20 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types/apis"
 
 	apitypes "github.com/rancher/apiserver/pkg/types"
+	"github.com/rancher/wrangler/pkg/data/convert"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+)
+
+var (
+	_ []IIDObject = []IIDObject{
+		&ClusterState{},
+		&Template{},
+		&Credential{},
+		&Setting{},
+		&Explorer{},
+		&Package{},
+	}
 )
 
 // ClusterState cluster state struct.
@@ -25,6 +39,19 @@ type ClusterState struct {
 	types.SSH      `json:",inline" mapstructure:",squash" gorm:"embedded"`
 }
 
+func (c *ClusterState) SchemaID() string {
+	return getSchemaID(&apis.Cluster{})
+}
+
+func (c *ClusterState) ToAPIObject() *apitypes.APIObject {
+	rtn := ConvertToCluster(c, false)
+	return &apitypes.APIObject{
+		Type:   c.SchemaID(),
+		ID:     c.GetID(),
+		Object: rtn,
+	}
+}
+
 // Template template struct.
 type Template struct {
 	types.Metadata `json:",inline" mapstructure:",squash" gorm:"embedded"`
@@ -33,34 +60,54 @@ type Template struct {
 	IsDefault      bool `json:"is-default" gorm:"type:bool"`
 }
 
+func (t *Template) SchemaID() string {
+	return getSchemaID(&apis.ClusterTemplate{})
+}
+
+func (t *Template) ToAPIObject() *apitypes.APIObject {
+	rtn := toTemplate(t)
+	return &apitypes.APIObject{
+		Type:   t.SchemaID(),
+		ID:     rtn.GetID(),
+		Object: rtn,
+	}
+}
+
 // Credential credential struct.
 type Credential struct {
-	ID       int    `json:"id" gorm:"type:integer"`
-	Provider string `json:"provider"`
+	ID       int    `json:"id" gorm:"type:integer;primaryKey;not null;autoIncrement"`
+	Provider string `json:"provider" gorm:"not null"`
 	Secrets  []byte `json:"secrets,omitempty" gorm:"type:bytes"`
+}
+
+func (c *Credential) GetID() string {
+	return strconv.Itoa(c.ID)
 }
 
 // Explorer struct
 type Explorer struct {
-	ContextName string `json:"context-name"`
-	Enabled     bool   `json:"enabled"`
+	ContextName string `json:"context-name" gorm:"primaryKey;not null"`
+	Enabled     bool   `json:"enabled" gorm:"type:bool"`
 	Port        int    `json:"port"`
+}
+
+func (e *Explorer) GetID() string {
+	return e.ContextName
 }
 
 // Setting struct
 type Setting struct {
-	Name  string `json:"name"`
+	Name  string `json:"name" grom:"primaryKey;not null"`
 	Value string `json:"value"`
 }
 
-type templateEvent struct {
-	Name   string
-	Object *Template
+func (s *Setting) GetID() string {
+	return s.Name
 }
 
-type clusterEvent struct {
+type event struct {
 	Name   string
-	Object *ClusterState
+	Object interface{}
 }
 
 // LogEvent log event struct.
@@ -69,15 +116,20 @@ type LogEvent struct {
 	ContextName string
 }
 
-type explorerEvent struct {
-	Name   string
-	Object *Explorer
-}
-
 // Store holds broadcaster's API state.
 type Store struct {
 	*gorm.DB
 	broadcaster *Broadcaster
+}
+
+type IIDObject interface {
+	GetID() string
+}
+
+type ISchemaObject interface {
+	IIDObject
+	SchemaID() string
+	ToAPIObject() *apitypes.APIObject
 }
 
 // NewClusterDB new cluster store.
@@ -116,34 +168,16 @@ func (d *Store) updateHandler(db *gorm.DB) {
 	d.hook(db, apitypes.ChangeAPIEvent)
 }
 
-func (d *Store) hook(db *gorm.DB, event string) {
-	// TODO refactor for common function
+func (d *Store) hook(db *gorm.DB, eventName string) {
 	if db.Statement.Schema != nil {
-		if db.Statement.Schema.Name == "Template" {
-			temp := convertModelToTemplate(db.Statement.Model)
-			if temp != nil {
-				d.broadcaster.Broadcast(&templateEvent{
-					Name:   event,
-					Object: temp,
-				})
-			}
-		} else if db.Statement.Schema.Name == "ClusterState" {
-			state := convertToClusterState(db.Statement.Model)
-			if state != nil {
-				d.broadcaster.Broadcast(&clusterEvent{
-					Name:   event,
-					Object: state,
-				})
-			}
-		} else if db.Statement.Schema.Name == "Explorer" {
-			exp := convertToExplorer(db.Statement.Model)
-			if exp != nil {
-				d.broadcaster.Broadcast(&explorerEvent{
-					Name:   event,
-					Object: exp,
-				})
-			}
+		apiObj := GetAPIObject(db.Statement.Model)
+		if apiObj == nil {
+			return
 		}
+		d.broadcaster.Broadcast(&event{
+			Name:   eventName,
+			Object: apiObj,
+		})
 	}
 }
 
@@ -152,28 +186,56 @@ func (d *Store) BroadcastObject(obj interface{}) {
 	d.broadcaster.Broadcast(obj)
 }
 
-// WatchCluster watch cluster.
-func (d *Store) WatchCluster(apiOp *apitypes.APIRequest, schema *apitypes.APISchema, input chan apitypes.APIEvent) {
-	// new subscribe.
+func (d *Store) Watch(apiOp *apitypes.APIRequest, schema *apitypes.APISchema) chan apitypes.APIEvent {
+	result := make(chan apitypes.APIEvent)
 	sub := d.broadcaster.Register(func(v interface{}) bool {
-		_, ok := v.(*clusterEvent)
-		return ok
-	})
-	for {
-		select {
-		case v, ok := <-sub:
-			if !ok {
-				continue
-			}
-			state, isCluster := v.(*clusterEvent)
-			if !isCluster {
-				continue
-			}
-			input <- toClusterEvent(state, schema.ID)
-		case <-apiOp.Context().Done():
-			d.broadcaster.Evict(sub)
-			return
+		event, ok := v.(*event)
+		if !ok {
+			return false
 		}
+		obj, ok := event.Object.(*apitypes.APIObject)
+		if !ok {
+			return false
+		}
+		return obj.Type == schema.ID
+	})
+	go func() {
+		for {
+			select {
+			case v, ok := <-sub:
+				if !ok || v == nil {
+					continue
+				}
+				e := v.(*event)
+				result <- getAPIEvent(e, schema)
+			case <-apiOp.Context().Done():
+				d.broadcaster.Evict(sub)
+				close(result)
+				return
+			}
+		}
+	}()
+	return result
+}
+
+func getSchemaID(v interface{}) string {
+	iSchema, ok := v.(ISchemaObject)
+	if ok {
+		return iSchema.SchemaID()
+	}
+	dataType := reflect.TypeOf(v)
+	if dataType.Kind() == reflect.Ptr {
+		dataType = dataType.Elem()
+	}
+	return convert.LowerTitle(dataType.Name())
+}
+
+func getAPIEvent(event *event, schema *apitypes.APISchema) apitypes.APIEvent {
+	obj := event.Object.(*apitypes.APIObject)
+	return apitypes.APIEvent{
+		Name:         event.Name,
+		ResourceType: schema.ID,
+		Object:       *obj,
 	}
 }
 
@@ -199,42 +261,6 @@ func (d *Store) Log(apiOp *apitypes.APIRequest, input chan *LogEvent) {
 			d.broadcaster.Evict(sub)
 			return
 		}
-	}
-}
-
-// Explorer watch K3s cluster setting changes for kube-explorer
-func (d *Store) Explorer(apiOp *apitypes.APIRequest, schema *apitypes.APISchema, input chan apitypes.APIEvent) {
-	sub := d.broadcaster.Register(func(v interface{}) bool {
-		_, ok := v.(*explorerEvent)
-		return ok
-	})
-	for {
-		select {
-		case v, ok := <-sub:
-			if !ok {
-				continue
-			}
-			exp, isExplorer := v.(*explorerEvent)
-			if !isExplorer {
-				continue
-			}
-			input <- toExplorerEvent(exp, schema.ID)
-		case <-apiOp.Context().Done():
-			d.broadcaster.Evict(sub)
-			return
-		}
-	}
-}
-
-func toClusterEvent(state *clusterEvent, schemaID string) apitypes.APIEvent {
-	return apitypes.APIEvent{
-		Name:         state.Name,
-		ResourceType: schemaID,
-		Object: apitypes.APIObject{
-			Type:   schemaID,
-			ID:     state.Object.ContextName,
-			Object: ConvertToCluster(state.Object, false),
-		},
 	}
 }
 
@@ -328,18 +354,6 @@ func convertToExplorer(m interface{}) *Explorer {
 	return exp
 }
 
-func toExplorerEvent(event *explorerEvent, schemaID string) apitypes.APIEvent {
-	return apitypes.APIEvent{
-		Name:         event.Name,
-		ResourceType: schemaID,
-		Object: apitypes.APIObject{
-			Type:   schemaID,
-			ID:     event.Object.ContextName,
-			Object: event.Object,
-		},
-	}
-}
-
 // SaveCluster save cluster.
 func (d *Store) SaveCluster(cluster *types.Cluster) error {
 	// find cluster
@@ -400,9 +414,9 @@ func (d *Store) DeleteCluster(name, provider string) error {
 		return nil
 	}
 	result := d.DB.Where("name = ? AND provider = ?", name, provider).Delete(&ClusterState{})
-	d.broadcaster.Broadcast(&clusterEvent{
+	d.broadcaster.Broadcast(&event{
 		Name:   apitypes.RemoveAPIEvent,
-		Object: state,
+		Object: GetAPIObject(state),
 	})
 	if result.Error == nil {
 		metrics.ClusterCount.With(getLabelsFromMeta(state.Metadata)).Dec()
@@ -485,9 +499,9 @@ func (d *Store) DeleteTemplate(name, provider string) error {
 		Where("name = ? AND provider = ?", name, provider).
 		Delete(&Template{})
 	if result.Error == nil {
-		d.broadcaster.Broadcast(&templateEvent{
+		d.broadcaster.Broadcast(&event{
 			Name:   apitypes.RemoveAPIEvent,
-			Object: temp,
+			Object: GetAPIObject(temp),
 		})
 		metrics.TemplateCount.With(getLabelsFromMeta(temp.Metadata)).Dec()
 	}
@@ -513,43 +527,6 @@ func (d *Store) GetTemplate(name, provider string) (*Template, error) {
 		return nil, nil
 	}
 	return template, nil
-}
-
-// WatchTemplate watch template.
-func (d *Store) WatchTemplate(apiOp *apitypes.APIRequest, schema *apitypes.APISchema, input chan apitypes.APIEvent) {
-	// new subscribe for template
-	sub := d.broadcaster.Register(func(v interface{}) bool {
-		_, ok := v.(*templateEvent)
-		return ok
-	})
-	for {
-		select {
-		case v, ok := <-sub:
-			if !ok {
-				continue
-			}
-			temp, isTemplate := v.(*templateEvent)
-			if !isTemplate {
-				continue
-			}
-			input <- toTemplateEvent(temp, schema.ID)
-		case <-apiOp.Context().Done():
-			d.broadcaster.Evict(sub)
-			return
-		}
-	}
-}
-
-func toTemplateEvent(state *templateEvent, schemaID string) apitypes.APIEvent {
-	return apitypes.APIEvent{
-		Name:         state.Name,
-		ResourceType: schemaID,
-		Object: apitypes.APIObject{
-			Type:   schemaID,
-			ID:     state.Object.ContextName,
-			Object: toTemplate(state.Object),
-		},
-	}
 }
 
 func toTemplate(temp *Template) *apis.ClusterTemplate {
@@ -709,4 +686,21 @@ func (d *Store) ListSettings() ([]*Setting, error) {
 	list := make([]*Setting, 0)
 	result := d.DB.Find(&list)
 	return list, result.Error
+}
+
+func GetAPIObject(v interface{}) *apitypes.APIObject {
+	rtn, ok := v.(ISchemaObject)
+	if ok {
+		return rtn.ToAPIObject()
+	}
+
+	ider, ok := v.(IIDObject)
+	if !ok {
+		return nil
+	}
+	return &apitypes.APIObject{
+		ID:     ider.GetID(),
+		Type:   getSchemaID(v),
+		Object: v,
+	}
 }

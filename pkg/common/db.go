@@ -94,23 +94,6 @@ var (
 				is_default               bool,
 				unique (name, provider)
 			);`,
-		`CREATE TABLE IF NOT EXISTS credentials
-			(
-				id integer not null primary key autoincrement,
-				provider TEXT not null,
-				secrets BLOB
-			);`,
-		`CREATE TABLE IF NOT EXISTS explorers
-			(
-				context_name TEXT not null primary key,
-				enabled bool,
-				port int
-			);`,
-		`CREATE TABLE IF NOT EXISTS settings
-			(
-				name TEXT not null primary key,
-				value BLOB
-			);`,
 	}
 )
 
@@ -127,7 +110,14 @@ func InitStorage(ctx context.Context) error {
 	}
 
 	setup(store.DB)
-	if err := store.DB.AutoMigrate(&ClusterState{}, &Template{}, &Package{}); err != nil {
+	if err := store.DB.AutoMigrate(
+		&ClusterState{},
+		&Template{},
+		&Package{},
+		&Credential{},
+		&Explorer{},
+		&Setting{},
+	); err != nil {
 		return err
 	}
 
