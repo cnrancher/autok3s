@@ -37,6 +37,7 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 - Low cost(try spot instances in each cloud).
 - Simplify operations by UI dashboard.
 - Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator).
+- [Airgap](docs/i18n/en_us/airgap/README.md) K3s package management and installation.
 
 ## Providers
 
