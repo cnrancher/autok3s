@@ -49,13 +49,13 @@ func TestGetCommand(t *testing.T) {
 		},
 	}
 	masterCommands := []string{
-		"curl -sLS https://get.k3s.io | INSTALL_K3S_EXEC='server --cluster-init --node-external-ip=1.2.3.1 " +
+		"curl -sLS https://get.k3s.io | INSTALL_K3S_EXEC='server --advertise-address=1.2.3.1 --cluster-init --node-external-ip=1.2.3.1 " +
 			"--tls-san=1.2.3.1 --tls-san=1.2.3.2 --tls-san=1.2.3.3 --tls-san=2.3.4.5' " +
 			"INSTALL_K3S_VERSION='v1.24.3+k3s1' K3S_TOKEN='dd73df9b22f8ff22be0d17ec36e7267a' sh -",
-		"curl -sLS https://get.k3s.io | INSTALL_K3S_EXEC='server --node-external-ip=1.2.3.2 " +
+		"curl -sLS https://get.k3s.io | INSTALL_K3S_EXEC='server --advertise-address=1.2.3.2 --node-external-ip=1.2.3.2 " +
 			"--server=https://1.2.3.1:6443 --tls-san=1.2.3.1 --tls-san=1.2.3.2 --tls-san=1.2.3.3 --tls-san=2.3.4.5' " +
 			"INSTALL_K3S_VERSION='v1.24.3+k3s1' K3S_TOKEN='dd73df9b22f8ff22be0d17ec36e7267a' sh -",
-		"curl -sLS https://get.k3s.io | INSTALL_K3S_EXEC='server --node-external-ip=1.2.3.3 " +
+		"curl -sLS https://get.k3s.io | INSTALL_K3S_EXEC='server --advertise-address=1.2.3.3 --node-external-ip=1.2.3.3 " +
 			"--server=https://1.2.3.1:6443 --tls-san=1.2.3.1 --tls-san=1.2.3.2 --tls-san=1.2.3.3 --tls-san=2.3.4.5' " +
 			"INSTALL_K3S_VERSION='v1.24.3+k3s1' K3S_TOKEN='dd73df9b22f8ff22be0d17ec36e7267a' sh -",
 	}
@@ -79,6 +79,7 @@ func TestGetCommand(t *testing.T) {
 	testCluster.DataStore = "mysql://root:root@tcp(1.2.3.4:3306)/k3s"
 	testCluster.Network = "host-gw"
 	expectFirstMasterCommand := "curl -sLS https://get.k3s.io | INSTALL_K3S_EXEC='server " +
+		"--advertise-address=1.2.3.1 " +
 		"--datastore-endpoint=mysql://root:root@tcp(1.2.3.4:3306)/k3s " +
 		"--flannel-backend=host-gw " +
 		"--node-external-ip=1.2.3.1 " +

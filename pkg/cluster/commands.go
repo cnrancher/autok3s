@@ -122,6 +122,11 @@ func getRunArgs(isFirstMaster bool, fixedIP string, cluster *types.Cluster, node
 		for _, san := range getTLSSans(cluster) {
 			runArgs = append(runArgs, tlsSanArg+"="+san)
 		}
+
+		internalIPAddress := getFirstAddress(node.InternalIPAddress)
+		if internalIPAddress != "" {
+			runArgs = append(runArgs, "--advertise-address="+internalIPAddress)
+		}
 	}
 
 	if externalAddr := getFirstAddress(node.PublicIPAddress); externalAddr != "" {
