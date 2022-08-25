@@ -3,15 +3,24 @@
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-# helm repo add pandaria http://pandaria-releases.cnrancher.com/server-charts/latest
-helm repo add pandaria http://pandaria-releases.cnrancher.com/2.6-charts/dev
-# helm repo add pandaria http://pandaria-releases.cnrancher.com/2.6-charts/latest
+PANDARIA_VERSION=""
+
+# REPO_BASE="http://pandaria-releases.cnrancher.com"
+REPO_BASE="https://pandaria-releases.oss-cn-beijing.aliyuncs.com"
+
+# 2.0-2.5 repo for prd
+# helm repo add pandaria ${REPO_BASE}/server-charts/latest
+
+# 2.6 repo for dev
+helm repo add pandaria ${REPO_BASE}/2.6-charts/dev
+
+# 2.6 repo for prd
+# helm repo add pandaria ${REPO_BASE}/2.6-charts/latest
+
 helm repo update
 
 # no effect, just for compatibility with rancher helm template
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.1/cert-manager.crds.yaml
-
-PANDARIA_VERSION=""
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.crds.yaml
 
 #docker login -u xxx -p xxx
 #docker pull cnrancher/rancher:$PANDARIA_VERSION
