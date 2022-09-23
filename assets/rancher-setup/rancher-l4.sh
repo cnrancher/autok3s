@@ -8,7 +8,7 @@ helm repo add jetstack https://charts.jetstack.io
 helm repo update
 
 # no effect, just for compatibility with rancher helm template
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.crds.yaml
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.crds.yaml
 
 kubectl create namespace cattle-system
 ec2_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
