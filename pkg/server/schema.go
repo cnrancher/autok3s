@@ -62,7 +62,6 @@ func initCredential(s *types.APISchemas) {
 		schema.Store = &credential.Store{}
 		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
 		schema.ResourceMethods = []string{http.MethodGet, http.MethodPut, http.MethodDelete}
-		schema.Formatter = credential.Formatter
 	})
 }
 
