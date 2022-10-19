@@ -4,7 +4,7 @@ ARG TARGETARCH
 ARG TARGETOS
 
 ENV TARGETPLATFORM=${TARGETPLATFORM:-"linux/amd64"} ARCH=${TARGETARCH:-"amd64"} OS=${TARGETOS:-"linux"}
-ENV KUBE_EXPLORER_VERSION=v0.2.10
+ENV KUBE_EXPLORER_VERSION=v0.2.12
 
 RUN zypper -n install curl ca-certificates
 RUN mkdir /home/shell && \
