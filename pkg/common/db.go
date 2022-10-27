@@ -114,7 +114,10 @@ func InitStorage(ctx context.Context) error {
 		&ClusterState{},
 		&Template{},
 		&Package{},
-		&Credential{},
+		// TODO
+		// Migrate Credential table will cause create table error when upgrading autok3s from 0.5.x
+		// So we are not migrating this table for now and needs a better upgrade solution in later version.
+		// &Credential{},
 		&Explorer{},
 		&Setting{},
 	); err != nil {
