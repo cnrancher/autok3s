@@ -7,7 +7,7 @@ services:
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
   autok3s:
-    image: cnrancher/autok3s:v0.5.2
+    image: cnrancher/autok3s:v0.6.0
     init: true
     ports:
     - 8080
