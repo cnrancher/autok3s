@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const (
@@ -27,7 +27,7 @@ func EnsureFolderExist(path string) error {
 
 // EnsureFileExist ensures file exist.
 func EnsureFileExist(file string) error {
-	if err := EnsureFolderExist(path.Dir(file)); err != nil {
+	if err := EnsureFolderExist(filepath.Dir(file)); err != nil {
 		return err
 	}
 	if _, err := os.Stat(file); os.IsNotExist(err) {
