@@ -12,8 +12,8 @@ services:
     ports:
     - 8080
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - $HOME/.autok3s/:$HOME/.autok3s/
     environment:
-    - AUTOK3S_CONFIG=$HOME/.autok3s/
-    - VIRTUAL_HOST=autok3s.vcap.me
+      - AUTOK3S_CONFIG=$HOME/.autok3s/
+      - VIRTUAL_HOST=autok3s.vcap.me
