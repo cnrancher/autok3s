@@ -17,6 +17,7 @@ RUN curl -sSL https://github.com/cnrancher/kube-explorer/releases/download/${KUB
     chmod +x /usr/local/bin/kube-explorer
 
 ENV AUTOK3S_CONFIG /root/.autok3s
+ENV DOCKER_HOST unix:///var/run/docker.sock
 ENV HOME /root
 
 WORKDIR /home/shell
