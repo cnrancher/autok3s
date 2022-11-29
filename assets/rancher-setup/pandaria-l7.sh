@@ -20,12 +20,15 @@ helm repo add pandaria ${REPO_BASE}/2.6-charts/dev
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
 
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.crds.yaml
-
 helm install cert-manager jetstack/cert-manager \
   --namespace cert-manager \
   --create-namespace \
-  --version v1.9.1
+  --set installCRDs=true \
+  --set image.repository=cnrancher/mirrored-jetstack-cert-manager-controller \
+  --set webhook.image.repository=cnrancher/mirrored-jetstack-cert-manager-webhook \
+  --set cainjector.image.repository=cnrancher/mirrored-jetstack-cert-manager-cainjector \
+  --set startupapicheck.image.repository=cnrancher/mirrored-jetstack-cert-manager-ctl \
+  --version v1.10.1
 
 #docker login -u xxx -p xxx
 #docker pull cnrancher/rancher:$PANDARIA_VERSION

@@ -20,7 +20,7 @@ helm repo add pandaria ${REPO_BASE}/2.6-charts/dev
 helm repo update
 
 # no effect, just for compatibility with rancher helm template
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.crds.yaml
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.10.1/cert-manager.crds.yaml
 
 #docker login -u xxx -p xxx
 #docker pull cnrancher/rancher:$PANDARIA_VERSION
