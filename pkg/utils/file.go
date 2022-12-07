@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -42,6 +43,10 @@ func EnsureFileExist(file string) error {
 
 // UserHome returns user's home dir.
 func UserHome() string {
+	u, err := user.Current()
+	if err == nil {
+		return u.HomeDir
+	}
 	if home := os.Getenv(homeEnv); home != "" {
 		return home
 	}
