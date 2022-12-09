@@ -15,28 +15,37 @@ import (
 
 const sshAuthSock = "SSH_AUTH_SOCK"
 
+func StripUserHome(path string) string {
+	if len(path) > 2 && path[:2] == "~/" {
+		path = filepath.Join(UserHome(), path[2:])
+	}
+	return path
+}
+
+func GetFileContent(path string) ([]byte, error) {
+	buff, err := ioutil.ReadFile(StripUserHome(path))
+	if err != nil {
+		return []byte{}, err
+	}
+	return buff, nil
+}
+
 // SSHPrivateKeyPath returns ssh private key content from given path.
 func SSHPrivateKeyPath(sshKey string) (string, error) {
-	if sshKey[:2] == "~/" {
-		sshKey = filepath.Join(UserHome(), sshKey[2:])
-	}
-	buff, err := ioutil.ReadFile(sshKey)
+	content, err := GetFileContent(sshKey)
 	if err != nil {
 		return "", fmt.Errorf("error while reading SSH key file: %v", err)
 	}
-	return string(buff), nil
+	return string(content), nil
 }
 
 // SSHCertificatePath returns ssh certificate key content from given path
 func SSHCertificatePath(sshCertPath string) (string, error) {
-	if sshCertPath[:2] == "~/" {
-		sshCertPath = filepath.Join(UserHome(), sshCertPath[2:])
-	}
-	buff, err := ioutil.ReadFile(sshCertPath)
+	content, err := GetFileContent(sshCertPath)
 	if err != nil {
 		return "", fmt.Errorf("error while reading SSH certificate file: %v", err)
 	}
-	return string(buff), nil
+	return string(content), nil
 }
 
 // GetSSHConfig generate ssh config.

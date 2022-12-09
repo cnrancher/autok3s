@@ -126,6 +126,7 @@ func InitStorage(ctx context.Context) error {
 		// &Credential{},
 		&Explorer{},
 		&Setting{},
+		&SSHKey{},
 	); err != nil {
 		return err
 	}
