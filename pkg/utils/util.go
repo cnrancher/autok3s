@@ -18,6 +18,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/rancher/wrangler/pkg/schemas"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"golang.org/x/term"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -58,14 +59,19 @@ func UniqueArray(origin []string) (unique []string) {
 	return
 }
 
-// AskForConfirmation ask for confirmation form os.Stdin.
-func AskForConfirmation(s string, def bool) (rtn bool) {
+func AskForConfirmationWithError(s string, def bool) (rtn bool, err error) {
 	prompt := survey.Confirm{
 		Message: s,
 		Default: def,
 	}
+	err = survey.AskOne(&prompt, &rtn)
+	return
+}
 
-	if err := survey.AskOne(&prompt, &rtn); err != nil {
+// AskForConfirmation ask for confirmation form os.Stdin.
+func AskForConfirmation(s string, def bool) (rtn bool) {
+	var err error
+	if rtn, err = AskForConfirmationWithError(s, def); err != nil {
 		logrus.Warnf("failed to confirm, %v", err)
 	}
 	return
@@ -183,4 +189,13 @@ func GenerateRand() int {
 
 func IsTerm() bool {
 	return term.IsTerminal(int(syscall.Stdin))
+}
+
+func CommandExitWithoutHelpInfo(f func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		if err := f(cmd, args); err != nil {
+			cmd.PrintErr(err)
+			os.Exit(1)
+		}
+	}
 }

@@ -25,6 +25,7 @@ var (
 		&Setting{},
 		&Explorer{},
 		&Package{},
+		&SSHKey{},
 	}
 )
 
@@ -97,7 +98,7 @@ func (e *Explorer) GetID() string {
 
 // Setting struct
 type Setting struct {
-	Name  string `json:"name" grom:"primaryKey;not null"`
+	Name  string `json:"name" gorm:"primaryKey;not null"`
 	Value string `json:"value"`
 }
 

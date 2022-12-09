@@ -9,6 +9,7 @@ import (
 
 	"github.com/cnrancher/autok3s/cmd"
 	"github.com/cnrancher/autok3s/cmd/airgap"
+	"github.com/cnrancher/autok3s/cmd/sshkey"
 	"github.com/cnrancher/autok3s/pkg/cli/kubectl"
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/metrics"
@@ -43,7 +44,7 @@ func main() {
 	rootCmd.AddCommand(cmd.CompletionCommand(), cmd.VersionCommand(gitVersion, gitCommit, gitTreeState, buildDate),
 		cmd.ListCommand(), cmd.CreateCommand(), cmd.JoinCommand(), cmd.KubectlCommand(), cmd.DeleteCommand(),
 		cmd.SSHCommand(), cmd.DescribeCommand(), cmd.ServeCommand(), cmd.ExplorerCommand(), cmd.UpgradeCommand(),
-		cmd.TelemetryCommand(), airgap.Command())
+		cmd.TelemetryCommand(), airgap.Command(), sshkey.Command())
 
 	rootCmd.PersistentPreRun = func(c *cobra.Command, args []string) {
 		common.InitLogger(logrus.StandardLogger())
