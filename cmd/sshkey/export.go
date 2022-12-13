@@ -6,15 +6,10 @@ import (
 	"path/filepath"
 
 	"github.com/cnrancher/autok3s/pkg/common"
+	pkgsshkey "github.com/cnrancher/autok3s/pkg/sshkey"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/spf13/cobra"
-)
-
-const (
-	privateKeyFilename  = "id_rsa"
-	publicKeyFilename   = "id_rsa.pub"
-	certificateFilename = "pub.cert"
 )
 
 var exportCmd = &cobra.Command{
@@ -46,9 +41,9 @@ func validateFiles(cmd *cobra.Command, args []string) error {
 	}
 	target := rtn[0]
 	checkmap := map[string]string{
-		privateKeyFilename:  target.SSHKey,
-		publicKeyFilename:   target.SSHPublicKey,
-		certificateFilename: target.SSHCert,
+		pkgsshkey.PrivateKeyFilename:  target.SSHKey,
+		pkgsshkey.PublicKeyFilename:   target.SSHPublicKey,
+		pkgsshkey.CertificateFilename: target.SSHCert,
 	}
 	for filename, toCheck := range checkmap {
 		if toCheck == "" {
@@ -89,9 +84,9 @@ func pathsNotExists(basePath string, paths ...string) error {
 
 func exportKeyFiles(path string, target *common.SSHKey) error {
 	dataMap := map[string]string{
-		privateKeyFilename:  target.SSHKey,
-		publicKeyFilename:   target.SSHPublicKey,
-		certificateFilename: target.SSHCert,
+		pkgsshkey.PrivateKeyFilename:  target.SSHKey,
+		pkgsshkey.PublicKeyFilename:   target.SSHPublicKey,
+		pkgsshkey.CertificateFilename: target.SSHCert,
 	}
 	for filename, data := range dataMap {
 		if data == "" {

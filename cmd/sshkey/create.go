@@ -156,7 +156,7 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 
 	if sshKeyFlags.Generate {
-		if err := pathsNotExists(sshKeyFlags.OutputPath, privateKeyFilename, publicKeyFilename); err != nil {
+		if err := pathsNotExists(sshKeyFlags.OutputPath, pkgsshkey.PrivateKeyFilename, pkgsshkey.PublicKeyFilename); err != nil {
 			return err
 		}
 		infoMsg := fmt.Sprintf("generating RSA ssh key pair with %d bit size", sshKeyFlags.Bits)

@@ -122,7 +122,7 @@ func newDialer(id, node string, conn *websocket.Conn) (*hosts.WebSocketDialer, e
 				wsDialer = hosts.NewWebSocketDialer(conn, dialer)
 				return wsDialer, nil
 			}
-			dialer, err := hosts.NewSSHDialer(&n, true)
+			dialer, err := hosts.NewSSHDialer(&n, true, common.NewLogger(nil))
 			if err != nil {
 				return nil, err
 			}

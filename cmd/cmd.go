@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/cnrancher/autok3s/pkg/common"
-	"github.com/cnrancher/autok3s/pkg/utils"
 
 	// import custom provider
 	_ "github.com/cnrancher/autok3s/pkg/providers/alibaba"
@@ -66,8 +65,8 @@ func Command() *cobra.Command {
 }
 
 func initCfg() {
-	if err := utils.EnsureFolderExist(common.GetLogPath()); err != nil {
-		logrus.Fatalln(err)
+	if err := common.MoveLogs(); err != nil {
+		logrus.Errorf("failed to relocate cluster logs, %v", err)
 	}
 
 	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)

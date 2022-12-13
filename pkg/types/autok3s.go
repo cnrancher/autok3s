@@ -82,10 +82,15 @@ type SSH struct {
 	SSHUser          string `json:"ssh-user,omitempty" yaml:"ssh-user,omitempty"`
 	SSHPassword      string `json:"ssh-password,omitempty" yaml:"ssh-password,omitempty"`
 	SSHKeyPath       string `json:"ssh-key-path,omitempty" yaml:"ssh-key-path,omitempty"`
-	SSHCert          string `json:"ssh-cert,omitempty" yaml:"ssh-cert,omitempty"`
 	SSHCertPath      string `json:"ssh-cert-path,omitempty" yaml:"ssh-cert-path,omitempty"`
 	SSHKeyPassphrase string `json:"ssh-key-passphrase,omitempty" yaml:"ssh-key-passphrase,omitempty"`
-	SSHAgentAuth     bool   `json:"ssh-agent-auth,omitempty" yaml:"ssh-agent-auth,omitempty" `
+	SSHAgentAuth     bool   `json:"ssh-agent-auth,omitempty" yaml:"ssh-agent-auth,omitempty"`
+
+	SSHKeyName string `json:"ssh-key-name,omitempty" yaml:"ssh-key-name,omitempty" norman:"type=reference[sshkey]"`
+	SSHKey     string `json:"ssh-key,omitempty" yaml:"ssh-key,omitempty" norman:"type=password" gorm:"-:all"`
+	// SSHCert is no longer needed in db, the content will be read and saved to the cluster's directory.
+	// There was no way to set the SSHCert so it is save to ignore the value in DB.
+	SSHCert string `json:"ssh-cert,omitempty" yaml:"ssh-cert,omitempty" gorm:"-:all"`
 }
 
 // Flag struct for flag.

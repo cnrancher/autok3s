@@ -18,6 +18,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
+	pkgsshkey "github.com/cnrancher/autok3s/pkg/sshkey"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
@@ -270,6 +271,12 @@ func (p *ProviderBase) GetSSHOptions() []types.Flag {
 			V:     p.SSHAgentAuth,
 			Usage: "Enable ssh agent",
 		},
+		{
+			Name:  "ssh-key-name",
+			P:     &p.SSHKeyName,
+			V:     p.SSHKeyName,
+			Usage: "Use the stored ssh key with name",
+		},
 	}
 }
 
@@ -340,12 +347,23 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 	p.Logger.Infof("[%s] begin to create cluster %s...", p.Provider, p.Name)
 	c.Status.Status = common.StatusCreating
 	// save cluster.
-	err = common.DefaultDB.SaveCluster(c)
-	if err != nil {
+	if err = common.DefaultDB.SaveCluster(c); err != nil {
 		return err
 	}
+	// store ssh key
+	if newSSH, err := pkgsshkey.StoreClusterSSHKeys(p.ContextName, &c.SSH); err != nil {
+		return err
+	} else if newSSH != nil {
+		p.Logger.Infof("[%s] cluster's ssh keys saved", p.Name)
+		c.SSH = *newSSH
+		// update cluster with stored key
+		if err = common.DefaultDB.SaveCluster(c); err != nil {
+			return err
+		}
+		p.SSH = *newSSH
+	}
 
-	c, err = cloudInstanceFunc(&p.SSH)
+	c, err = cloudInstanceFunc(&c.SSH)
 	if err != nil {
 		return err
 	}
@@ -449,7 +467,7 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 		return err
 	}
 
-	c, err := cloudInstanceFunc(&p.SSH)
+	c, err := cloudInstanceFunc(&state.SSH)
 	if err != nil {
 		p.Logger.Errorf("[%s] failed to prepare instance, got error %v", p.Provider, err)
 		return err
@@ -595,7 +613,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 		defer func() {
 			_ = logFile.Close()
 			// remove log file.
-			_ = os.Remove(filepath.Join(common.GetLogPath(), p.ContextName))
+			_ = os.RemoveAll(common.GetClusterContextPath(p.ContextName))
 		}()
 		state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
 		if err != nil && !force {
@@ -975,7 +993,7 @@ func (p *ProviderBase) ReleaseManifests() error {
 	masterIP := p.IP
 	for _, n := range p.Status.MasterNodes {
 		if n.InternalIPAddress[0] == masterIP {
-			dialer, err := hosts.NewSSHDialer(&n, true)
+			dialer, err := hosts.NewSSHDialer(&n, true, p.Logger)
 			if err != nil {
 				return err
 			}

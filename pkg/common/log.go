@@ -2,6 +2,7 @@ package common
 
 import (
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -22,14 +23,25 @@ func NewLogger(w *os.File) (logger *logrus.Logger) {
 	return
 }
 
-// GetLogPath returns log path.
-func GetLogPath() string {
+// GetOldLogPath returns old log path.
+func GetOldLogPath() string {
 	return filepath.Join(CfgPath, "logs")
 }
 
+func GetLogFilePath(clusterName string) string {
+	return filepath.Join(GetClusterContextPath(clusterName), "log")
+}
+
+func GetClusterContextPath(clusterName string) string {
+	return filepath.Join(CfgPath, clusterName)
+}
+
 // GetLogFile open and return log file.
-func GetLogFile(name string) (logFile *os.File, err error) {
-	logFilePath := filepath.Join(GetLogPath(), name)
+func GetLogFile(clusterName string) (logFile *os.File, err error) {
+	logFilePath := GetLogFilePath(clusterName)
+	if err = os.MkdirAll(filepath.Dir(logFilePath), 0755); err != nil {
+		return nil, err
+	}
 	// check file exist
 	_, err = os.Stat(logFilePath)
 	if err != nil {
@@ -50,4 +62,32 @@ func InitLogger(logger *logrus.Logger) {
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
+}
+
+func MoveLogs() error {
+	oldRoot := GetOldLogPath()
+	_, err := os.Stat(oldRoot)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	newRoot := CfgPath
+
+	if err := filepath.Walk(oldRoot, func(path string, info fs.FileInfo, err error) error {
+		// skip all the dirs because we store all the logs with cluster context name and no dirs exists in logs dir
+		if info.IsDir() {
+			return nil
+		}
+		// assuming all the relative path should only be logs file
+		rel, _ := filepath.Rel(oldRoot, path)
+		if err := os.MkdirAll(filepath.Join(newRoot, rel), 0755); err != nil {
+			return err
+		}
+		if err := os.Rename(path, GetLogFilePath(rel)); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return os.RemoveAll(oldRoot)
 }
