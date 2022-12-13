@@ -14,12 +14,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func NeedPassword(keypath string) (bool, error) {
-	content, err := utils.GetFileContent(keypath)
-	if err != nil {
-		return false, err
-	}
-
+func NeedPasswordRaw(content []byte) (bool, error) {
 	if _, err := ssh.ParseRawPrivateKey(content); err != nil {
 		if _, ok := err.(*ssh.PassphraseMissingError); ok {
 			return true, nil
@@ -29,12 +24,20 @@ func NeedPassword(keypath string) (bool, error) {
 	return false, nil
 }
 
-func CreateSSHKey(key *common.SSHKey, passphrase string) error {
+func NeedPassword(keypath string) (bool, error) {
+	content, err := utils.GetFileContent(keypath)
+	if err != nil {
+		return false, err
+	}
+	return NeedPasswordRaw(content)
+}
+
+func CreateSSHKey(key *common.SSHKey) error {
 	var err error
 	var publicKey ssh.PublicKey
 	var privateKey ssh.Signer
-	if passphrase != "" {
-		privateKey, err = ssh.ParsePrivateKeyWithPassphrase([]byte(key.SSHKey), []byte(passphrase))
+	if key.SSHPassphrase != "" {
+		privateKey, err = ssh.ParsePrivateKeyWithPassphrase([]byte(key.SSHKey), []byte(key.SSHPassphrase))
 		key.HasPassword = true
 	} else {
 		privateKey, err = ssh.ParsePrivateKey([]byte(key.SSHKey))
@@ -66,8 +69,8 @@ func CreateSSHKey(key *common.SSHKey, passphrase string) error {
 	return common.DefaultDB.SaveSSHKey(*key)
 }
 
-func GenerateSSHKey(key *common.SSHKey, passphrase string, bits int) error {
-	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
+func GenerateSSHKey(key *common.SSHKey) error {
+	privateKey, err := rsa.GenerateKey(rand.Reader, key.Bits)
 	if err != nil {
 		return err
 	}
@@ -76,8 +79,8 @@ func GenerateSSHKey(key *common.SSHKey, passphrase string, bits int) error {
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 
-	if passphrase != "" {
-		block, err = x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(passphrase), x509.PEMCipherAES256)
+	if key.SSHPassphrase != "" {
+		block, err = x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(key.SSHPassphrase), x509.PEMCipherAES256)
 		if err != nil {
 			return err
 		}

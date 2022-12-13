@@ -7,16 +7,19 @@ import (
 )
 
 type SSHKey struct {
-	Name        string `json:"name" gorm:"primaryKey;not null"`
-	GenerateKey bool   `json:"generate-key,omitempty" gorm:"-:all" norman:"writeOnly,noupdate"`
-	HasPassword bool   `json:"has-password,omitempty" norman:"readonly"`
+	Name        string `json:"name" gorm:"primaryKey;not null" wrangler:"required"`
+	GenerateKey bool   `json:"generate-key,omitempty" gorm:"-:all" wrangler:"writeOnly,noupdate"`
+	HasPassword bool   `json:"has-password" wrangler:"nocreate,noupdate"`
 
-	SSHCert      string `json:"ssh-cert,omitempty" yaml:"ssh-cert,omitempty"`
-	SSHKey       string `json:"ssh-key,omitempty" yaml:"ssh-key,omitempty" norman:"type=password"`
-	SSHPublicKey string `json:"ssh-key-public,omitempty" yaml:"ssh-key-public,omitempty"`
+	SSHPassphrase string `json:"ssh-passphrase,omitempty" gorm:"-:all" wrangler:"type=password,nullable"`
+	Bits          int    `json:"bits,omitempty" gorm:"-:all" wrangler:"default=2048,nullable"`
+
+	SSHCert      string `json:"ssh-cert,omitempty" yaml:"ssh-cert,omitempty" wrangler:"nullable"`
+	SSHKey       string `json:"ssh-key,omitempty" yaml:"ssh-key,omitempty" wrangler:"writeOnly,nullable"`
+	SSHPublicKey string `json:"ssh-key-public,omitempty" yaml:"ssh-key-public,omitempty" wrangler:"nullable"`
 }
 
-func (s *SSHKey) GetID() string {
+func (s SSHKey) GetID() string {
 	return s.Name
 }
 

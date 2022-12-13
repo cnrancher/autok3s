@@ -152,7 +152,9 @@ func validateCreateArgs(cmd *cobra.Command, args []string) (err error) {
 
 func create(cmd *cobra.Command, args []string) error {
 	toSave := common.SSHKey{
-		Name: args[0],
+		Name:          args[0],
+		SSHPassphrase: sshKeyFlags.Passphrase,
+		Bits:          sshKeyFlags.Bits,
 	}
 
 	if sshKeyFlags.Generate {
@@ -165,7 +167,7 @@ func create(cmd *cobra.Command, args []string) error {
 		}
 		cmd.Printf(infoMsg + "...\n")
 
-		if err := pkgsshkey.GenerateSSHKey(&toSave, sshKeyFlags.Passphrase, sshKeyFlags.Bits); err != nil {
+		if err := pkgsshkey.GenerateSSHKey(&toSave); err != nil {
 			return err
 		}
 
@@ -195,7 +197,7 @@ func create(cmd *cobra.Command, args []string) error {
 		}
 		*pointer = string(content)
 	}
-	if err := pkgsshkey.CreateSSHKey(&toSave, sshKeyFlags.Passphrase); err != nil {
+	if err := pkgsshkey.CreateSSHKey(&toSave); err != nil {
 		return err
 	}
 	cmd.Printf("ssh key %s loaded\n", toSave.Name)
