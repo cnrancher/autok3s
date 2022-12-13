@@ -29,6 +29,7 @@ func Start() http.Handler {
 	initExplorer(s.Schemas)
 	initSettings(s.Schemas)
 	initPackage(s.Schemas)
+	initSSHKey(s.Schemas)
 
 	apiroot.Register(s.Schemas, []string{"v1"})
 	router := mux.NewRouter()

@@ -11,6 +11,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/server/store/pkg"
 	"github.com/cnrancher/autok3s/pkg/server/store/provider"
 	"github.com/cnrancher/autok3s/pkg/server/store/settings"
+	"github.com/cnrancher/autok3s/pkg/server/store/sshkey"
 	"github.com/cnrancher/autok3s/pkg/server/store/template"
 	"github.com/cnrancher/autok3s/pkg/server/store/websocket"
 	wkube "github.com/cnrancher/autok3s/pkg/server/store/websocket/kubectl"
@@ -131,5 +132,18 @@ func initPackage(s *types.APISchemas) {
 		schema.CollectionFormatter = pkg.CollectionFormat
 		schema.ActionHandlers = pkg.ActionHandlers()
 		schema.LinkHandlers = pkg.LinkHandlers()
+	})
+}
+
+func initSSHKey(s *types.APISchemas) {
+	s.MustImportAndCustomize(common.SSHKey{}, func(schema *types.APISchema) {
+		schema.CollectionMethods = []string{http.MethodGet, http.MethodPost}
+		schema.ResourceMethods = []string{http.MethodGet, http.MethodDelete}
+		schema.Store = &sshkey.Store{}
+		schema.ActionHandlers = sshkey.ActionHandlers()
+		schema.Formatter = sshkey.Format
+		schema.ResourceActions["export"] = wranglertypes.Action{
+			Output: "sshkey",
+		}
 	})
 }
