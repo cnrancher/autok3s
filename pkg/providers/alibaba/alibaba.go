@@ -1514,7 +1514,7 @@ func (p *Alibaba) getSecurityGroup(id string) (*ecs.DescribeSecurityGroupAttribu
 }
 
 func (p *Alibaba) uploadKeyPair(node types.Node, publicKey string) error {
-	dialer, err := hosts.NewSSHDialer(&node, true)
+	dialer, err := hosts.NewSSHDialer(&node, true, p.Logger)
 	if err != nil {
 		return err
 	}

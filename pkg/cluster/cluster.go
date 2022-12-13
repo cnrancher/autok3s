@@ -465,7 +465,7 @@ func (p *ProviderBase) execute(n *types.Node, cmds []string) (string, error) {
 		return "", nil
 	}
 
-	dialer, err := hosts.NewSSHDialer(n, true)
+	dialer, err := hosts.NewSSHDialer(n, true, p.Logger)
 	if err != nil {
 		return "", err
 	}
@@ -492,7 +492,7 @@ func (p *ProviderBase) execute(n *types.Node, cmds []string) (string, error) {
 }
 
 func terminal(n *types.Node) error {
-	dialer, err := hosts.NewSSHDialer(n, true)
+	dialer, err := hosts.NewSSHDialer(n, true, common.NewLogger(nil))
 	if err != nil {
 		return err
 	}
@@ -867,7 +867,7 @@ func nodeByInstanceID(nodes []types.Node) map[string]types.Node {
 }
 
 func (p *ProviderBase) scpFiles(clusterName string, pkg *common.Package, node *types.Node) error {
-	dialer, err := hosts.NewSSHDialer(node, true)
+	dialer, err := hosts.NewSSHDialer(node, true, p.Logger)
 	if err != nil {
 		return err
 	}

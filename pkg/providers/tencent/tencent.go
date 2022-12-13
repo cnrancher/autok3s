@@ -1446,7 +1446,7 @@ func (p *Tencent) allocateEIPForInstance(num int, master bool) ([]uint64, error)
 }
 
 func (p *Tencent) uploadKeyPair(node types.Node, publicKey string) error {
-	dialer, err := hosts.NewSSHDialer(&node, true)
+	dialer, err := hosts.NewSSHDialer(&node, true, p.logger)
 	if err != nil {
 		return err
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
+	"github.com/sirupsen/logrus"
 
 	"github.com/moby/term"
 	"golang.org/x/crypto/ssh"
@@ -20,7 +21,7 @@ import (
 )
 
 var defaultBackoff = wait.Backoff{
-	Duration: 30 * time.Second,
+	Duration: 15 * time.Second,
 	Factor:   1,
 	Steps:    5,
 }
@@ -55,7 +56,7 @@ type SSHDialer struct {
 }
 
 // NewSSHDialer returns new ssh dialer.
-func NewSSHDialer(n *types.Node, timeout bool) (*SSHDialer, error) {
+func NewSSHDialer(n *types.Node, timeout bool, logger *logrus.Logger) (*SSHDialer, error) {
 	if len(n.PublicIPAddress) <= 0 && n.InstanceID == "" {
 		return nil, errors.New("[ssh-dialer] no node IP or node ID is specified")
 	}
@@ -91,7 +92,10 @@ func NewSSHDialer(n *types.Node, timeout bool) (*SSHDialer, error) {
 		}
 	}
 
+	try := 0
 	if err := wait.ExponentialBackoff(defaultBackoff, func() (bool, error) {
+		try++
+		logger.Infof("the %d/%d time tring to ssh to %s with user %s", try, defaultBackoff.Steps, d.sshAddress, d.username)
 		c, err := d.Dial(timeout)
 		if err != nil {
 			return false, nil
@@ -109,7 +113,7 @@ func NewSSHDialer(n *types.Node, timeout bool) (*SSHDialer, error) {
 
 // Dial handshake with ssh address.
 func (d *SSHDialer) Dial(t bool) (*ssh.Client, error) {
-	timeout := 30 * time.Second
+	timeout := defaultBackoff.Duration
 	if !t {
 		timeout = 0
 	}

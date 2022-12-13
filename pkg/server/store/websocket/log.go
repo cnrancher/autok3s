@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 
@@ -83,7 +82,7 @@ func logHandler(apiOp *types.APIRequest) error {
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	logFilePath := filepath.Join(common.GetLogPath(), cluster)
+	logFilePath := common.GetLogFilePath(cluster)
 	state, err := common.DefaultDB.GetClusterByID(cluster)
 	if err != nil {
 		return err
