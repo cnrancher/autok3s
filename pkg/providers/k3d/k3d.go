@@ -20,27 +20,29 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	dockerunits "github.com/docker/go-units"
+	cliutil "github.com/k3d-io/k3d/v5/cmd/util"
+	k3dutil "github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/k3d-io/k3d/v5/pkg/client"
+	"github.com/k3d-io/k3d/v5/pkg/config"
+	k3dtypes "github.com/k3d-io/k3d/v5/pkg/config/types"
+	k3dconf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha4"
+	k3dlogger "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	dockerutils "github.com/k3d-io/k3d/v5/pkg/runtimes/docker"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
+	k3dversion "github.com/k3d-io/k3d/v5/version"
 	"github.com/moby/term"
-	cliutil "github.com/rancher/k3d/v5/cmd/util"
-	k3dutil "github.com/rancher/k3d/v5/cmd/util"
-	"github.com/rancher/k3d/v5/pkg/client"
-	"github.com/rancher/k3d/v5/pkg/config"
-	k3dtypes "github.com/rancher/k3d/v5/pkg/config/types"
-	k3dconf "github.com/rancher/k3d/v5/pkg/config/v1alpha3"
-	k3dlogger "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	dockerutils "github.com/rancher/k3d/v5/pkg/runtimes/docker"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
-	k3dversion "github.com/rancher/k3d/v5/version"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
 	providerName = "k3d"
 
-	k3dVersion = "5.2.2"
-	k3dImage   = "rancher/k3s:v1.21.7-k3s1"
 	k3dAPIPort = "0.0.0.0:0"
+)
+
+var (
+	k3dImage = fmt.Sprintf("%s:%s", k3d.DefaultK3sImageRepo, k3dversion.K3sVersion)
 )
 
 // K3d provider k3d struct.
@@ -50,7 +52,6 @@ type K3d struct {
 }
 
 func init() {
-	k3dversion.Version = k3dVersion
 	providers.RegisterProvider(providerName, func() (providers.Provider, error) {
 		return newProvider(), nil
 	})
@@ -622,7 +623,9 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*k3dconf.ClusterConfig, error)
 			APIVersion: config.DefaultConfigApiVersion,
 			Kind:       "Simple",
 		},
-		Name:         p.Name,
+		ObjectMeta: k3dtypes.ObjectMeta{
+			Name: p.Name,
+		},
 		Servers:      masters,
 		Agents:       workers,
 		ClusterToken: p.Token,

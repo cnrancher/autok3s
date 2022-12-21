@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	k3dutil "github.com/rancher/k3d/v5/cmd/util"
+	k3dutil "github.com/k3d-io/k3d/v5/cmd/util"
 	"github.com/sirupsen/logrus"
 )
 

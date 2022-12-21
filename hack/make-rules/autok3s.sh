@@ -65,6 +65,9 @@ function build() {
   ui
   go_generate
   autok3s::log::info "building autok3s(${GIT_VERSION},${GIT_COMMIT},${GIT_TREE_STATE},${BUILD_DATE})..."
+  # TODO default k3s version in k3d should also get from k3d in
+  local K3D_VERSION=`go list -m all | grep k3d/v5 | awk '{print $2}'`
+  local K3S_TAG=`curl --silent --retry 3 "https://update.k3s.io/v1-release/channels/stable" | egrep -o '/v[^ ]+"' | sed -E 's/\/|\"//g' | sed -E 's/\+/\-/'`
 
   local version_flags="
     -X main.gitVersion=${GIT_VERSION}
@@ -77,7 +80,9 @@ function build() {
     -X k8s.io/component-base/version.gitVersion=${GIT_VERSION}
     -X k8s.io/component-base/version.gitCommit=${GIT_COMMIT}
     -X k8s.io/component-base/version.gitTreeState=${GIT_TREE_STATE}
-    -X k8s.io/component-base/version.buildDate=${BUILD_DATE}"
+    -X k8s.io/component-base/version.buildDate=${BUILD_DATE}
+    -X github.com/k3d-io/k3d/v5/version.Version=${K3D_VERSION:-v5.4.4}
+    -X github.com/k3d-io/k3d/v5/version.K3sVersion=${K3S_TAG}"
   local flags="
     -w -s"
   local ext_flags="
