@@ -1,6 +1,6 @@
 module github.com/cnrancher/autok3s
 
-go 1.17
+go 1.19
 
 replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.0+incompatible
