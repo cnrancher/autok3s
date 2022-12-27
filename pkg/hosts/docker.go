@@ -19,9 +19,9 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/ioutils"
 	dockerSig "github.com/docker/docker/pkg/signal"
+	dockerutils "github.com/k3d-io/k3d/v5/pkg/runtimes/docker"
+	k3dtypes "github.com/k3d-io/k3d/v5/pkg/types"
 	"github.com/moby/term"
-	dockerutils "github.com/rancher/k3d/v5/pkg/runtimes/docker"
-	k3dtypes "github.com/rancher/k3d/v5/pkg/types"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 )

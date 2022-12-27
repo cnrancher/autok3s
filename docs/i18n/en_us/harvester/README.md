@@ -1,5 +1,7 @@
 # Harvester Provider
 
+> Harvester provider is only supported in autok3s <= v0.6.1.
+
 ## Introduction
 
 This article provides users with the instructions to create and launch a K3s cluster using Harvester VMs, and to add nodes for an existing K3s cluster on Harvester VMs. In addition, this article provides guidance of advanced usages of running K3s on Harvester VM, such as setting up private registry, and enabling UI components.
