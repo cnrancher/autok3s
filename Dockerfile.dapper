@@ -1,7 +1,7 @@
 FROM registry.suse.com/bci/golang:1.19
 ARG PROXY
 ARG GOPROXY
-RUN zypper -n install netcat wget curl
+RUN zypper -n install netcat wget curl gawk
 RUN zypper install -y -f docker
 ## install golangci-lint
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
