@@ -13,7 +13,6 @@ import (
 	_ "github.com/cnrancher/autok3s/pkg/providers/alibaba"
 	_ "github.com/cnrancher/autok3s/pkg/providers/aws"
 	_ "github.com/cnrancher/autok3s/pkg/providers/google"
-	_ "github.com/cnrancher/autok3s/pkg/providers/harvester"
 	_ "github.com/cnrancher/autok3s/pkg/providers/k3d"
 	_ "github.com/cnrancher/autok3s/pkg/providers/native"
 	_ "github.com/cnrancher/autok3s/pkg/providers/tencent"
