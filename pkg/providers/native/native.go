@@ -87,7 +87,7 @@ func (p *Native) CreateK3sCluster() (err error) {
 	if p.SSHUser == "" {
 		p.SSHUser = defaultUser
 	}
-	if p.SSHKeyName == "" && p.SSHPassword == "" && p.SSHKeyPath == "" {
+	if p.SSHKey == "" && p.SSHKeyName == "" && p.SSHPassword == "" && p.SSHKeyPath == "" {
 		p.SSHKeyPath = defaultSSHKeyPath
 	}
 
