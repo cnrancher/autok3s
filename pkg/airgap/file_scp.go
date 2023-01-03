@@ -48,6 +48,11 @@ var (
 			targetPath: "/usr/local/bin",
 		},
 	}
+	parseArchMap = map[string]string{
+		"x86_64":  "amd64",
+		"aarch64": "arm64",
+		"armv7l":  "arm",
+	}
 )
 
 func ScpFiles(clusterName string, pkg *common.Package, dialer *hosts.SSHDialer) error {
@@ -243,16 +248,11 @@ func getRemoteArch(conn *ssh.Client) (string, error) {
 }
 
 func parseUnameArch(output string) string {
-	switch output {
-	case "x86_64":
-		return "amd64"
-	case "aarh64":
-		return "arm64"
-	case "armv7l":
-		return "arm"
-	default:
-		return output
+	rtn, ok := parseArchMap[output]
+	if ok {
+		return rtn
 	}
+	return output
 }
 
 // getScpFileMap will return the local file path for specific arch to target file map
