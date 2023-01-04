@@ -68,6 +68,10 @@ func (t *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 			SSH:       template.SSH,
 			IsDefault: template.IsDefault,
 		}
+		// TODO skip harvester for historical data, will remove here after harvester provider added back
+		if template.Provider == "harvester" {
+			continue
+		}
 		provider, err := providers.GetProvider(template.Provider)
 		if err != nil {
 			logrus.Errorf("failed to get provider by name %s: %v", template.Provider, err)

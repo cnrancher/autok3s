@@ -763,6 +763,10 @@ func ListClusters(providerName string) ([]*types.ClusterInfo, error) {
 	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
 	clusterList := make([]*types.ClusterInfo, 0)
 	for _, state := range stateList {
+		// TODO skip harvester for historical data, will remove here after harvester provider added back
+		if state.Provider == "harvester" {
+			continue
+		}
 		provider, err := providers.GetProvider(state.Provider)
 		if err != nil {
 			logrus.Errorf("failed to get provider %v: %v", state.Provider, err)
