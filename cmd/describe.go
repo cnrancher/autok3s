@@ -53,6 +53,10 @@ func describeCluster() {
 		logrus.Fatalf("find cluster error %v", err)
 	}
 	for _, state := range result {
+		// TODO skip harvester for historical data, will remove here after harvester provider added back
+		if state.Provider == "harvester" {
+			continue
+		}
 		provider, err := providers.GetProvider(state.Provider)
 		if err != nil {
 			logrus.Errorf("failed to get provider %v: %v", state.Provider, err)
