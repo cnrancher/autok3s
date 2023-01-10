@@ -54,7 +54,7 @@ func (p *K3d) GetCreateFlags() []types.Flag {
 			Name:  "token",
 			P:     &p.Token,
 			V:     p.Token,
-			Usage: "K3s token, if empty will automatically generated, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/#cluster-options",
+			Usage: "K3s token, if empty will automatically generated, see: https://docs.k3s.io/reference/server-config#cluster-options",
 		},
 		{
 			Name:     "network",
@@ -247,19 +247,19 @@ func (p *K3d) sharedFlags() []types.Flag {
 			Name:  "master-extra-args",
 			P:     &p.MasterExtraArgs,
 			V:     p.MasterExtraArgs,
-			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--no-deploy metrics-server'), for more information, please see: https://rancher.com/docs/k3s/latest/en/installation/install-options/server-config/",
+			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--no-deploy metrics-server'), for more information, please see: https://docs.k3s.io/reference/server-config",
 		},
 		{
 			Name:  "worker-extra-args",
 			P:     &p.WorkerExtraArgs,
 			V:     p.WorkerExtraArgs,
-			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute'), for more information, please see: https://rancher.com/docs/k3s/latest/en/installation/install-options/agent-config/",
+			Usage: "Worker extra arguments for k3s installer, wrapped in quotes. e.g.(--worker-extra-args '--node-taint key=value:NoExecute'), for more information, please see: https://docs.k3s.io/reference/agent-config",
 		},
 		{
 			Name:  "registry",
 			P:     &p.Registry,
 			V:     p.Registry,
-			Usage: "K3s registry file, see: https://rancher.com/docs/k3s/latest/en/installation/private-registry",
+			Usage: "K3s registry file, see: https://docs.k3s.io/installation/private-registry",
 		},
 		{
 			Name:     "masters-memory",

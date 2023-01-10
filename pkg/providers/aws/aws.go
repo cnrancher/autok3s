@@ -350,7 +350,7 @@ func (p *Amazon) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 
 	if p.CloudControllerManager {
 		// generate tags for security group and subnet
-		// https://rancher.com/docs/rancher/v2.x/en/cluster-provisioning/rke-clusters/cloud-providers/amazon/#2-configure-the-clusterid
+		// https://docs.ranchermanager.rancher.io/v2.6/how-to-guides/new-user-guides/kubernetes-clusters-in-rancher-setup/set-up-cloud-providers/amazon
 		err := p.addTagsForCCMResource()
 		if err != nil {
 			return nil, err

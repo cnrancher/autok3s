@@ -26,7 +26,7 @@ func init() {
 	upgradeCmd.Flags().StringVarP(&clusterName, "name", "n", clusterName, "cluster name")
 	upgradeCmd.Flags().StringVarP(&channel, "k3s-channel", "", channel, "Channel to use for fetching K3s download URL. Defaults to “stable”. Options include: stable, latest, testing")
 	upgradeCmd.Flags().StringVarP(&version, "k3s-version", "", version, "Used to specify the version of k3s cluster, overrides k3s-channel")
-	upgradeCmd.Flags().StringVarP(&installScript, "k3s-install-script", "", installScript, "Change the default upstream k3s install script address, see: https://rancher.com/docs/k3s/latest/en/installation/install-options/#options-for-installation-with-script")
+	upgradeCmd.Flags().StringVarP(&installScript, "k3s-install-script", "", installScript, "Change the default upstream k3s install script address, see: https://docs.k3s.io/installation/configuration#options-for-installation-with-script")
 	upgradeCmd.Flags().StringVarP(&uPackageName, "package-name", "", uPackageName, "Airgap package name which you want to upgrade k3s with")
 	upgradeCmd.Flags().StringVarP(&uPackagePath, "package-path", "", uPackagePath, "Airgap package path which you want to upgrade k3s with")
 }
