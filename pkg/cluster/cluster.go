@@ -31,7 +31,8 @@ import (
 )
 
 var (
-	registryPath = "/etc/rancher/k3s"
+	registryPath              = "/etc/rancher/k3s"
+	datastoreCertificatesPath = "/etc/rancher/datastore"
 )
 
 // InitK3sCluster initial K3S cluster.
@@ -435,6 +436,14 @@ func (p *ProviderBase) initNode(isFirstMaster bool, fixedIP string, cluster *typ
 
 	if cluster.Registry != "" || cluster.RegistryContent != "" {
 		if err := p.handleRegistry(&node, cluster); err != nil {
+			return err
+		}
+	}
+
+	if cluster.DataStoreCAFile != "" || cluster.DataStoreCAFileContent != "" ||
+		cluster.DataStoreCertFileContent != "" || cluster.DataStoreCertFile != "" ||
+		cluster.DataStoreKeyFileContent != "" || cluster.DataStoreKeyFile != "" {
+		if err := p.handleDataStoreCertificate(&node, cluster); err != nil {
 			return err
 		}
 	}
@@ -874,4 +883,47 @@ func (p *ProviderBase) scpFiles(clusterName string, pkg *common.Package, node *t
 	defer dialer.Close()
 	dialer.SetWriter(p.Logger.Out)
 	return airgap.ScpFiles(clusterName, pkg, dialer)
+}
+
+func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluster) error {
+	cmd := make([]string, 0)
+	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", datastoreCertificatesPath))
+	if c.DataStoreCAFile != "" {
+		caFile, err := os.ReadFile(c.DataStoreCAFile)
+		if err != nil {
+			return err
+		}
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-ca.pem\"",
+			base64.StdEncoding.EncodeToString(caFile), datastoreCertificatesPath))
+	}
+	if c.DataStoreCertFile != "" {
+		certFile, err := os.ReadFile(c.DataStoreCertFile)
+		if err != nil {
+			return err
+		}
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-cert.pem\"",
+			base64.StdEncoding.EncodeToString(certFile), datastoreCertificatesPath))
+	}
+	if c.DataStoreKeyFile != "" {
+		keyFile, err := os.ReadFile(c.DataStoreKeyFile)
+		if err != nil {
+			return err
+		}
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-key.pem\"",
+			base64.StdEncoding.EncodeToString(keyFile), datastoreCertificatesPath))
+	}
+	if c.DataStoreCAFileContent != "" {
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-ca.pem\"",
+			base64.StdEncoding.EncodeToString([]byte(p.DataStoreCAFileContent)), datastoreCertificatesPath))
+	}
+	if c.DataStoreKeyFileContent != "" {
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-key.pem\"",
+			base64.StdEncoding.EncodeToString([]byte(p.DataStoreKeyFileContent)), datastoreCertificatesPath))
+	}
+	if c.DataStoreCertFileContent != "" {
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-cert.pem\"",
+			base64.StdEncoding.EncodeToString([]byte(p.DataStoreCertFileContent)), datastoreCertificatesPath))
+	}
+	_, err := p.execute(n, cmd)
+	return err
 }

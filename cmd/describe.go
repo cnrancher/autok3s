@@ -80,6 +80,10 @@ func describeCluster() {
 		_, _ = fmt.Fprintf(out, "Zone: %s\n", info.Zone)
 		_, _ = fmt.Fprintf(out, "Master: %s\n", info.Master)
 		_, _ = fmt.Fprintf(out, "Worker: %s\n", info.Worker)
+		_, _ = fmt.Fprintf(out, "IsHAMode: %v\n", info.IsHAMode)
+		if info.IsHAMode {
+			_, _ = fmt.Fprintf(out, "DataStoreType: %s\n", info.DataStoreType)
+		}
 		_, _ = fmt.Fprintf(out, "Status: %s\n", info.Status)
 		_, _ = fmt.Fprintf(out, "Version: %s\n", info.Version)
 		_, _ = fmt.Fprintf(out, "Nodes:%s\n", "")

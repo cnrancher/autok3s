@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 
@@ -39,7 +40,7 @@ func listCluster() {
 	table.SetHeaderLine(false)
 	table.SetColumnSeparator("")
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetHeader([]string{"Name", "Region", "Provider", "Status", "Masters", "Workers", "Version"})
+	table.SetHeader([]string{"Name", "Region", "Provider", "Status", "Masters", "Workers", "Version", "IsHAMode", "DataStoreType"})
 
 	filters, err := cluster.ListClusters("")
 	if err != nil {
@@ -61,6 +62,8 @@ func listCluster() {
 			f.Master,
 			f.Worker,
 			f.Version,
+			strconv.FormatBool(f.IsHAMode),
+			f.DataStoreType,
 		})
 	}
 

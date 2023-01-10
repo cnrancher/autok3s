@@ -238,9 +238,6 @@ func (p *Native) GetCluster(kubecfg string) *types.ClusterInfo {
 		Name:     p.Name,
 		Provider: p.GetProviderName(),
 	}
-	if kubecfg == "" {
-		return c
-	}
 
 	return p.GetClusterStatus(kubecfg, c, p.syncInstanceNodes)
 }
