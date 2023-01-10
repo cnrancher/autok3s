@@ -623,8 +623,8 @@ func (p *Tencent) CreateCheck() error {
 			return err
 		}
 	}
-	if p.KeypairID != "" && p.SSHKeyPath == "" {
-		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path must set with --key-pair %s", p.GetProviderName(), p.KeypairID)
+	if p.KeypairID != "" && (p.SSHKeyPath == "" || p.SSHKeyName == "") {
+		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path or --ssh-key-name must set with --key-pair %s", p.GetProviderName(), p.KeypairID)
 	}
 	masterNum, err := strconv.Atoi(p.Master)
 	if masterNum < 1 || err != nil {
