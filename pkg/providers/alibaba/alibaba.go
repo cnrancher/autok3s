@@ -634,7 +634,7 @@ func (p *Alibaba) getVpcCIDR() (string, error) {
 
 // CreateCheck check create command and flags.
 func (p *Alibaba) CreateCheck() error {
-	if p.KeyPair != "" && (p.SSHKeyPath == "" || p.SSHKeyName == "") {
+	if p.KeyPair != "" && (p.SSHKeyPath == "" && p.SSHKeyName == "") {
 		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path or --ssh-key-name with --key-pair %s", p.GetProviderName(), p.KeyPair)
 	}
 
