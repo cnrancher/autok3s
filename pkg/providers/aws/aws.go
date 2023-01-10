@@ -655,8 +655,8 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 
 // CreateCheck check create command and flags.
 func (p *Amazon) CreateCheck() error {
-	if p.KeypairName != "" && p.SSHKeyPath == "" {
-		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path with --keypair-name %s", p.GetProviderName(), p.KeypairName)
+	if p.KeypairName != "" && (p.SSHKeyPath == "" || p.SSHKeyName == "") {
+		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path or --ssh-key-name with --keypair-name %s", p.GetProviderName(), p.KeypairName)
 	}
 	masterNum, err := strconv.Atoi(p.Master)
 	if masterNum < 1 || err != nil {
