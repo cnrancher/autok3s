@@ -22,7 +22,6 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types/tencent"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/sirupsen/logrus"
 	tencentCommon "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -69,12 +68,11 @@ type Tencent struct {
 	*cluster.ProviderBase `json:",inline"`
 	tencent.Options       `json:",inline"`
 
-	c      *cvm.Client
-	v      *vpc.Client
-	t      *tag.Client
-	r      *tke.Client
-	m      *sync.Map
-	logger *logrus.Logger
+	c *cvm.Client
+	v *vpc.Client
+	t *tag.Client
+	r *tke.Client
+	m *sync.Map
 }
 
 func init() {
@@ -1446,7 +1444,7 @@ func (p *Tencent) allocateEIPForInstance(num int, master bool) ([]uint64, error)
 }
 
 func (p *Tencent) uploadKeyPair(node types.Node, publicKey string) error {
-	dialer, err := hosts.NewSSHDialer(&node, true, p.logger)
+	dialer, err := hosts.NewSSHDialer(&node, true, p.Logger)
 	if err != nil {
 		return err
 	}
