@@ -250,9 +250,6 @@ func (p *Alibaba) GetCluster(kubecfg string) *types.ClusterInfo {
 		Zone:     p.Zone,
 		Provider: p.GetProviderName(),
 	}
-	if kubecfg == "" {
-		return c
-	}
 
 	return p.GetClusterStatus(kubecfg, c, p.getInstanceNodes)
 }

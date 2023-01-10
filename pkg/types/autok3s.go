@@ -22,35 +22,41 @@ type Cluster struct {
 
 // Metadata struct for metadata.
 type Metadata struct {
-	Name                  string      `json:"name" yaml:"name"`
-	Provider              string      `json:"provider" yaml:"provider"`
-	Master                string      `json:"master" yaml:"master"`
-	Worker                string      `json:"worker" yaml:"worker"`
-	Token                 string      `json:"token,omitempty" yaml:"token,omitempty"`
-	IP                    string      `json:"ip,omitempty" yaml:"ip,omitempty"`
-	TLSSans               StringArray `json:"tls-sans,omitempty" yaml:"tls-sans,omitempty" gorm:"type:text"`
-	ClusterCidr           string      `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
-	MasterExtraArgs       string      `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
-	WorkerExtraArgs       string      `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
-	Registry              string      `json:"registry,omitempty" yaml:"registry,omitempty"`
-	SystemDefaultRegistry string      `json:"system-default-registry,omitempty" yaml:"system-default-registry,omitempty"`
-	DataStore             string      `json:"datastore,omitempty" yaml:"datastore,omitempty"`
-	K3sVersion            string      `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
-	K3sChannel            string      `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`
-	InstallScript         string      `json:"k3s-install-script,omitempty" yaml:"k3s-install-script,omitempty"`
-	Mirror                string      `json:"k3s-install-mirror,omitempty" yaml:"k3s-install-mirror,omitempty"`
-	DockerMirror          string      `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
-	DockerArg             string      `json:"docker-arg,omitempty" yaml:"docker-arg,omitempty"`
-	DockerScript          string      `json:"docker-script,omitempty" yaml:"docker-script,omitempty"`
-	Network               string      `json:"network,omitempty" yaml:"network,omitempty"`
-	UI                    bool        `json:"ui" yaml:"ui" gorm:"type:bool"` // Deprecated
-	Cluster               bool        `json:"cluster" yaml:"cluster" gorm:"type:bool"`
-	ContextName           string      `json:"context-name" yaml:"context-name"`
-	RegistryContent       string      `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
-	Manifests             string      `json:"manifests,omitempty" yaml:"manifests,omitempty"`
-	Enable                StringArray `json:"enable,omitempty" yaml:"enable,omitempty" gorm:"type:stringArray"`
-	PackagePath           string      `json:"package-path,omitempty" yaml:"package-path,omitempty"`
-	PackageName           string      `json:"package-name,omitempty" yaml:"package-name,omitempty"`
+	Name                     string      `json:"name" yaml:"name"`
+	Provider                 string      `json:"provider" yaml:"provider"`
+	Master                   string      `json:"master" yaml:"master"`
+	Worker                   string      `json:"worker" yaml:"worker"`
+	Token                    string      `json:"token,omitempty" yaml:"token,omitempty"`
+	IP                       string      `json:"ip,omitempty" yaml:"ip,omitempty"`
+	TLSSans                  StringArray `json:"tls-sans,omitempty" yaml:"tls-sans,omitempty" gorm:"type:text"`
+	ClusterCidr              string      `json:"cluster-cidr,omitempty" yaml:"cluster-cidr,omitempty"`
+	MasterExtraArgs          string      `json:"master-extra-args,omitempty" yaml:"master-extra-args,omitempty"`
+	WorkerExtraArgs          string      `json:"worker-extra-args,omitempty" yaml:"worker-extra-args,omitempty"`
+	Registry                 string      `json:"registry,omitempty" yaml:"registry,omitempty"`
+	SystemDefaultRegistry    string      `json:"system-default-registry,omitempty" yaml:"system-default-registry,omitempty"`
+	DataStore                string      `json:"datastore,omitempty" yaml:"datastore,omitempty"`
+	K3sVersion               string      `json:"k3s-version,omitempty" yaml:"k3s-version,omitempty"`
+	K3sChannel               string      `json:"k3s-channel,omitempty" yaml:"k3s-channel,omitempty"`
+	InstallScript            string      `json:"k3s-install-script,omitempty" yaml:"k3s-install-script,omitempty"`
+	Mirror                   string      `json:"k3s-install-mirror,omitempty" yaml:"k3s-install-mirror,omitempty"`
+	DockerMirror             string      `json:"dockerMirror,omitempty" yaml:"dockerMirror,omitempty"`
+	DockerArg                string      `json:"docker-arg,omitempty" yaml:"docker-arg,omitempty"`
+	DockerScript             string      `json:"docker-script,omitempty" yaml:"docker-script,omitempty"`
+	Network                  string      `json:"network,omitempty" yaml:"network,omitempty"`
+	UI                       bool        `json:"ui" yaml:"ui" gorm:"type:bool"` // Deprecated
+	Cluster                  bool        `json:"cluster" yaml:"cluster" gorm:"type:bool"`
+	ContextName              string      `json:"context-name" yaml:"context-name"`
+	RegistryContent          string      `json:"registry-content,omitempty" yaml:"registry-content,omitempty"`
+	Manifests                string      `json:"manifests,omitempty" yaml:"manifests,omitempty"`
+	Enable                   StringArray `json:"enable,omitempty" yaml:"enable,omitempty" gorm:"type:stringArray"`
+	PackagePath              string      `json:"package-path,omitempty" yaml:"package-path,omitempty"`
+	PackageName              string      `json:"package-name,omitempty" yaml:"package-name,omitempty"`
+	DataStoreCAFile          string      `json:"datastore-cafile,omitempty" yaml:"datastore-cafile,omitempty"`
+	DataStoreCertFile        string      `json:"datastore-certfile,omitempty" yaml:"datastore-certfile,omitempty"`
+	DataStoreKeyFile         string      `json:"datastore-keyfile,omitempty" yaml:"datastore-keyfile,omitempty"`
+	DataStoreCAFileContent   string      `json:"datastore-cafile-content,omitempty" yaml:"datastore-cafile-content,omitempty"`
+	DataStoreCertFileContent string      `json:"datastore-certfile-content,omitempty" yaml:"datastore-certfile-content,omitempty"`
+	DataStoreKeyFileContent  string      `json:"datastore-keyfile-content,omitempty" yaml:"datastore-keyfile-content,omitempty"`
 }
 
 // Status struct for status.
@@ -115,16 +121,18 @@ const (
 
 // ClusterInfo struct for cluster info.
 type ClusterInfo struct {
-	ID       string        `json:"id,omitempty"`
-	Name     string        `json:"name,omitempty"`
-	Region   string        `json:"region,omitempty"`
-	Zone     string        `json:"zone,omitempty"`
-	Provider string        `json:"provider,omitempty"`
-	Status   string        `json:"status,omitempty"`
-	Master   string        `json:"master,omitempty"`
-	Worker   string        `json:"worker,omitempty"`
-	Version  string        `json:"version,omitempty"`
-	Nodes    []ClusterNode `json:"nodes,omitempty"`
+	ID            string        `json:"id,omitempty"`
+	Name          string        `json:"name,omitempty"`
+	Region        string        `json:"region,omitempty"`
+	Zone          string        `json:"zone,omitempty"`
+	Provider      string        `json:"provider,omitempty"`
+	Status        string        `json:"status,omitempty"`
+	Master        string        `json:"master,omitempty"`
+	Worker        string        `json:"worker,omitempty"`
+	Version       string        `json:"version,omitempty"`
+	Nodes         []ClusterNode `json:"nodes,omitempty"`
+	IsHAMode      bool          `json:"is-ha-mode,omitempty"`
+	DataStoreType string        `json:"datastore-type,omitempty"`
 }
 
 // ClusterNode struct for cluster node.

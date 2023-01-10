@@ -3,6 +3,7 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -100,6 +101,18 @@ func (c *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 		Options:  opt,
 		SSH:      state.SSH,
 	}
+	if state.Cluster {
+		obj.IsHAMode = true
+		obj.DataStoreType = "Embedded DB(etcd)"
+	} else if obj.DataStore != "" {
+		obj.IsHAMode = true
+		dataStoreArray := strings.Split(obj.DataStore, "://")
+		if dataStoreArray[0] == "http" {
+			obj.DataStoreType = "External DB(etcd)"
+		} else {
+			obj.DataStoreType = fmt.Sprintf("External DB(%s)", dataStoreArray[0])
+		}
+	}
 	return types.APIObject{
 		Type:   schema.ID,
 		ID:     id,
@@ -142,7 +155,51 @@ func (c *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 	return types.APIObject{}, nil
 }
 
-// Watch watches template.
+// Watch watches cluster change event.
 func (c *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
-	return common.DefaultDB.Watch(apiOp, schema), nil
+	result := make(chan types.APIEvent)
+	data := common.DefaultDB.Watch(apiOp, schema)
+	go func() {
+		for {
+			select {
+			case v, ok := <-data:
+				if !ok {
+					continue
+				}
+				obj := v.Object.Object.(autok3stypes.Cluster)
+				cluster := &apis.Cluster{
+					Metadata: obj.Metadata,
+					SSH:      obj.SSH,
+					Options:  obj.Options,
+					Status:   obj.Status,
+				}
+				if obj.Cluster {
+					cluster.IsHAMode = true
+					cluster.DataStoreType = "Embedded DB(etcd)"
+				} else if obj.DataStore != "" {
+					cluster.IsHAMode = true
+					dataStoreArray := strings.Split(obj.DataStore, "://")
+					if dataStoreArray[0] == "http" {
+						cluster.DataStoreType = "External DB(etcd)"
+					} else {
+						cluster.DataStoreType = fmt.Sprintf("External DB(%s)", dataStoreArray[0])
+					}
+				}
+				e := types.APIEvent{
+					Name:         v.Name,
+					ResourceType: v.ResourceType,
+					Object: types.APIObject{
+						Type:   schema.ID,
+						ID:     v.Object.ID,
+						Object: cluster,
+					},
+				}
+				result <- e
+			case <-apiOp.Context().Done():
+				close(result)
+				return
+			}
+		}
+	}()
+	return result, nil
 }

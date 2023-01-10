@@ -108,6 +108,18 @@ func getRunArgs(isFirstMaster bool, fixedIP string, cluster *types.Cluster, node
 			runArgs = append(runArgs, "--datastore-endpoint="+cluster.DataStore)
 		}
 
+		if cluster.DataStoreCAFileContent != "" || cluster.DataStoreCAFile != "" {
+			runArgs = append(runArgs, fmt.Sprintf("--datastore-cafile=%s/ds-ca.pem", datastoreCertificatesPath))
+		}
+
+		if cluster.DataStoreCertFileContent != "" || cluster.DataStoreCertFile != "" {
+			runArgs = append(runArgs, fmt.Sprintf("--datastore-certfile=%s/ds-cert.pem", datastoreCertificatesPath))
+		}
+
+		if cluster.DataStoreKeyFileContent != "" || cluster.DataStoreKeyFile != "" {
+			runArgs = append(runArgs, fmt.Sprintf("--datastore-keyfile=%s/ds-key.pem", datastoreCertificatesPath))
+		}
+
 		if isCluster && isFirstMaster {
 			runArgs = append(runArgs, "--cluster-init")
 		}

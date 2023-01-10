@@ -156,9 +156,6 @@ func (p *K3d) GetCluster(kubeConfig string) *types.ClusterInfo {
 		Name:     p.Name,
 		Provider: p.GetProviderName(),
 	}
-	if kubeConfig == "" {
-		return c
-	}
 	return p.GetClusterStatus(kubeConfig, c, p.k3dStatus)
 }
 

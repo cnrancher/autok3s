@@ -67,6 +67,24 @@ func toProviderObject(provider providers.Provider, schema *types.APISchema, id s
 		Required:    false,
 		Default:     "",
 	}
+	config["datastore-cafile-content"] = schemas.Field{
+		Type:        "string",
+		Description: "TLS Certificate Authority (CA) file used to help secure communication with the datastore, see: https://docs.k3s.io/installation/datastore#external-datastore-configuration-parameters",
+		Required:    false,
+		Default:     "",
+	}
+	config["datastore-certfile-content"] = schemas.Field{
+		Type:        "string",
+		Description: "TLS certificate file used for client certificate based authentication to your datastore, see: https://docs.k3s.io/installation/datastore#external-datastore-configuration-parameters",
+		Required:    false,
+		Default:     "",
+	}
+	config["datastore-keyfile-content"] = schemas.Field{
+		Type:        "string",
+		Description: "TLS key file used for client certificate based authentication to your datastore, see: https://docs.k3s.io/installation/datastore#external-datastore-configuration-parameters",
+		Required:    false,
+		Default:     "",
+	}
 	obj := types.APIObject{
 		Type: schema.ID,
 		ID:   id,

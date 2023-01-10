@@ -196,6 +196,24 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Usage: "K3s datastore endpoint, Specify etcd, Mysql, Postgres, or Sqlite (default) data source name, see: https://docs.k3s.io/reference/server-config#database",
 		},
 		{
+			Name:  "datastore-cafile",
+			P:     &p.DataStoreCAFile,
+			V:     p.DataStoreCAFile,
+			Usage: "TLS Certificate Authority (CA) file used to help secure communication with the datastore, see: https://docs.k3s.io/installation/datastore#external-datastore-configuration-parameters",
+		},
+		{
+			Name:  "datastore-certfile",
+			P:     &p.DataStoreCertFile,
+			V:     p.DataStoreCertFile,
+			Usage: "TLS certificate file used for client certificate based authentication to your datastore, see: https://docs.k3s.io/installation/datastore#external-datastore-configuration-parameters",
+		},
+		{
+			Name:  "datastore-keyfile",
+			P:     &p.DataStoreKeyFile,
+			V:     p.DataStoreKeyFile,
+			Usage: "TLS key file used for client certificate based authentication to your datastore, see: https://docs.k3s.io/installation/datastore#external-datastore-configuration-parameters",
+		},
+		{
 			Name:  "token",
 			P:     &p.Token,
 			V:     p.Token,
@@ -668,6 +686,23 @@ func (p *ProviderBase) GetClusterStatus(kubeCfg string, c *types.ClusterInfo, de
 
 	c.Master = p.Master
 	c.Worker = p.Worker
+	if p.Cluster {
+		c.IsHAMode = true
+		c.DataStoreType = "Embedded DB(etcd)"
+	} else if p.DataStore != "" {
+		c.IsHAMode = true
+		dataStoreArray := strings.Split(p.DataStore, "://")
+		if dataStoreArray[0] == "http" {
+			c.DataStoreType = "External DB(etcd)"
+		} else {
+			c.DataStoreType = fmt.Sprintf("External DB(%s)", dataStoreArray[0])
+		}
+	}
+
+	if kubeCfg == "" {
+		return c
+	}
+
 	client, err := GetClusterConfig(p.ContextName, kubeCfg)
 	if err != nil {
 		p.Logger.Errorf("[%s] failed to generate kube client for cluster %s: %v", p.Provider, p.ContextName, err)
@@ -839,6 +874,20 @@ func (p *ProviderBase) syncExistNodes() {
 func (p *ProviderBase) Describe(kubeCfg string, c *types.ClusterInfo, describeInstance func() ([]types.Node, error)) *types.ClusterInfo {
 	c.Master = p.Master
 	c.Worker = p.Worker
+
+	if p.Cluster {
+		c.IsHAMode = true
+		c.DataStoreType = "Embedded DB(etcd)"
+	} else if p.DataStore != "" {
+		c.IsHAMode = true
+		dataStoreArray := strings.Split(p.DataStore, "://")
+		if dataStoreArray[0] == "http" {
+			c.DataStoreType = "External DB(etcd)"
+		} else {
+			c.DataStoreType = fmt.Sprintf("External DB(%s)", dataStoreArray[0])
+		}
+	}
+
 	if kubeCfg == "" {
 		c.Status = common.StatusMissing
 		return c

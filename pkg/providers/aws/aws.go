@@ -238,9 +238,6 @@ func (p *Amazon) GetCluster(kubecfg string) *types.ClusterInfo {
 		Provider: p.GetProviderName(),
 		Region:   p.Region,
 	}
-	if kubecfg == "" {
-		return c
-	}
 
 	return p.GetClusterStatus(kubecfg, c, p.getInstanceNodes)
 }
