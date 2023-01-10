@@ -652,21 +652,17 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 
 // CreateCheck check create command and flags.
 func (p *Amazon) CreateCheck() error {
+	if err := p.CheckCreateArgs(p.IsClusterExist); err != nil {
+		return err
+	}
+
 	if p.KeypairName != "" && (p.SSHKeyPath == "" && p.SSHKeyName == "") {
 		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path or --ssh-key-name with --keypair-name %s", p.GetProviderName(), p.KeypairName)
 	}
+
 	masterNum, err := strconv.Atoi(p.Master)
 	if masterNum < 1 || err != nil {
 		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
-			p.GetProviderName())
-	}
-	if masterNum > 1 && !p.Cluster && p.DataStore == "" {
-		return fmt.Errorf("[%s] calling preflight error: need to set `--cluster` or `--datastore` when `--master` number > 1",
-			p.GetProviderName())
-	}
-
-	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
-		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
 			p.GetProviderName())
 	}
 
@@ -681,26 +677,6 @@ func (p *Amazon) CreateCheck() error {
 	}
 	if workerNum > 0 && p.CloudControllerManager && p.IamInstanceProfileForWorker == "" {
 		return fmt.Errorf("[%s] calling preflight error: need to set `--iam-instance-profile-worker` if enabled Amazon Cloud Controller Manager", p.GetProviderName())
-	}
-
-	// check name exist.
-	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
-	if err != nil {
-		return err
-	}
-
-	if state != nil && state.Status != common.StatusFailed {
-		return fmt.Errorf("[%s] cluster %s is already exist", p.GetProviderName(), p.Name)
-	}
-
-	exist, _, err := p.IsClusterExist()
-	if err != nil {
-		return err
-	}
-
-	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster `%s` is already exist",
-			p.GetProviderName(), p.Name)
 	}
 
 	// check key pair.
@@ -804,24 +780,9 @@ func (p *Amazon) CreateCheck() error {
 
 // JoinCheck check join command and flags.
 func (p *Amazon) JoinCheck() error {
-	// check cluster exist.
-	exist, _, err := p.IsClusterExist()
-
-	if err != nil {
+	if err := p.CheckJoinArgs(p.IsClusterExist); err != nil {
 		return err
 	}
-
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.ContextName)
-	}
-
-	// check flags.
-	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
-		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
-			p.GetProviderName())
-	}
-
 	masterNum, err := strconv.Atoi(p.Master)
 	if err != nil {
 		return fmt.Errorf("[%s] calling preflight error: `--master` must be number",
@@ -831,9 +792,6 @@ func (p *Amazon) JoinCheck() error {
 	if err != nil {
 		return fmt.Errorf("[%s] calling preflight error: `--worker` must be number",
 			p.GetProviderName())
-	}
-	if masterNum < 1 && workerNum < 1 {
-		return fmt.Errorf("[%s] calling preflight error: `--master` or `--worker` number must >= 1", p.GetProviderName())
 	}
 
 	if masterNum > 0 && p.CloudControllerManager && p.IamInstanceProfileForControl == "" {

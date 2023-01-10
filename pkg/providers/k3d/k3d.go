@@ -3,7 +3,6 @@ package k3d
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -199,20 +198,8 @@ func (p *K3d) SetConfig(config []byte) error {
 
 // CreateCheck check create command and flags.
 func (p *K3d) CreateCheck() error {
-	masterNum, err := strconv.Atoi(p.Master)
-	if masterNum < 1 || err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
-			p.GetProviderName())
-	}
-
-	exist, _, err := p.IsClusterExist()
-	if err != nil && !errors.Is(err, client.ClusterGetNoNodesFoundError) {
+	if err := p.CheckCreateArgs(p.IsClusterExist); err != nil {
 		return err
-	}
-
-	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster `%s` is already exist",
-			p.GetProviderName(), p.Name)
 	}
 
 	ipPorts := strings.Split(p.APIPort, ":")
@@ -236,31 +223,8 @@ func (p *K3d) CreateCheck() error {
 
 // JoinCheck check join command and flags.
 func (p *K3d) JoinCheck() error {
-	// check cluster exist.
-	exist, _, err := p.IsClusterExist()
-
-	if err != nil {
+	if err := p.CheckJoinArgs(p.IsClusterExist); err != nil {
 		return err
-	}
-
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.ContextName)
-	}
-
-	// check flags.
-	masterNum, err := strconv.Atoi(p.Master)
-	if err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--master` must be number",
-			p.GetProviderName())
-	}
-	workerNum, err := strconv.Atoi(p.Worker)
-	if err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--worker` must be number",
-			p.GetProviderName())
-	}
-	if masterNum < 1 && workerNum < 1 {
-		return fmt.Errorf("[%s] calling preflight error: `--master` or `--worker` number must >= 1", p.GetProviderName())
 	}
 	if p.MastersMemory != "" {
 		if _, err := dockerunits.RAMInBytes(p.MastersMemory); err != nil {

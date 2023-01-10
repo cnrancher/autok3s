@@ -614,6 +614,10 @@ func (p *Tencent) deleteInstance(f bool) (string, error) {
 
 // CreateCheck check create command and flags.
 func (p *Tencent) CreateCheck() error {
+	if err := p.CheckCreateArgs(p.IsClusterExist); err != nil {
+		return err
+	}
+
 	if p.UserDataPath != "" {
 		_, err := os.Stat(p.UserDataPath)
 		if err != nil {
@@ -622,40 +626,6 @@ func (p *Tencent) CreateCheck() error {
 	}
 	if p.KeypairID != "" && (p.SSHKeyPath == "" && p.SSHKeyName == "") {
 		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path or --ssh-key-name must set with --key-pair %s", p.GetProviderName(), p.KeypairID)
-	}
-	masterNum, err := strconv.Atoi(p.Master)
-	if masterNum < 1 || err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
-			p.GetProviderName())
-	}
-	if masterNum > 1 && !p.Cluster && p.DataStore == "" {
-		return fmt.Errorf("[%s] calling preflight error: need to set `--cluster` or `--datastore` when `--master` number > 1",
-			p.GetProviderName())
-	}
-
-	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
-		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
-			p.GetProviderName())
-	}
-
-	// check name exist.
-	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
-	if err != nil {
-		return err
-	}
-
-	if state != nil && state.Status != common.StatusFailed {
-		return fmt.Errorf("[%s] cluster %s is already exist", p.GetProviderName(), p.Name)
-	}
-
-	exist, _, err := p.IsClusterExist()
-	if err != nil {
-		return err
-	}
-
-	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster `%s` at region %s is already exist",
-			p.GetProviderName(), p.Name, p.Region)
 	}
 
 	if p.Region != defaultRegion && p.Zone == defaultZone && p.VpcID == "" {
@@ -672,26 +642,7 @@ func (p *Tencent) CreateCheck() error {
 
 // JoinCheck check join command and flags.
 func (p *Tencent) JoinCheck() error {
-	if p.Master == "0" && p.Worker == "0" {
-		return fmt.Errorf("[%s] calling preflight error: `--master` or `--worker` number must >= 1", p.GetProviderName())
-	}
-	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
-		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
-			p.GetProviderName())
-	}
-
-	exist, _, err := p.IsClusterExist()
-
-	if err != nil {
-		return err
-	}
-
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.Name)
-	}
-
-	return nil
+	return p.CheckJoinArgs(p.IsClusterExist)
 }
 
 func (p *Tencent) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, publicKey string) error {
