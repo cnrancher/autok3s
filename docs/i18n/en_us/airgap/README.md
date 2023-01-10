@@ -86,7 +86,7 @@ The exported package can be imported via `autok3s airgap import <path> [name]` c
 
 ## About K3s install script
 
-Refer to the [k3s docs](https://rancher.com/docs/k3s/latest/en/installation/airgap/#prerequisites), the install.sh needs to be downloaded and run in k3s node when install with airgap mode.  
+Refer to the [k3s docs](https://docs.k3s.io/installation/airgap#prerequisites), the install.sh needs to be downloaded and run in k3s node when install with airgap mode.  
 In autok3s, we will have an initial install script downloaded from `https://get.k3s.io` in the CICD process and the script is stored in settings `install-script`. The command `autok3s airgap update-install-script` can be used to update the stored install script. It will download from the configured source(settings `install-script-source-repo`).
 
 ## How to create/upgrade cluster with airgap package

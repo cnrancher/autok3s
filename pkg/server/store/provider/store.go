@@ -63,7 +63,7 @@ func toProviderObject(provider providers.Provider, schema *types.APISchema, id s
 	config := utils.ConvertFlagsToFields(provider.GetCreateFlags())
 	config["registry-content"] = schemas.Field{
 		Type:        "string",
-		Description: "K3s registry file, see: https://rancher.com/docs/k3s/latest/en/installation/private-registry",
+		Description: "K3s registry file, see: https://docs.k3s.io/installation/private-registry",
 		Required:    false,
 		Default:     "",
 	}
