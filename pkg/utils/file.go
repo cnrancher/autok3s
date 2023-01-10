@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -56,4 +58,17 @@ func UserHome() string {
 		return homeDrive + homePath
 	}
 	return os.Getenv(userProfileEnv)
+}
+
+func IsFileExists(file string) bool {
+	filePath := StripUserHome(file)
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			logrus.Errorf("[autoK3s] file %s is not exist", file)
+		} else {
+			logrus.Errorf("[autoK3s] failed to get file %s with error: %v", file, err)
+		}
+		return false
+	}
+	return true
 }

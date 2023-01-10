@@ -277,55 +277,18 @@ func (p *Google) CreateCheck() error {
 		}
 	}
 
-	// check flags
-	masterNum, err := strconv.Atoi(p.Master)
-	if masterNum < 1 || err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
-			p.GetProviderName())
-	}
-	if masterNum > 1 && !p.Cluster && p.DataStore == "" {
-		return fmt.Errorf("[%s] calling preflight error: need to set `--cluster` or `--datastore` when `--master` number > 1",
-			p.GetProviderName())
-	}
-
-	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
-		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
-			p.GetProviderName())
-	}
-
-	if _, err = strconv.Atoi(p.Worker); err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--worker` must be number",
-			p.GetProviderName())
-	}
-
-	// check cluster exist
-	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
-	if err != nil {
+	if err := p.CheckCreateArgs(p.IsClusterExist); err != nil {
 		return err
-	}
-
-	if state != nil && state.Status != common.StatusFailed {
-		return fmt.Errorf("[%s] cluster %s is already exist", p.GetProviderName(), p.Name)
-	}
-
-	exist, _, err := p.IsClusterExist()
-	if err != nil {
-		return err
-	}
-
-	if exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster `%s` is already exist",
-			p.GetProviderName(), p.Name)
 	}
 
 	// check project exist
-	if _, err = p.client.Projects.Get(p.Project).Do(); err != nil {
+	if _, err := p.client.Projects.Get(p.Project).Do(); err != nil {
 		return fmt.Errorf("[%s] GCE project id %s is not found: %v", p.GetProviderName(), p.Project, err)
 	}
 
 	// check startup script file exist
 	if p.StartupScriptPath != "" {
-		_, err = os.Stat(p.StartupScriptPath)
+		_, err := os.Stat(p.StartupScriptPath)
 		if err != nil {
 			return err
 		}
@@ -341,38 +304,8 @@ func (p *Google) JoinCheck() error {
 			return err
 		}
 	}
-	// check cluster exist
-	exist, _, err := p.IsClusterExist()
 
-	if err != nil {
-		return err
-	}
-
-	if !exist {
-		return fmt.Errorf("[%s] calling preflight error: cluster name `%s` do not exist",
-			p.GetProviderName(), p.ContextName)
-	}
-
-	// check flags
-	if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
-		return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
-			p.GetProviderName())
-	}
-
-	masterNum, err := strconv.Atoi(p.Master)
-	if err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--master` must be number",
-			p.GetProviderName())
-	}
-	workerNum, err := strconv.Atoi(p.Worker)
-	if err != nil {
-		return fmt.Errorf("[%s] calling preflight error: `--worker` must be number",
-			p.GetProviderName())
-	}
-	if masterNum < 1 && workerNum < 1 {
-		return fmt.Errorf("[%s] calling preflight error: `--master` or `--worker` number must >= 1", p.GetProviderName())
-	}
-	return nil
+	return p.CheckJoinArgs(p.IsClusterExist)
 }
 
 func (p *Google) newClient() error {

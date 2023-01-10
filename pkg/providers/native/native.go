@@ -148,32 +148,13 @@ func (p *Native) CreateCheck() error {
 		return fmt.Errorf("[%s] calling preflight error: cluster must have one master when create", p.GetProviderName())
 	}
 
-	// check file exists.
-	if p.SSHKeyPath != "" {
-		sshPrivateKey := p.SSHKeyPath
-		if strings.HasPrefix(sshPrivateKey, "~/") {
-			baseDir := getUserHomeDir()
-			if baseDir == "" {
-				return fmt.Errorf("[%s] calling preflight error: failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
-			}
-			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
-		}
-		if _, err := os.Stat(sshPrivateKey); err != nil {
-			return err
-		}
+	masterList := strings.Split(p.MasterIps, ",")
+	if len(masterList) > 1 && !p.Cluster && p.DataStore == "" {
+		return fmt.Errorf("[%s] calling preflight error: need to set `--cluster` or `--datastore` for HA mode",
+			p.Provider)
 	}
 
-	// check name exist.
-	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
-	if err != nil {
-		return err
-	}
-
-	if state != nil && state.Status != common.StatusFailed {
-		return fmt.Errorf("[%s] calling preflight error: cluster %s is already exist", p.GetProviderName(), p.Name)
-	}
-
-	return nil
+	return p.CheckCreateArgs(p.IsClusterExist)
 }
 
 // JoinCheck check join command and flags.
@@ -181,28 +162,23 @@ func (p *Native) JoinCheck() error {
 	if p.MasterIps == "" && p.WorkerIps == "" {
 		return fmt.Errorf("[%s] calling preflight error: cluster must have one node when join", p.GetProviderName())
 	}
+	masterList := strings.Split(p.MasterIps, ",")
+	if len(masterList) > 1 && !p.Cluster && p.DataStore == "" {
+		return fmt.Errorf("[%s] calling preflight error: can't join master nodes to single node cluster", p.GetProviderName())
+	}
 	// check --ip if cluster is not exist(for previous version)
 	state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
 	if err != nil {
 		return err
 	}
 	if state == nil && p.IP == "" {
-		return fmt.Errorf("[%s] calling preflight error: cluster %s is not exist", p.Provider, p.Name)
+		return fmt.Errorf("[%s] calling preflight error: cluster %s is not exist", p.GetProviderName(), p.Name)
 	}
 	// check file exists.
-	if p.SSHKeyPath != "" {
-		sshPrivateKey := p.SSHKeyPath
-		if strings.HasPrefix(sshPrivateKey, "~/") {
-			baseDir := getUserHomeDir()
-			if baseDir == "" {
-				return fmt.Errorf("[%s] calling preflight error: failed to get user home directory for %s, please set with absolute file path", p.GetProviderName(), sshPrivateKey)
-			}
-			sshPrivateKey = filepath.Join(baseDir, sshPrivateKey[2:])
-		}
-		if _, err := os.Stat(sshPrivateKey); err != nil {
-			return err
-		}
+	if p.SSHKeyPath != "" && !utils.IsFileExists(p.SSHKeyPath) {
+		return fmt.Errorf("[%s] calling preflight error: failed to get ssh-key-path", p.GetProviderName())
 	}
+
 	return nil
 }
 
