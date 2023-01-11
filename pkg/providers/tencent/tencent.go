@@ -624,8 +624,8 @@ func (p *Tencent) CreateCheck() error {
 			return err
 		}
 	}
-	if p.KeypairID != "" && (p.SSHKeyPath == "" && p.SSHKeyName == "") {
-		return fmt.Errorf("[%s] calling preflight error: --ssh-key-path or --ssh-key-name must set with --key-pair %s", p.GetProviderName(), p.KeypairID)
+	if err := p.ValdiateRequireSSHPrivateKey(); p.KeypairID != "" && err != nil {
+		return fmt.Errorf("[%s] calling preflight error: %s with --key-pair %s", p.GetProviderName(), err.Error(), p.KeypairID)
 	}
 
 	if p.Region != defaultRegion && p.Zone == defaultZone && p.VpcID == "" {

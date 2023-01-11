@@ -656,8 +656,8 @@ func (p *Amazon) CreateCheck() error {
 		return err
 	}
 
-	if p.KeypairName != "" && (p.SSHKeyPath == "" && p.SSHKeyName == "") {
-		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path or --ssh-key-name with --keypair-name %s", p.GetProviderName(), p.KeypairName)
+	if err := p.ValdiateRequireSSHPrivateKey(); p.KeypairName != "" && err != nil {
+		return fmt.Errorf("[%s] calling preflight error: %s with --keypair-name %s", p.GetProviderName(), err.Error(), p.KeypairName)
 	}
 
 	masterNum, err := strconv.Atoi(p.Master)

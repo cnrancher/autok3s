@@ -1303,3 +1303,14 @@ func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, ve
 
 	return p.Upgrade(&c)
 }
+
+func (p *ProviderBase) ValdiateRequireSSHPrivateKey() error {
+	errStr := "ssh key is require but none of --ssh-key-path or --ssh-key-name is provided"
+	if !common.IsCLI {
+		errStr = "ssh key is require but none of --ssh-key-path, --ssh-key-name or --ssh-key is provided"
+	}
+	if p.SSHKey == "" && p.SSHKeyPath == "" && p.SSHKeyName == "" {
+		return fmt.Errorf(errStr)
+	}
+	return nil
+}

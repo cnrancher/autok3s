@@ -635,8 +635,8 @@ func (p *Alibaba) CreateCheck() error {
 		return err
 	}
 
-	if p.KeyPair != "" && (p.SSHKeyPath == "" && p.SSHKeyName == "") {
-		return fmt.Errorf("[%s] calling preflight error: must set --ssh-key-path or --ssh-key-name with --key-pair %s", p.GetProviderName(), p.KeyPair)
+	if err := p.ValdiateRequireSSHPrivateKey(); p.KeyPair != "" && err != nil {
+		return fmt.Errorf("[%s] calling preflight error: %s with --key-pair %s", p.GetProviderName(), err.Error(), p.KeyPair)
 	}
 	if p.Region != defaultRegion && p.Zone == defaultZoneID && p.VSwitch == "" {
 		return fmt.Errorf("[%s] calling preflight error: must set `--zone` in specified region %s to create default vswitch or set exist `--vswitch` in specified region", p.GetProviderName(), p.Region)
