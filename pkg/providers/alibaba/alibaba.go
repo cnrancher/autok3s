@@ -525,7 +525,6 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 					return err
 				}
 				v.SSH.SSHPassword = ""
-				ssh.SSHPassword = ""
 			}
 			p.M.Store(status.InstanceId, v)
 			continue
