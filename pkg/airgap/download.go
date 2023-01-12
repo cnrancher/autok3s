@@ -38,7 +38,7 @@ var (
 	packageTmpBasePath = filepath.Join(packagePath, tmpDirName)
 	downloadSourceMap  = map[string]string{
 		"github":    "https://github.com/k3s-io/k3s/releases/download",
-		"aliyunoss": "https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s",
+		"aliyunoss": "https://rancher-mirror.rancher.cn/k3s",
 	}
 	ErrVersionNotFound = errors.New("version not found")
 

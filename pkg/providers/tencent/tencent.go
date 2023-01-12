@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	k3sInstallScript          = "https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s/k3s-install.sh"
+	k3sInstallScript          = "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh"
 	secretID                  = "secret-id"
 	secretKey                 = "secret-key"
 	imageID                   = "img-487zeit5" /* Ubuntu Server 22.04.1 LTS x64 */
