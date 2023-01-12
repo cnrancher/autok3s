@@ -29,7 +29,7 @@ var (
 	InstallUUID     = newSetting("install-uuid", "", "The autok3s instance unique install id")
 
 	InstallScript         = newSetting("install-script", "", "The k3s offline install script with base64 encode")
-	ScriptUpdateSource    = newSetting("install-script-source-repo", "https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s/k3s-install.sh", "The install script auto update source, github or aliyun oss")
+	ScriptUpdateSource    = newSetting("install-script-source-repo", "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh", "The install script auto update source, github or aliyun oss")
 	PackageDownloadSource = newSetting("package-download-source", "github", "The airgap package download source, github and aliyunoss are validated.")
 )
 

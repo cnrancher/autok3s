@@ -75,7 +75,7 @@ Scenario 3 - Run with cli:
 
 ```bash
 # The commands use the shell script on MacOS and Linux, or visit the Releases page to download the executable for Windows.
-curl -sS https://rancher-mirror.oss-cn-beijing.aliyuncs.com/autok3s/install.sh  | sh
+curl -sS https://rancher-mirror.rancher.cn/autok3s/install.sh  | sh
 
 # The commands will start autok3s daemon with an interactionable UI.
 autok3s -d serve
