@@ -34,9 +34,9 @@ const (
 	providerName = "aws"
 
 	defaultUser              = "ubuntu"
-	ami                      = "ami-00ddb0e5626798373" // Ubuntu Server 18.04 LTS (HVM) x86 64
-	instanceType             = "t2.micro"              // 1 vCPU, 1 GiB
-	volumeType               = "gp2"
+	ami                      = "ami-06878d265978313ca" // Ubuntu Server 22.04 LTS (HVM) x86 64
+	instanceType             = "t3a.medium"            // 2 vCPU, 4 GiB
+	volumeType               = "gp3"
 	diskSize                 = "16"
 	defaultRegion            = "us-east-1"
 	ipRange                  = "0.0.0.0/0"

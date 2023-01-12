@@ -36,7 +36,7 @@ const (
 	k3sInstallScript          = "https://rancher-mirror.oss-cn-beijing.aliyuncs.com/k3s/k3s-install.sh"
 	secretID                  = "secret-id"
 	secretKey                 = "secret-key"
-	imageID                   = "img-pi0ii46r" /* Ubuntu Server 18.04.1 LTS x64 */
+	imageID                   = "img-487zeit5" /* Ubuntu Server 22.04.1 LTS x64 */
 	instanceType              = "SA1.MEDIUM4"  /* CPU:2 Memory:4 */
 	defaultInstanceChargeType = "POSTPAID_BY_HOUR"
 	spotInstanceChargeType    = "SPOTPAID"

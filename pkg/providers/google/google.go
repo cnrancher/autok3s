@@ -32,9 +32,9 @@ const (
 
 	defaultRegion      = "us-central1"
 	defaultZone        = "us-central1-b"
-	defaultMachineType = "n1-standard-1"
-	defaultImageName   = "ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20210514"
-	defaultDiskType    = "pd-standard"
+	defaultMachineType = "e2-medium"
+	defaultImageName   = "ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20230107"
+	defaultDiskType    = "pd-balanced"
 	defaultDiskSize    = 10
 	defaultNetwork     = "default"
 	defaultUser        = "autok3s"
