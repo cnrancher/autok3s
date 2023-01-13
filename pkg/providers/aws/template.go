@@ -72,6 +72,8 @@ rules:
   - serviceaccounts
   verbs:
   - create
+  - get
+  - list
 - apiGroups:
   - ""
   resources:
@@ -101,6 +103,12 @@ rules:
   - list
   - watch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -149,6 +157,7 @@ spec:
           args:
             - --v=2
             - --cloud-provider=aws
+            - --cluster-cidr={{ .ClusterCIDR }}
 {{- range $index, $args := .ExtraArgs }}
             - {{ $args }}
 {{- end }}

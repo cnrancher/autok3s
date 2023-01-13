@@ -520,7 +520,7 @@ func (p *Tencent) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 
 	if _, ok := c.Options.(tencent.Options); ok {
 		if p.CloudControllerManager {
-			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik"
+			c.MasterExtraArgs += " --disable-cloud-controller --disable servicelb,traefik"
 		}
 	}
 	c.SSH = *ssh

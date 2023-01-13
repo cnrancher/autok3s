@@ -247,7 +247,7 @@ func (p *K3d) sharedFlags() []types.Flag {
 			Name:  "master-extra-args",
 			P:     &p.MasterExtraArgs,
 			V:     p.MasterExtraArgs,
-			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--no-deploy metrics-server'), for more information, please see: https://docs.k3s.io/reference/server-config",
+			Usage: "Master extra arguments for k3s installer, wrapped in quotes. e.g.(--master-extra-args '--disable metrics-server'), for more information, please see: https://docs.k3s.io/reference/server-config",
 		},
 		{
 			Name:  "worker-extra-args",
