@@ -1038,7 +1038,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 
 	if _, ok := c.Options.(alibaba.Options); ok {
 		if p.CloudControllerManager {
-			c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik"
+			c.MasterExtraArgs += " --disable-cloud-controller --disable servicelb,traefik"
 		}
 	}
 	c.SSH = *ssh

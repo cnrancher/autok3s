@@ -77,6 +77,8 @@ rules:
   - serviceaccounts
   verbs:
   - create
+  - get
+  - list
 - apiGroups:
   - ""
   resources:
@@ -106,6 +108,12 @@ rules:
   - list
   - watch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -150,11 +158,11 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: aws-cloud-controller-manager
-          image: gcr.io/k8s-staging-provider-aws/cloud-controller-manager:v1.23.1
+          image: gcr.io/k8s-staging-provider-aws/cloud-controller-manager:v1.18.0-alpha.1
           args:
             - --v=2
             - --cloud-provider=aws
-            - --use-service-account-credentials=true
+            - --cluster-cidr=10.0.0.0/16
           resources:
             requests:
               cpu: 200m
@@ -163,9 +171,9 @@ spec:
 )
 
 func TestParseTemplate(t *testing.T) {
-	manifest := getAWSCCMManifest("v1.23.9+k3s1")
+	manifest := getAWSCCMManifest("v1.18.20+k3s1", "10.0.0.0/16")
 	if manifest != testOutput {
-		t.Fatal("template doesn't match target output")
+		t.Fatalf("template %s doesn't match target output", manifest)
 	}
 }
 
@@ -182,6 +190,14 @@ func TestGetCCMVersion(t *testing.T) {
 		{
 			k3sversion: "v1.24.3+k3s1",
 			ccmVersion: ccmVersionMap[">= 1.24"],
+		},
+		{
+			k3sversion: "v1.18.20+k3s1",
+			ccmVersion: ccmVersionMap["~1.18"],
+		},
+		{
+			k3sversion: "v1.17.17+k3s1",
+			ccmVersion: ccmVersionMap["< 1.18"],
 		},
 	} {
 		ccm, err := getCCMVersion(c.k3sversion)

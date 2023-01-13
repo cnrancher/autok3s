@@ -382,7 +382,7 @@ func (p *Google) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	}
 	c.ContextName = p.ContextName
 	if p.CloudControllerManager {
-		c.MasterExtraArgs += " --disable-cloud-controller --no-deploy servicelb,traefik,local-storage"
+		c.MasterExtraArgs += " --disable-cloud-controller --disable servicelb,traefik,local-storage"
 	}
 	c.SSH = *ssh
 
