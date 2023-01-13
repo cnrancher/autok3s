@@ -89,6 +89,18 @@ func (t *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 			temp.Status = status
 		}
 		temp.Options = opt
+		if temp.Cluster {
+			temp.IsHAMode = true
+			temp.DataStoreType = "Embedded DB(etcd)"
+		} else if temp.DataStore != "" {
+			temp.IsHAMode = true
+			dataStoreArray := strings.Split(temp.DataStore, "://")
+			if dataStoreArray[0] == "http" {
+				temp.DataStoreType = "External DB(etcd)"
+			} else {
+				temp.DataStoreType = fmt.Sprintf("External DB(%s)", dataStoreArray[0])
+			}
+		}
 		result.Objects = append(result.Objects, types.APIObject{
 			ID:     template.ContextName,
 			Type:   schema.ID,
@@ -125,6 +137,18 @@ func (t *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 		return types.APIObject{}, err
 	}
 	temp.Options = opt
+	if temp.Cluster {
+		temp.IsHAMode = true
+		temp.DataStoreType = "Embedded DB(etcd)"
+	} else if temp.DataStore != "" {
+		temp.IsHAMode = true
+		dataStoreArray := strings.Split(temp.DataStore, "://")
+		if dataStoreArray[0] == "http" {
+			temp.DataStoreType = "External DB(etcd)"
+		} else {
+			temp.DataStoreType = fmt.Sprintf("External DB(%s)", dataStoreArray[0])
+		}
+	}
 	return types.APIObject{
 		ID:     template.ContextName,
 		Type:   schema.ID,
@@ -169,5 +193,43 @@ func (t *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 
 // Watch watches template.
 func (t *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
-	return common.DefaultDB.Watch(apiOp, schema), nil
+	result := make(chan types.APIEvent)
+	data := common.DefaultDB.Watch(apiOp, schema)
+	go func() {
+		for {
+			select {
+			case v, ok := <-data:
+				if !ok {
+					continue
+				}
+				temp := v.Object.Object.(*apis.ClusterTemplate)
+				if temp.Cluster {
+					temp.IsHAMode = true
+					temp.DataStoreType = "Embedded DB(etcd)"
+				} else if temp.DataStore != "" {
+					temp.IsHAMode = true
+					dataStoreArray := strings.Split(temp.DataStore, "://")
+					if dataStoreArray[0] == "http" {
+						temp.DataStoreType = "External DB(etcd)"
+					} else {
+						temp.DataStoreType = fmt.Sprintf("External DB(%s)", dataStoreArray[0])
+					}
+				}
+				e := types.APIEvent{
+					Name:         v.Name,
+					ResourceType: v.ResourceType,
+					Object: types.APIObject{
+						Type:   schema.ID,
+						ID:     v.Object.ID,
+						Object: temp,
+					},
+				}
+				result <- e
+			case <-apiOp.Context().Done():
+				close(result)
+				return
+			}
+		}
+	}()
+	return result, nil
 }

@@ -57,6 +57,8 @@ type ClusterTemplate struct {
 	Options        interface{} `json:"options,omitempty"`
 	IsDefault      bool        `json:"is-default"`
 	Status         string      `json:"status"`
+	IsHAMode       bool        `json:"is-ha-mode"`
+	DataStoreType  string      `json:"datastore-type,omitempty"`
 }
 
 // KubeconfigOutput is specified cluster kubeconfig for user download
