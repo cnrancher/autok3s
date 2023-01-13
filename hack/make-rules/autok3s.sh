@@ -9,7 +9,7 @@ CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 # The root of the autok3s directory
 ROOT_DIR="${CURR_DIR}"
 CROSS=${CROSS:-}
-UI_VERSION="v0.7.0-rc6"
+UI_VERSION="v0.7.0-rc7"
 
 source "${ROOT_DIR}/hack/lib/init.sh"
 source "${CURR_DIR}/hack/lib/constant.sh"
