@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/user"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -154,7 +152,9 @@ func (p *Native) CreateCheck() error {
 			p.Provider)
 	}
 
-	return p.CheckCreateArgs(p.IsClusterExist)
+	return p.CheckCreateArgs(func() (bool, []string, error) {
+		return false, []string{}, nil
+	})
 }
 
 // JoinCheck check join command and flags.
@@ -429,14 +429,4 @@ func (p *Native) uninstallCluster(f bool) (string, error) {
 
 func (p *Native) isInstanceRunning(state string) bool {
 	return true
-}
-
-func getUserHomeDir() string {
-	home := os.Getenv("HOME")
-	if home == "" {
-		if u, err := user.Current(); err == nil {
-			return u.HomeDir
-		}
-	}
-	return home
 }
