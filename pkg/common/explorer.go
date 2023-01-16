@@ -23,6 +23,12 @@ func EnableExplorer(ctx context.Context, config string) (int, error) {
 	if err := CheckCommandExist(KubeExplorerCommand); err != nil {
 		return 0, err
 	}
+
+	// command execution validate
+	if err := checkExplorerCmd(); err != nil {
+		return 0, err
+	}
+
 	// save config for kube-explorer
 	exp, err := DefaultDB.GetExplorer(config)
 	if err != nil {
@@ -101,7 +107,11 @@ func InitExplorer() {
 	for _, exp := range expList {
 		if exp.Enabled {
 			logrus.Infof("start kube-explorer for cluster %s", exp.ContextName)
-			go EnableExplorer(context.Background(), exp.ContextName)
+			go func() {
+				if _, err = EnableExplorer(context.Background(), exp.ContextName); err != nil {
+					logrus.Errorf("failed to start kube-explorer for cluster %s: %v", exp.ContextName, err)
+				}
+			}()
 		}
 	}
 }
@@ -122,4 +132,9 @@ func StartKubeExplorer(ctx context.Context, config string, port int) error {
 func CheckCommandExist(cmd string) error {
 	_, err := exec.LookPath(cmd)
 	return err
+}
+
+func checkExplorerCmd() error {
+	explorerVersion := exec.Command(KubeExplorerCommand, "--version")
+	return explorerVersion.Run()
 }
