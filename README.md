@@ -37,6 +37,7 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 - Simplify operations by UI dashboard.
 - Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator).
 - [Airgap](docs/i18n/en_us/airgap/README.md) K3s package management and installation.
+- [SSH Key Management](docs/i18n/en_us/sshkey/README.md) can manage the SSH keys are used to provision K3s clusters.
 
 ## Providers
 
