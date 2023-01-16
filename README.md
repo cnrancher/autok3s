@@ -12,6 +12,8 @@
 
 ## What is AutoK3s
 
+English / [简体中文](docs/i18n/zh_cn/README.md)
+
 [K3s](https://github.com/k3s-io/k3s) is a fully certified Kubernetes offering, it can replace the "full-fat" K8s in some cases.
 
 AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it can help you **Run K3s Everywhere**.
@@ -48,7 +50,6 @@ Now supports the following providers, we encourage submitting PR contribution fo
 - [alibaba](docs/i18n/en_us/alibaba/README.md) - Bootstrap K3s onto Alibaba ECS
 - [tencent](docs/i18n/en_us/tencent/README.md) - Bootstrap K3s onto Tencent CVM
 - [k3d](docs/i18n/en_us/k3d/README.md) - Bootstrap K3d onto Local Machine
-- [harvester](docs/i18n/en_us/harvester/README.md) - Bootstrap K3s onto Harvester VM
 - [native](docs/i18n/en_us/native/README.md) - Bootstrap K3s onto any VM
 
 ## Quick Start (tl;dr)
@@ -58,10 +59,10 @@ Scenario 1 - Run with docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 # Standard Linux (Recommended)
-$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.6.1
+$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.7.0
 
 # MacOS
-$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.6.1
+$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.7.0
 ```
 
 Scenario 2 - Run with docker-compose
@@ -84,6 +85,8 @@ autok3s -d serve
 
 ## Uninstall
 
+> For v0.5.0 or newer version
+
 To uninstall autok3s cli, please execute command below:
 
 ```bash
@@ -97,7 +100,7 @@ we can manage K3s clusters by kube-explorer dashboard.
 
 Watch the demo:
 
-![](docs/assets/autok3s-v0.4.7-demo.gif)
+![](docs/assets/autok3s-v0.7.0-demo.gif)
 
 ## Developers' Guide
 
@@ -119,7 +122,7 @@ AutoK3s is 100% open-source software. The project source code is spread across a
 
 # License
 
-Copyright (c) 2022 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2023 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
