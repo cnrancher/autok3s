@@ -62,7 +62,7 @@ Scenario 1 - Run with docker:
 $ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.7.0
 
 # MacOS
-$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.7.0
+$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST="" cnrancher/autok3s:v0.7.0
 ```
 
 Scenario 2 - Run with docker-compose
