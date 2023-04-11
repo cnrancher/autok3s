@@ -21,8 +21,8 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
+	"github.com/k3d-io/k3d/v5/pkg/types/k3s"
 	"github.com/sirupsen/logrus"
-	yamlv3 "gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -519,20 +519,11 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 	if c.Registry == "" && c.RegistryContent == "" {
 		return nil
 	}
-	cmd := make([]string, 0)
-	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", registryPath))
-	var registry *Registry
-	if c.Registry != "" {
-		registry, err = unmarshalRegistryFile(c.Registry)
-		if err != nil {
-			return err
-		}
-	} else if c.RegistryContent != "" {
-		registry = &Registry{}
-		err = yamlv3.Unmarshal([]byte(c.RegistryContent), registry)
-		if err != nil {
-			return err
-		}
+	var cmd []string
+
+	registry, err := utils.VerifyRegistryFileContent(p.Registry, p.RegistryContent)
+	if err != nil {
+		return err
 	}
 
 	tls, err := registryTLSMap(registry)
@@ -541,13 +532,15 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 	}
 
 	if tls != nil && len(tls) > 0 {
-		registry, cmd, err = saveRegistryTLS(registry, tls)
+		cmd, err = saveRegistryTLS(registry, tls)
 		if err != nil {
 			return err
 		}
+	} else {
+		cmd = []string{fmt.Sprintf("sudo mkdir -p %s", registryPath)}
 	}
 
-	registryContent, err := registryToString(registry)
+	registryContent, err := utils.RegistryToString(registry)
 	if err != nil {
 		return err
 	}
@@ -558,29 +551,7 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 	return err
 }
 
-func unmarshalRegistryFile(file string) (*Registry, error) {
-	registry := &Registry{}
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return registry, nil
-		}
-		return nil, err
-	}
-
-	if len(b) == 0 {
-		return nil, fmt.Errorf("registry file %s is empty", file)
-	}
-
-	err = yamlv3.Unmarshal(b, registry)
-	if err != nil {
-		return nil, err
-	}
-
-	return registry, nil
-}
-
-func registryTLSMap(registry *Registry) (m map[string]map[string][]byte, err error) {
+func registryTLSMap(registry *k3s.Registry) (m map[string]map[string][]byte, err error) {
 	m = make(map[string]map[string][]byte)
 	if registry == nil {
 		err = fmt.Errorf("registry is nil")
@@ -620,12 +591,12 @@ func registryTLSMap(registry *Registry) (m map[string]map[string][]byte, err err
 	return
 }
 
-func saveRegistryTLS(registry *Registry, m map[string]map[string][]byte) (*Registry, []string, error) {
+func saveRegistryTLS(registry *k3s.Registry, m map[string]map[string][]byte) ([]string, error) {
 	cmd := make([]string, 0)
 	for r, c := range m {
 		if r != "" {
 			if _, ok := registry.Configs[r]; !ok {
-				return nil, cmd, fmt.Errorf("registry map is not match the struct: %s", r)
+				return cmd, fmt.Errorf("registry map is not match the struct: %s", r)
 			}
 
 			// i.e /etc/rancher/k3s/mycustomreg:5000/.
@@ -650,18 +621,7 @@ func saveRegistryTLS(registry *Registry, m map[string]map[string][]byte) (*Regis
 		}
 	}
 
-	return registry, cmd, nil
-}
-
-func registryToString(registry *Registry) (string, error) {
-	if registry == nil {
-		return "", fmt.Errorf("can't save registry file: registry is nil")
-	}
-	b, err := yamlv3.Marshal(registry)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
+	return cmd, nil
 }
 
 func buildConfigFromFlags(context, kubeconfigPath string) (*rest.Config, error) {

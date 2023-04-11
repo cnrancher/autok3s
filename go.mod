@@ -51,7 +51,7 @@ require (
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/term v0.5.0
 	google.golang.org/api v0.81.0
-	gopkg.in/yaml.v3 v3.0.1
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.23.4
 	k8s.io/api v0.24.0
 	k8s.io/apimachinery v0.24.0
@@ -61,6 +61,8 @@ require (
 	k8s.io/kubectl v0.23.7
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 )
+
+require sigs.k8s.io/yaml v1.3.0
 
 require (
 	cloud.google.com/go/compute v1.6.1 // indirect
@@ -195,5 +197,4 @@ require (
 	sigs.k8s.io/kustomize/kustomize/v4 v4.4.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )

@@ -664,9 +664,17 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*k3dconf.ClusterConfig, error)
 		}
 	}
 
-	if p.Registry != "" {
-		cfg.Registries.Config = p.Registry
+	registry, err := utils.VerifyRegistryFileContent(p.Registry, p.RegistryContent)
+	if err != nil {
+		return nil, err
 	}
+
+	content, err := utils.RegistryToString(registry)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Registries.Config = content
 
 	// volumeFilterMap will map volume mounts to applied node filters.
 	if len(p.Volumes) > 0 {
