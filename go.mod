@@ -4,7 +4,6 @@ go 1.19
 
 replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.0+incompatible
-	github.com/docker/docker => github.com/docker/docker v20.10.12+incompatible
 	k8s.io/api => k8s.io/api v0.23.7
 	k8s.io/apimachinery => k8s.io/apimachinery v0.23.7
 
@@ -18,7 +17,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.38.65
 	github.com/creack/pty v1.1.17
-	github.com/docker/docker v20.10.17+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/glebarez/sqlite v1.4.3
