@@ -449,7 +449,7 @@ func (p *ProviderBase) initNode(isFirstMaster bool, fixedIP string, cluster *typ
 	}
 
 	if pkg != nil {
-		if err := p.scpFiles(cluster.Name, pkg, &node); err != nil {
+		if err := p.scpFiles(cluster.Name, pkg, &node, extraArgs); err != nil {
 			return err
 		}
 	}
@@ -784,7 +784,7 @@ func (p *ProviderBase) Upgrade(cluster *types.Cluster) error {
 		var cmd string
 
 		if pkg != nil {
-			if err := p.scpFiles(cluster.Name, pkg, &node); err != nil {
+			if err := p.scpFiles(cluster.Name, pkg, &node, extraArgs); err != nil {
 				return err
 			}
 			cmd = k3sRestart
@@ -809,7 +809,7 @@ func (p *ProviderBase) Upgrade(cluster *types.Cluster) error {
 
 		var cmd string
 		if pkg != nil {
-			if err := p.scpFiles(cluster.Name, pkg, &node); err != nil {
+			if err := p.scpFiles(cluster.Name, pkg, &node, extraArgs); err != nil {
 				return err
 			}
 			cmd = k3sAgentRestart
@@ -835,14 +835,14 @@ func nodeByInstanceID(nodes []types.Node) map[string]types.Node {
 	return rtn
 }
 
-func (p *ProviderBase) scpFiles(clusterName string, pkg *common.Package, node *types.Node) error {
+func (p *ProviderBase) scpFiles(clusterName string, pkg *common.Package, node *types.Node, extraArgs string) error {
 	dialer, err := hosts.NewSSHDialer(node, true, p.Logger)
 	if err != nil {
 		return err
 	}
 	defer dialer.Close()
 	dialer.SetWriter(p.Logger.Out)
-	return airgap.ScpFiles(clusterName, pkg, dialer)
+	return airgap.ScpFiles(p.Logger, clusterName, pkg, dialer, extraArgs)
 }
 
 func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluster) error {
