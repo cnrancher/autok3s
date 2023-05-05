@@ -32,26 +32,17 @@ const (
 	k3sInstallScript         = "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh"
 	accessKeyID              = "access-key"
 	accessKeySecret          = "access-secret"
-	imageID                  = "ubuntu_22_04_x64_20G_alibase_20221130.vhd"
-	instanceType             = "ecs.s6-c1m2.large"
-	internetMaxBandwidthOut  = "5"
-	diskCategory             = "cloud_essd"
-	diskSize                 = "40"
 	resourceTypeEip          = "EIP"
 	eipStatusAvailable       = "Available"
 	eipStatusInUse           = "InUse"
-	defaultRegion            = "cn-hangzhou"
 	vpcCidrBlock             = "10.0.0.0/8"
 	vSwitchCidrBlock         = "10.3.0.0/20"
 	ipRange                  = "0.0.0.0/0"
 	vpcName                  = "autok3s-aliyun-vpc"
 	vSwitchName              = "autok3s-aliyun-vswitch"
-	defaultZoneID            = "cn-hangzhou-i"
 	defaultSecurityGroupName = "autok3s"
 	vpcStatusAvailable       = "Available"
 	defaultUser              = "root"
-	defaultSpotStrategy      = "NoSpot"
-	defaultSpotDuration      = 1
 )
 
 // providerName is the name of this provider.
@@ -82,22 +73,13 @@ func newProvider() *Alibaba {
 	base := cluster.NewBaseProvider()
 	base.Provider = providerName
 	base.InstallScript = k3sInstallScript
-	return &Alibaba{
+	alibabaProvider := &Alibaba{
 		ProviderBase: base,
-		Options: alibaba.Options{
-			DiskCategory:            diskCategory,
-			DiskSize:                diskSize,
-			Image:                   imageID,
-			InstanceType:            instanceType,
-			InternetMaxBandwidthOut: internetMaxBandwidthOut,
-			Region:                  defaultRegion,
-			Zone:                    defaultZoneID,
-			EIP:                     false,
-			CloudControllerManager:  false,
-			SpotStrategy:            defaultSpotStrategy,
-			SpotDuration:            defaultSpotDuration,
-		},
 	}
+	if opt, ok := common.DefaultTemplates[providerName]; ok {
+		alibabaProvider.Options = opt.(alibaba.Options)
+	}
+	return alibabaProvider
 }
 
 // GetProviderName returns provider name.
@@ -636,9 +618,6 @@ func (p *Alibaba) CreateCheck() error {
 
 	if err := p.ValdiateRequireSSHPrivateKey(); p.KeyPair != "" && err != nil {
 		return fmt.Errorf("[%s] calling preflight error: %s with --key-pair %s", p.GetProviderName(), err.Error(), p.KeyPair)
-	}
-	if p.Region != defaultRegion && p.Zone == defaultZoneID && p.VSwitch == "" {
-		return fmt.Errorf("[%s] calling preflight error: must set `--zone` in specified region %s to create default vswitch or set exist `--vswitch` in specified region", p.GetProviderName(), p.Region)
 	}
 
 	if p.UserDataPath != "" {

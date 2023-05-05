@@ -30,15 +30,7 @@ import (
 const (
 	providerName = "google"
 
-	defaultRegion      = "us-central1"
-	defaultZone        = "us-central1-b"
-	defaultMachineType = "e2-medium"
-	defaultImageName   = "ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20230107"
-	defaultDiskType    = "pd-balanced"
-	defaultDiskSize    = 10
-	defaultNetwork     = "default"
-	defaultUser        = "autok3s"
-	defaultScopes      = "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/cloud-platform"
+	defaultUser = "autok3s"
 
 	defaultSecurityGroup = "autok3s"
 	apiURL               = "https://www.googleapis.com/compute/v1/projects"
@@ -64,19 +56,13 @@ func init() {
 func newProvider() *Google {
 	base := cluster.NewBaseProvider()
 	base.Provider = providerName
-	return &Google{
+	googleProvider := &Google{
 		ProviderBase: base,
-		Options: typesgoogle.Options{
-			Region:       defaultRegion,
-			Zone:         defaultZone,
-			DiskType:     defaultDiskType,
-			DiskSize:     defaultDiskSize,
-			MachineType:  defaultMachineType,
-			MachineImage: defaultImageName,
-			VMNetwork:    defaultNetwork,
-			Scopes:       defaultScopes,
-		},
 	}
+	if opt, ok := common.DefaultTemplates[providerName]; ok {
+		googleProvider.Options = opt.(typesgoogle.Options)
+	}
+	return googleProvider
 }
 
 // GetProviderName returns provider name.
