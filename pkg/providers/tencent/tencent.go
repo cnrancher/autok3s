@@ -33,26 +33,18 @@ import (
 )
 
 const (
-	k3sInstallScript          = "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh"
-	secretID                  = "secret-id"
-	secretKey                 = "secret-key"
-	imageID                   = "img-487zeit5" /* Ubuntu Server 22.04.1 LTS x64 */
-	instanceType              = "SA1.MEDIUM4"  /* CPU:2 Memory:4 */
-	defaultInstanceChargeType = "POSTPAID_BY_HOUR"
-	spotInstanceChargeType    = "SPOTPAID"
-	internetMaxBandwidthOut   = "5"
-	internetChargeType        = "TRAFFIC_POSTPAID_BY_HOUR"
-	diskCategory              = "CLOUD_SSD"
-	diskSize                  = "50"
-	defaultRegion             = "ap-guangzhou"
-	defaultZone               = "ap-guangzhou-3"
-	defaultSecurityGroupName  = "autok3s"
-	vpcName                   = "autok3s-tencent-vpc"
-	subnetName                = "autok3s-tencent-subnet"
-	vpcCidrBlock              = "192.168.0.0/16"
-	subnetCidrBlock           = "192.168.3.0/24"
-	ipRange                   = "0.0.0.0/0"
-	defaultUser               = "ubuntu"
+	k3sInstallScript         = "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh"
+	secretID                 = "secret-id"
+	secretKey                = "secret-key"
+	spotInstanceChargeType   = "SPOTPAID"
+	internetChargeType       = "TRAFFIC_POSTPAID_BY_HOUR"
+	defaultSecurityGroupName = "autok3s"
+	vpcName                  = "autok3s-tencent-vpc"
+	subnetName               = "autok3s-tencent-subnet"
+	vpcCidrBlock             = "192.168.0.0/16"
+	subnetCidrBlock          = "192.168.3.0/24"
+	ipRange                  = "0.0.0.0/0"
+	defaultUser              = "ubuntu"
 )
 
 // providerName is the name of this provider.
@@ -85,21 +77,13 @@ func newProvider() *Tencent {
 	base := cluster.NewBaseProvider()
 	base.Provider = providerName
 	base.InstallScript = k3sInstallScript
-	return &Tencent{
+	tencentProvider := &Tencent{
 		ProviderBase: base,
-		Options: tencent.Options{
-			ImageID:                 imageID,
-			InstanceType:            instanceType,
-			InstanceChargeType:      defaultInstanceChargeType,
-			SystemDiskSize:          diskSize,
-			SystemDiskType:          diskCategory,
-			InternetMaxBandwidthOut: internetMaxBandwidthOut,
-			PublicIPAssignedEIP:     false,
-			Region:                  defaultRegion,
-			Zone:                    defaultZone,
-			CloudControllerManager:  false,
-		},
 	}
+	if opt, ok := common.DefaultTemplates[providerName]; ok {
+		tencentProvider.Options = opt.(tencent.Options)
+	}
+	return tencentProvider
 }
 
 // GetProviderName returns provider name.
@@ -626,10 +610,6 @@ func (p *Tencent) CreateCheck() error {
 	}
 	if err := p.ValdiateRequireSSHPrivateKey(); p.KeypairID != "" && err != nil {
 		return fmt.Errorf("[%s] calling preflight error: %s with --key-pair %s", p.GetProviderName(), err.Error(), p.KeypairID)
-	}
-
-	if p.Region != defaultRegion && p.Zone == defaultZone && p.VpcID == "" {
-		return fmt.Errorf("[%s] calling preflight error: must set `--zone` in specified region %s to create default vpc or set exist `--vpc xxx --subnet xxx` in specified region", p.GetProviderName(), p.Region)
 	}
 
 	if p.CloudControllerManager && p.NetworkRouteTableName == "" {

@@ -34,16 +34,9 @@ const (
 	providerName = "aws"
 
 	defaultUser              = "ubuntu"
-	ami                      = "ami-06878d265978313ca" // Ubuntu Server 22.04 LTS (HVM) x86 64
-	instanceType             = "t3a.medium"            // 2 vCPU, 4 GiB
-	volumeType               = "gp3"
-	diskSize                 = "16"
-	defaultRegion            = "us-east-1"
 	ipRange                  = "0.0.0.0/0"
-	defaultZoneID            = "us-east-1a"
 	defaultSecurityGroupName = "autok3s"
 	defaultDeviceName        = "/dev/sda1"
-	requestSpotInstance      = false
 )
 
 const (
@@ -88,19 +81,13 @@ func init() {
 func newProvider() *Amazon {
 	base := cluster.NewBaseProvider()
 	base.Provider = providerName
-	return &Amazon{
+	amazonProvider := &Amazon{
 		ProviderBase: base,
-		Options: typesaws.Options{
-			Region:                 defaultRegion,
-			Zone:                   defaultZoneID,
-			VolumeType:             volumeType,
-			RootSize:               diskSize,
-			InstanceType:           instanceType,
-			AMI:                    ami,
-			RequestSpotInstance:    requestSpotInstance,
-			CloudControllerManager: false,
-		},
 	}
+	if opt, ok := common.DefaultTemplates[providerName]; ok {
+		amazonProvider.Options = opt.(typesaws.Options)
+	}
+	return amazonProvider
 }
 
 // GetProviderName returns provider name.
