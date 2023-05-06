@@ -59,7 +59,6 @@ func CollectionFormat(request *types.APIRequest, collection *types.GenericCollec
 
 func importHandler(w http.ResponseWriter, r *http.Request) {
 	apiContext := types.GetAPIContext(r.Context())
-	defer r.Body.Close()
 	name := apiContext.Query.Get("name")
 	if name == "" {
 		apiContext.WriteError(apierror.NewFieldAPIError(validation.MissingRequired, "name", ""))
@@ -110,7 +109,6 @@ func importHandler(w http.ResponseWriter, r *http.Request) {
 
 func exportHandler(w http.ResponseWriter, r *http.Request) {
 	apiContext := types.GetAPIContext(r.Context())
-	defer r.Body.Close()
 	current, err := getPackageFromContext(apiContext)
 	if err != nil {
 		apiContext.WriteError(apierror.WrapAPIError(err, validation.ServerError, "failed to get package"))
@@ -130,7 +128,6 @@ func exportHandler(w http.ResponseWriter, r *http.Request) {
 
 func updateInstallScript(w http.ResponseWriter, r *http.Request) {
 	apiContext := types.GetAPIContext(r.Context())
-	defer r.Body.Close()
 	buff := bytes.NewBuffer([]byte{})
 	if err := settings.GetScriptFromSource(buff); err != nil {
 		apiContext.WriteError(apierror.WrapAPIError(err, validation.ServerError, "failed to get script from source"))
@@ -146,7 +143,6 @@ func updateInstallScript(w http.ResponseWriter, r *http.Request) {
 
 func cancelHandler(w http.ResponseWriter, r *http.Request) {
 	apiContext := types.GetAPIContext(r.Context())
-	defer r.Body.Close()
 	name := apiContext.Name
 	if err := airgap.CancelDownload(name); err != nil {
 		logrus.Warnf("failed to cancel package %s download, %v", name, err)
@@ -157,7 +153,6 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	apiContext := types.GetAPIContext(r.Context())
-	defer r.Body.Close()
 	name := apiContext.Name
 	if err := airgap.CancelDownload(name); err != nil {
 		logrus.Warnf("failed to cancel package %s download, %v", name, err)

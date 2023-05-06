@@ -18,7 +18,6 @@ func ActionHandlers() map[string]http.Handler {
 
 func exportHandler(w http.ResponseWriter, r *http.Request) {
 	apiContext := types.GetAPIContext(r.Context())
-	defer r.Body.Close()
 	name := apiContext.Name
 	sshkeys, err := common.DefaultDB.ListSSHKey(&name)
 	if err != nil {
