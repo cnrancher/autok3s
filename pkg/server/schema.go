@@ -128,10 +128,12 @@ func initPackage(s *types.APISchemas) {
 			Output: "package",
 		}
 		schema.CollectionActions["update-install-script"] = wranglertypes.Action{}
+		schema.ResourceActions["cancel"] = wranglertypes.Action{}
+		schema.ResourceActions["download"] = wranglertypes.Action{}
 		schema.Formatter = pkg.Format
 		schema.CollectionFormatter = pkg.CollectionFormat
-		schema.ActionHandlers = pkg.ActionHandlers()
-		schema.LinkHandlers = pkg.LinkHandlers()
+		schema.ActionHandlers = pkg.ActionHandlers
+		schema.LinkHandlers = pkg.LinkHandlers
 	})
 }
 

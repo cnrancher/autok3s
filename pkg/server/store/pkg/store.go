@@ -108,20 +108,8 @@ func (e *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, wr types
 }
 
 func downloadAndUpdatepackage(pkg common.Package) {
-	downloader, err := airgap.NewDownloader(pkg)
-	if err != nil {
-		logrus.Errorf("failed to create downloader for package %s, %v", pkg.Name, err)
-		return
-	}
-	path, err := downloader.DownloadPackage()
-	if err != nil {
+	if err := airgap.DownloadPackage(pkg); err != nil {
 		logrus.Errorf("failed to download resource for package %s, %v", pkg.Name, err)
-		return
-	}
-	pkg.FilePath = path
-	pkg.State = common.PackageActive
-	if err := common.DefaultDB.SavePackage(pkg); err != nil {
-		logrus.Errorf("failed to update package %s, %v", pkg.Name, err)
 		return
 	}
 }

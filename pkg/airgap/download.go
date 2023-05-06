@@ -1,22 +1,19 @@
 package airgap
 
 import (
-	"bufio"
-	"crypto/sha256"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strings"
+	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/common"
-	"github.com/cnrancher/autok3s/pkg/settings"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -34,12 +31,6 @@ const (
 )
 
 var (
-	packagePath        = filepath.Join(common.CfgPath, "package")
-	packageTmpBasePath = filepath.Join(packagePath, tmpDirName)
-	downloadSourceMap  = map[string]string{
-		"github":    "https://github.com/k3s-io/k3s/releases/download",
-		"aliyunoss": "https://rancher-mirror.rancher.cn/k3s",
-	}
 	ErrVersionNotFound = errors.New("version not found")
 
 	separator     = regexp.MustCompile(" +")
@@ -54,6 +45,7 @@ var (
 		"k3s-airgap-images": {".tar.gz", ".tar"},
 		checksumBaseName:    {checksumExt},
 	}
+	cancelDownloadMap = &sync.Map{}
 )
 
 type version struct {
@@ -74,32 +66,31 @@ func (v *version) diff(pkg common.Package) (toAdd, toDel []string) {
 	return GetArchDiff(v.Archs, pkg.Archs)
 }
 
-func NewDownloader(pkg common.Package) (*Downloader, error) {
-	d := &Downloader{
+// DownloadPackage will update the package state and path for the package record
+func DownloadPackage(pkg common.Package) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	downloader := &downloader{
+		ctx:      ctx,
 		pkg:      pkg,
 		basePath: PackagePath(pkg.Name),
-		source:   settings.PackageDownloadSource.Get(),
 	}
-
-	versionPath := d.pkg.K3sVersion
-	if d.source == "aliyunoss" {
-		versionPath = strings.ReplaceAll(versionPath, "+", "-")
-	}
-	versionPath = url.QueryEscape(versionPath)
-	baseURL := downloadSourceMap[d.source]
-	d.sourceURL = fmt.Sprintf("%s/%s", baseURL, versionPath)
-
-	d.logger = logrus.WithFields(logrus.Fields{
+	downloader.sourceURL = getSourceURL(pkg.K3sVersion)
+	downloader.logger = logrus.WithFields(logrus.Fields{
 		"package": pkg.Name,
 		"version": pkg.K3sVersion,
 	})
-	sort.Strings(d.pkg.Archs)
+	sort.Strings(downloader.pkg.Archs)
+	cancelDownloadMap.Store(pkg.Name, cancel)
+	defer func() {
+		cancelDownloadMap.Delete(pkg.Name)
+		cancel()
+	}()
 
-	return d, d.validateVersion()
+	return downloader.downloadPackage()
 }
 
-type Downloader struct {
-	source           string
+type downloader struct {
+	ctx              context.Context
 	sourceURL        string
 	basePath         string
 	imageListContent []byte
@@ -107,10 +98,10 @@ type Downloader struct {
 	logger           logrus.FieldLogger
 }
 
-func (d *Downloader) DownloadPackage() (string, error) {
+func (d *downloader) downloadPackage() (er error) {
 	version, err := versionAndBasePath(d.basePath)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	toAddArchs, toDelArchs := version.diff(d.pkg)
@@ -118,39 +109,73 @@ func (d *Downloader) DownloadPackage() (string, error) {
 		len(toDelArchs) == 0 &&
 		isDone(d.basePath) {
 		d.logger.Infof("the package %s is ready, skip downloading resources.", d.pkg.Name)
-		return d.basePath, nil
-	}
-	if err := d.writeVersion(); err != nil {
-		return "", err
+		return nil
 	}
 
 	for _, arch := range toDelArchs {
 		d.logger.Infof("removing package arch %s", arch)
 		if err := os.RemoveAll(filepath.Join(d.basePath, arch)); err != nil {
-			return "", err
+			return err
 		}
 	}
 
-	for _, arch := range d.pkg.Archs {
-		if err := os.MkdirAll(filepath.Join(d.basePath, arch), 0755); err != nil {
-			return "", err
+	for _, reconcile := range []struct {
+		state common.State
+		f     func() error
+	}{
+		{
+			state: common.PackageValidating,
+			f:     d.validateVersion,
+		},
+		{f: d.writeVersion},
+		{
+			state: common.PackageDownloading,
+			f: func() error {
+				for _, arch := range d.pkg.Archs {
+					if err := os.MkdirAll(filepath.Join(d.basePath, arch), 0755); err != nil {
+						return err
+					}
+					d.logger.Infof("download %s resources", arch)
+					if err := d.downloadArch(arch); err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+		},
+		{f: func() error { return done(d.basePath) }},
+		{state: common.PackageVerifying, f: func() error {
+			_, err := VerifyFiles(d.basePath)
+			return err
+		}},
+	} {
+
+		if d.ctx.Err() != nil {
+			return d.ctx.Err()
 		}
-		d.logger.Infof("download %s resources", arch)
-		if err := d.downloadArch(arch); err != nil {
-			return "", err
+		if reconcile.state != "" {
+			if err := updatePackageState(&d.pkg, reconcile.state); err != nil {
+				return err
+			}
 		}
+		if err := reconcile.f(); err != nil {
+			if er := updatePackageState(&d.pkg, common.PackageOutOfSync); er != nil {
+				d.logger.Warnf("failed to set package %s to %s state", d.pkg.Name, common.PackageOutOfSync)
+			}
+			return err
+		}
+
 	}
 
-	if err := done(d.basePath); err != nil {
-		return "", err
+	d.pkg.FilePath = d.basePath
+	if err := updatePackageState(&d.pkg, common.PackageActive); err != nil {
+		return err
 	}
 
-	_, err = VerifyFiles(d.basePath)
-
-	return d.basePath, err
+	return err
 }
 
-func (d *Downloader) downloadArch(arch string) error {
+func (d *downloader) downloadArch(arch string) error {
 	if err := d.checkArchExists(arch); err != nil {
 		return err
 	}
@@ -179,7 +204,11 @@ func (d *Downloader) downloadArch(arch string) error {
 			// resourceName is the file name online
 			resourceName := basename + suffix
 			d.logger.Infof("downloading %s for %s", localFileName, arch)
-			if err := download(fullPath, d.getFileURL(resourceName)); err != nil {
+			err := d.download(fullPath, d.getFileURL(resourceName))
+			if err != nil && err == context.Canceled {
+				d.logger.Warnf("failed to download resource %s for %s because of context cancel", localFileName, arch)
+				return err
+			} else if err != nil {
 				d.logger.Warnf("failed to download resource %s for %s, skip this resource, %v", localFileName, arch, err)
 				continue
 			}
@@ -201,15 +230,15 @@ func (d *Downloader) downloadArch(arch string) error {
 	return nil
 }
 
-func (d *Downloader) getFileURL(Filename string) string {
+func (d *downloader) getFileURL(Filename string) string {
 	return fmt.Sprintf("%s/%s", d.sourceURL, Filename)
 }
 
 // validateVersion will download k3s-images.txt to check the version exists or not.
-func (d *Downloader) validateVersion() error {
-	downloadURL := d.getFileURL(imageListFilename)
-	d.logger.Debugf("downloading images file from %s", downloadURL)
-	resp, err := http.Get(downloadURL)
+func (d *downloader) validateVersion() error {
+	sourceURL := getSourceURL(d.pkg.K3sVersion)
+	downloadURL := fmt.Sprintf("%s/%s", sourceURL, imageListFilename)
+	resp, err := doRequestWithCtx(d.ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to download image list of k3s version %s, this version may be not validated.", d.pkg.K3sVersion)
 	}
@@ -220,16 +249,12 @@ func (d *Downloader) validateVersion() error {
 		return ErrVersionNotFound
 	}
 
-	content, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	d.imageListContent = content
-	return nil
+	d.imageListContent, err = ioutil.ReadAll(resp.Body)
+	return err
 }
 
 // writeVersion will also remove .done file as we assume that creating/updating version is happening.
-func (d *Downloader) writeVersion() error {
+func (d *downloader) writeVersion() error {
 	versionPath := filepath.Join(d.basePath, versionFilename)
 	versionJSON := versionContent(d.pkg)
 	_ = os.RemoveAll(versionPath)
@@ -239,9 +264,9 @@ func (d *Downloader) writeVersion() error {
 }
 
 // checkArchExists will fire HEAD request to server and check response
-func (d *Downloader) checkArchExists(arch string) error {
+func (d *downloader) checkArchExists(arch string) error {
 	target := checksumBaseName + "-" + arch + checksumExt
-	resp, err := http.Head(d.getFileURL(target))
+	resp, err := doRequestWithCtx(d.ctx, http.MethodHead, d.getFileURL(target), nil)
 	if err != nil {
 		return err
 	}
@@ -252,8 +277,8 @@ func (d *Downloader) checkArchExists(arch string) error {
 	return nil
 }
 
-func download(file, fromURL string) error {
-	resp, err := http.Get(fromURL)
+func (d *downloader) download(file, fromURL string) error {
+	resp, err := doRequestWithCtx(d.ctx, http.MethodGet, fromURL, nil)
 	if err != nil {
 		return err
 	}
@@ -330,146 +355,13 @@ func versionAndBasePath(basePath string) (*version, error) {
 	return &v, nil
 }
 
-func verifyArchFiles(arch, basePath string) error {
-	archBase := filepath.Join(basePath, arch)
-	checksumMap, err := getHashMapFromFile(filepath.Join(archBase, checksumFilename))
-	if err != nil {
-		return errors.Wrapf(err, "failed to get file hash map for arch %s", arch)
+func CancelDownload(name string) error {
+	f, loaded := cancelDownloadMap.Load(name)
+	if !loaded {
+		return fmt.Errorf("no downloader for package %s", name)
 	}
-
-	for basename, v := range resourceSuffixes {
-		if basename == checksumBaseName {
-			continue
-		}
-		checked := false
-		for origin, suffix := range getSuffixMapWithArchs(arch, basename, v) {
-			localFileName := basename + origin
-			resourceName := basename + suffix
-
-			ok, err := checkFileHash(filepath.Join(archBase, localFileName), checksumMap[resourceName])
-			if os.IsNotExist(err) {
-				continue
-			}
-			if !ok {
-				return fmt.Errorf("checksum for file %s/%s mismatch", arch, localFileName)
-			}
-			checked = true
-			break
-		}
-		if !checked {
-			return fmt.Errorf("resource %s for %s check fail", basename, arch)
-		}
+	if cancel, ok := f.(context.CancelFunc); ok {
+		cancel()
 	}
 	return nil
-}
-
-func VerifyFiles(basePath string) (*common.Package, error) {
-	version, err := versionAndBasePath(basePath)
-	if err != nil {
-		return nil, err
-	}
-	if version == nil {
-		return nil, errors.New("version.json is missing")
-	}
-
-	for _, arch := range version.Archs {
-		archBase := filepath.Join(basePath, arch)
-		if !isDone(archBase) {
-			return nil, fmt.Errorf("%s resources aren't available", arch)
-		}
-		if err := verifyArchFiles(arch, basePath); err != nil {
-			return nil, err
-		}
-	}
-
-	return &common.Package{
-		Archs:      version.Archs,
-		K3sVersion: version.Version,
-	}, nil
-}
-
-func getSuffixMapWithArchs(arch, baseName string, suffixes []string) map[string]string {
-	rtn := make(map[string]string, len(suffixes))
-	for _, suffix := range suffixes {
-		if baseName == "k3s" && arch == "amd64" {
-			rtn[suffix] = suffix
-		} else if baseName == "k3s" && arch == "arm" {
-			// arm binary suffix is armhf
-			rtn[suffix] = "-armhf" + suffix
-		} else {
-			rtn[suffix] = "-" + arch + suffix
-		}
-	}
-	return rtn
-}
-
-func getExt(filename string) (string, string) {
-	name := filename
-	var ext, currentExt string
-
-	for currentExt = filepath.Ext(name); currentExt != ""; currentExt = filepath.Ext(name) {
-		ext = currentExt + ext
-		name = strings.TrimSuffix(name, currentExt)
-	}
-	return name, ext
-}
-
-func getHashMapFromFile(path string) (map[string]string, error) {
-	fp, err := os.Open(path)
-	if err != nil {
-		return nil, errors.Wrapf(err, "checksum file not found")
-	}
-	defer fp.Close()
-	checksumMap := map[string]string{}
-	reader := bufio.NewReader(fp)
-	for {
-		// checksum file should be small enough to ignore isPrefix options.
-		line, _, err := reader.ReadLine()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		arr := separator.Split(string(line), 2)
-		checksumMap[filepath.Base(arr[1])] = arr[0]
-	}
-	return checksumMap, nil
-}
-
-func checkFileHash(filepath, targetHash string) (bool, error) {
-	hasher := sha256.New()
-	fp, err := os.Open(filepath)
-	if err != nil {
-		return false, err
-	}
-	defer fp.Close()
-	if _, err := io.Copy(hasher, fp); err != nil {
-		return false, err
-	}
-	return fmt.Sprintf("%x", hasher.Sum(nil)) == targetHash, nil
-}
-
-func isDone(basePath string) bool {
-	done, _ := os.Lstat(getDonePath(basePath))
-	return done != nil
-}
-
-func done(basePath string) error {
-	return ioutil.WriteFile(getDonePath(basePath), []byte{}, 0644)
-}
-
-func getDonePath(basePath string) string {
-	return filepath.Join(basePath, doneFilename)
-}
-
-func RemovePackage(name string) error {
-	return os.RemoveAll(PackagePath(name))
-}
-
-func TempDir(name string) string {
-	return filepath.Join(packageTmpBasePath, name)
-}
-
-func PackagePath(name string) string {
-	return filepath.Join(packagePath, name)
 }

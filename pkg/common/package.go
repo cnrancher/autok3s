@@ -10,11 +10,17 @@ import (
 
 type State string
 
-var (
+const (
 	// PackageActive is the state after package downloaded
 	PackageActive State = "Active"
 	// PackageOutOfSync is the state when downloading package fails
 	PackageOutOfSync State = "OutOfSync"
+	// PackageDownloading is the state when downloading packages
+	PackageDownloading State = "Downloading"
+	// PackageVerifying is the state when verifying packages
+	PackageVerifying State = "Verifying"
+	// PackageValidating is the state when validating k3s version
+	PackageValidating State = "Validating"
 )
 
 type Package struct {
