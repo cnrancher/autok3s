@@ -67,7 +67,7 @@ func (v *version) diff(pkg common.Package) (toAdd, toDel []string) {
 }
 
 // DownloadPackage will update the package state and path for the package record
-func DownloadPackage(pkg common.Package) error {
+func DownloadPackage(pkg common.Package, logger logrus.FieldLogger) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	downloader := &downloader{
 		ctx:      ctx,
@@ -75,10 +75,16 @@ func DownloadPackage(pkg common.Package) error {
 		basePath: PackagePath(pkg.Name),
 	}
 	downloader.sourceURL = getSourceURL(pkg.K3sVersion)
-	downloader.logger = logrus.WithFields(logrus.Fields{
+	fields := logrus.Fields{
 		"package": pkg.Name,
 		"version": pkg.K3sVersion,
-	})
+	}
+	if logger != nil {
+		downloader.logger = logger.WithFields(fields)
+	} else {
+		downloader.logger = logrus.WithFields(fields)
+	}
+
 	sort.Strings(downloader.pkg.Archs)
 	cancelDownloadMap.Store(pkg.Name, cancel)
 	defer func() {

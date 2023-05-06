@@ -203,3 +203,25 @@ func updatePackageState(pkg *common.Package, state common.State) error {
 	pkg.State = state
 	return common.DefaultDB.SavePackage(*pkg)
 }
+
+func GetDownloadFilePath(name string) string {
+	return filepath.Join(PackagePath(name), "log")
+}
+
+func GetLogFile(name string) (logFile *os.File, err error) {
+	logFilePath := GetDownloadFilePath(name)
+	if err = os.MkdirAll(filepath.Dir(logFilePath), 0755); err != nil {
+		return nil, err
+	}
+	// check file exist
+	_, err = os.Stat(logFilePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		logFile, err = os.Create(logFilePath)
+	} else {
+		logFile, err = os.OpenFile(logFilePath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	}
+	return logFile, err
+}

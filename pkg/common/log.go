@@ -28,7 +28,7 @@ func GetOldLogPath() string {
 	return filepath.Join(CfgPath, "logs")
 }
 
-func GetLogFilePath(clusterName string) string {
+func GetClusterLogFilePath(clusterName string) string {
 	return filepath.Join(GetClusterContextPath(clusterName), "log")
 }
 
@@ -38,7 +38,7 @@ func GetClusterContextPath(clusterName string) string {
 
 // GetLogFile open and return log file.
 func GetLogFile(clusterName string) (logFile *os.File, err error) {
-	logFilePath := GetLogFilePath(clusterName)
+	logFilePath := GetClusterLogFilePath(clusterName)
 	if err = os.MkdirAll(filepath.Dir(logFilePath), 0755); err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func MoveLogs() error {
 		if err := os.MkdirAll(filepath.Join(newRoot, rel), 0755); err != nil {
 			return err
 		}
-		if err := os.Rename(path, GetLogFilePath(rel)); err != nil {
+		if err := os.Rename(path, GetClusterLogFilePath(rel)); err != nil {
 			return err
 		}
 		return nil
