@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/cnrancher/autok3s/pkg/airgap"
 	"github.com/cnrancher/autok3s/pkg/common"
 
 	"github.com/hpcloud/tail"
@@ -70,7 +71,6 @@ func WriteLastLogs(t *tail.Tail, w http.ResponseWriter, f http.Flusher, logFileP
 
 // nolint: gocyclo
 func logHandler(apiOp *types.APIRequest) error {
-	cluster := apiOp.Request.URL.Query().Get("cluster")
 	w := apiOp.Response
 	f, ok := w.(http.Flusher)
 	if !ok {
@@ -82,17 +82,30 @@ func logHandler(apiOp *types.APIRequest) error {
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	logFilePath := common.GetLogFilePath(cluster)
-	state, err := common.DefaultDB.GetClusterByID(cluster)
+	var (
+		logFilePath string
+		shouldTail  bool
+		err         error
+	)
+
+	cluster := apiOp.Request.URL.Query().Get("cluster")
+	pkg := apiOp.Request.URL.Query().Get("package")
+	if cluster != "" && pkg == "" {
+		logFilePath, shouldTail, err = getClusterLogFile(cluster)
+	} else if cluster == "" && pkg != "" {
+		logFilePath, shouldTail, err = getAirgapDownloadLogFile(pkg)
+	} else if cluster == "" && pkg == "" {
+		err = apierror.NewAPIError(validation.MissingRequired, "missing the name of cluster or package")
+	} else {
+		err = apierror.NewAPIError(validation.InvalidOption, "only support passing cluster name or package name")
+	}
+
 	if err != nil {
 		return err
 	}
-	if state == nil {
-		return apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
-	}
 
 	// show all logs if cluster is running
-	if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
+	if shouldTail {
 		// show all logs from file
 		logFile, err := os.Open(logFilePath)
 		if err != nil {
@@ -147,4 +160,34 @@ func logHandler(apiOp *types.APIRequest) error {
 			f.Flush()
 		}
 	}
+}
+
+func getClusterLogFile(cluster string) (string, bool, error) {
+	logFilePath := common.GetClusterLogFilePath(cluster)
+	shouldTail := false
+	state, err := common.DefaultDB.GetClusterByID(cluster)
+	if err != nil {
+		return "", shouldTail, apierror.WrapAPIError(err, validation.ServerError, "failed to get cluster by ID")
+	}
+	if state == nil {
+		return "", shouldTail, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
+	}
+
+	if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
+		shouldTail = true
+	}
+	return logFilePath, shouldTail, nil
+}
+
+func getAirgapDownloadLogFile(name string) (string, bool, error) {
+	logFilePath := airgap.GetDownloadFilePath(name)
+	shouldTail := false
+	pkgs, err := common.DefaultDB.ListPackages(&name)
+	if err != nil {
+		return "", shouldTail, apierror.WrapAPIError(err, validation.ServerError, "failed to get package by ID")
+	}
+	if pkgs[0].State != common.PackageActive && pkgs[0].State != common.PackageOutOfSync {
+		shouldTail = true
+	}
+	return logFilePath, shouldTail, nil
 }

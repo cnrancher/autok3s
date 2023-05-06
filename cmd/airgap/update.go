@@ -90,7 +90,7 @@ func update(cmd *cobra.Command, args []string) error {
 		cmd.Printf("package %s of k3s version %s updated with arch(s) %s\n", name, toUpdate.K3sVersion, strings.Join(toUpdate.Archs, ","))
 	}
 
-	if err := pkgairgap.DownloadPackage(toUpdate); err != nil {
+	if err := pkgairgap.DownloadPackage(toUpdate, nil); err != nil {
 		return errors.Wrapf(err, "failed to download package %s", toUpdate.Name)
 	}
 

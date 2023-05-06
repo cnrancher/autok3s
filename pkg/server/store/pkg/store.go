@@ -108,7 +108,14 @@ func (e *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, wr types
 }
 
 func downloadAndUpdatepackage(pkg common.Package) {
-	if err := airgap.DownloadPackage(pkg); err != nil {
+	var logger *logrus.Logger
+	if file, err := airgap.GetLogFile(pkg.Name); err != nil {
+		logrus.Warnf("failed to create log file for package %s download, %v", pkg.Name, err)
+	} else {
+		logger = common.NewLogger(file)
+	}
+
+	if err := airgap.DownloadPackage(pkg, logger); err != nil {
 		logrus.Errorf("failed to download resource for package %s, %v", pkg.Name, err)
 		return
 	}

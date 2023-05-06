@@ -77,7 +77,7 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	cmd.Printf("airgap package %s record created, prepare to download\n", pkg.Name)
-	if err := pkgairgap.DownloadPackage(pkg); err != nil {
+	if err := pkgairgap.DownloadPackage(pkg, nil); err != nil {
 		return errors.Wrapf(err, "failed to download package %s", pkg.Name)
 	}
 
