@@ -107,11 +107,11 @@ func InitExplorer() {
 	for _, exp := range expList {
 		if exp.Enabled {
 			logrus.Infof("start kube-explorer for cluster %s", exp.ContextName)
-			go func() {
-				if _, err = EnableExplorer(context.Background(), exp.ContextName); err != nil {
-					logrus.Errorf("failed to start kube-explorer for cluster %s: %v", exp.ContextName, err)
+			go func(name string) {
+				if _, err = EnableExplorer(context.Background(), name); err != nil {
+					logrus.Errorf("failed to start kube-explorer for cluster %s: %v", name, err)
 				}
-			}()
+			}(exp.ContextName)
 		}
 	}
 }
