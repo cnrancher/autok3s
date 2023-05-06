@@ -77,19 +77,10 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	cmd.Printf("airgap package %s record created, prepare to download\n", pkg.Name)
-	downloader, err := pkgairgap.NewDownloader(pkg)
-	if err != nil {
-		return errors.Wrapf(err, "failed to start download process for package %s", pkg.Name)
-	}
-	path, err := downloader.DownloadPackage()
-	if err != nil {
+	if err := pkgairgap.DownloadPackage(pkg); err != nil {
 		return errors.Wrapf(err, "failed to download package %s", pkg.Name)
 	}
-	pkg.FilePath = path
-	pkg.State = common.PackageActive
-	if err := common.DefaultDB.SavePackage(pkg); err != nil {
-		return err
-	}
-	cmd.Printf("airgap package %s created and stored in path %s\n", name, path)
+
+	cmd.Printf("airgap package %s created and stored in path %s\n", name, pkgairgap.PackagePath(pkg.Name))
 	return nil
 }

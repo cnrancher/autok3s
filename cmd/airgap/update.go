@@ -90,19 +90,8 @@ func update(cmd *cobra.Command, args []string) error {
 		cmd.Printf("package %s of k3s version %s updated with arch(s) %s\n", name, toUpdate.K3sVersion, strings.Join(toUpdate.Archs, ","))
 	}
 
-	downloader, err := pkgairgap.NewDownloader(toUpdate)
-	if err != nil {
-		return errors.Wrapf(err, "failed to start download process for package %s", toUpdate.Name)
-	}
-	filepath, err := downloader.DownloadPackage()
-	if err != nil {
+	if err := pkgairgap.DownloadPackage(toUpdate); err != nil {
 		return errors.Wrapf(err, "failed to download package %s", toUpdate.Name)
-	}
-
-	toUpdate.State = common.PackageActive
-	toUpdate.FilePath = filepath
-	if err := common.DefaultDB.SavePackage(toUpdate); err != nil {
-		return err
 	}
 
 	cmd.Println("package updated")
