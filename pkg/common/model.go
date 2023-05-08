@@ -114,6 +114,7 @@ type event struct {
 // LogEvent log event struct.
 type LogEvent struct {
 	Name        string
+	ContextType string
 	ContextName string
 }
 
@@ -241,11 +242,11 @@ func getAPIEvent(event *event, schema *apitypes.APISchema) apitypes.APIEvent {
 }
 
 // Log subscribe log.
-func (d *Store) Log(apiOp *apitypes.APIRequest, input chan *LogEvent) {
+func (d *Store) Log(apiOp *apitypes.APIRequest, t string, input chan *LogEvent) {
 	// new subscribe for cluster logs
 	sub := d.broadcaster.Register(func(v interface{}) bool {
-		_, ok := v.(*LogEvent)
-		return ok
+		event, ok := v.(*LogEvent)
+		return ok && t == event.ContextType
 	})
 	for {
 		select {
