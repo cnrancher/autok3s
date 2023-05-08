@@ -16,7 +16,6 @@ var (
 	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
 	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand          = "if ! type docker; then curl -sSL %s | %s sh - %s; fi"
-	deployUICommand        = "echo \"%s\" | base64 -d | sudo tee \"%s/ui.yaml\""
 	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
 	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
 	k3sRestart             = `if [ -n "$(command -v systemctl)" ]; then sudo systemctl restart k3s; elif [ -n "$(command -v service)" ]; then sudo service k3s restart; fi`

@@ -644,7 +644,7 @@ func (p *Amazon) CreateCheck() error {
 		return err
 	}
 
-	if err := p.ValdiateRequireSSHPrivateKey(); p.KeypairName != "" && err != nil {
+	if err := p.ValidateRequireSSHPrivateKey(); p.KeypairName != "" && err != nil {
 		return fmt.Errorf("[%s] calling preflight error: %s with --keypair-name %s", p.GetProviderName(), err.Error(), p.KeypairName)
 	}
 

@@ -608,7 +608,7 @@ func (p *Tencent) CreateCheck() error {
 			return err
 		}
 	}
-	if err := p.ValdiateRequireSSHPrivateKey(); p.KeypairID != "" && err != nil {
+	if err := p.ValidateRequireSSHPrivateKey(); p.KeypairID != "" && err != nil {
 		return fmt.Errorf("[%s] calling preflight error: %s with --key-pair %s", p.GetProviderName(), err.Error(), p.KeypairID)
 	}
 
