@@ -33,7 +33,7 @@ func Format(request *types.APIRequest, resource *types.RawResource) {
 	switch common.State(resource.APIObject.Data().String("state")) {
 	case common.PackageActive:
 		linksToKeep["export"] = struct{}{}
-	case common.PackageDownloading:
+	case common.PackageDownloading, common.PackageValidating:
 		// resource.AddAction(request, "cancel")
 		actionsToKeep["cancel"] = struct{}{}
 	case common.PackageOutOfSync:
