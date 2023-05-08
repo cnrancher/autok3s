@@ -89,6 +89,9 @@ func initLogs(s *types.APISchemas) {
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{}
 		schema.ListHandler = websocket.LogHandler
+		schema.CodeName = "log"
+		schema.CodeNamePlural = "logs"
+		schema.PluralName = "logs"
 	})
 }
 

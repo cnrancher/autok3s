@@ -355,6 +355,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "create" {
 				logEvent := &common.LogEvent{
 					Name:        process.Event,
+					ContextType: "cluster",
 					ContextName: p.ContextName,
 				}
 				process.Fn(logEvent)
@@ -470,6 +471,7 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 			if process, ok := p.Callbacks[p.ContextName]; ok && process.Event == "update" {
 				logEvent := &common.LogEvent{
 					Name:        process.Event,
+					ContextType: "cluster",
 					ContextName: p.ContextName,
 				}
 				process.Fn(logEvent)
@@ -1262,6 +1264,7 @@ func (p *ProviderBase) UpgradeK3sCluster(clusterName, installScript, channel, ve
 			if process, ok := p.Callbacks[state.ContextName]; ok && process.Event == "update" {
 				logEvent := &common.LogEvent{
 					Name:        process.Event,
+					ContextType: "cluster",
 					ContextName: state.ContextName,
 				}
 				process.Fn(logEvent)

@@ -84,16 +84,22 @@ func logHandler(apiOp *types.APIRequest) error {
 
 	var (
 		logFilePath string
-		shouldTail  bool
+		shouldClose bool
 		err         error
+		contextType string
+		contextName string
 	)
 
 	cluster := apiOp.Request.URL.Query().Get("cluster")
 	pkg := apiOp.Request.URL.Query().Get("package")
 	if cluster != "" && pkg == "" {
-		logFilePath, shouldTail, err = getClusterLogFile(cluster)
+		contextType = "cluster"
+		contextName = cluster
+		logFilePath, shouldClose, err = getClusterLogFile(cluster)
 	} else if cluster == "" && pkg != "" {
-		logFilePath, shouldTail, err = getAirgapDownloadLogFile(pkg)
+		contextType = "package"
+		contextName = pkg
+		logFilePath, shouldClose, err = getAirgapDownloadLogFile(pkg)
 	} else if cluster == "" && pkg == "" {
 		err = apierror.NewAPIError(validation.MissingRequired, "missing the name of cluster or package")
 	} else {
@@ -105,7 +111,7 @@ func logHandler(apiOp *types.APIRequest) error {
 	}
 
 	// show all logs if cluster is running
-	if shouldTail {
+	if shouldClose {
 		// show all logs from file
 		logFile, err := os.Open(logFilePath)
 		if err != nil {
@@ -127,7 +133,7 @@ func logHandler(apiOp *types.APIRequest) error {
 	}
 
 	result := make(chan *common.LogEvent)
-	go common.DefaultDB.Log(apiOp, result)
+	go common.DefaultDB.Log(apiOp, contextType, result)
 
 	for {
 		select {
@@ -136,7 +142,7 @@ func logHandler(apiOp *types.APIRequest) error {
 				_, _ = w.Write([]byte("event: close\ndata: close\n\n"))
 				return nil
 			}
-			if s.ContextName == cluster {
+			if s.ContextName == contextName && s.ContextType == contextType {
 				err = WriteLastLogs(t, w, f, logFilePath)
 				if err != nil {
 					_, _ = w.Write([]byte("event: close\ndata: close\n\n"))
@@ -164,30 +170,29 @@ func logHandler(apiOp *types.APIRequest) error {
 
 func getClusterLogFile(cluster string) (string, bool, error) {
 	logFilePath := common.GetClusterLogFilePath(cluster)
-	shouldTail := false
+	shouldClose := false
 	state, err := common.DefaultDB.GetClusterByID(cluster)
 	if err != nil {
-		return "", shouldTail, apierror.WrapAPIError(err, validation.ServerError, "failed to get cluster by ID")
+		return "", shouldClose, apierror.WrapAPIError(err, validation.ServerError, "failed to get cluster by ID")
 	}
 	if state == nil {
-		return "", shouldTail, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
+		return "", shouldClose, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not exist", cluster))
 	}
-
 	if state.Status != common.StatusCreating && state.Status != common.StatusUpgrading {
-		shouldTail = true
+		shouldClose = true
 	}
-	return logFilePath, shouldTail, nil
+	return logFilePath, shouldClose, nil
 }
 
 func getAirgapDownloadLogFile(name string) (string, bool, error) {
 	logFilePath := airgap.GetDownloadFilePath(name)
-	shouldTail := false
+	shouldClose := false
 	pkgs, err := common.DefaultDB.ListPackages(&name)
 	if err != nil {
-		return "", shouldTail, apierror.WrapAPIError(err, validation.ServerError, "failed to get package by ID")
+		return "", shouldClose, apierror.WrapAPIError(err, validation.ServerError, "failed to get package by ID")
 	}
-	if pkgs[0].State != common.PackageActive && pkgs[0].State != common.PackageOutOfSync {
-		shouldTail = true
+	if pkgs[0].State == common.PackageActive {
+		shouldClose = true
 	}
-	return logFilePath, shouldTail, nil
+	return logFilePath, shouldClose, nil
 }
