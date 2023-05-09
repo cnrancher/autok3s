@@ -88,7 +88,7 @@ func (e *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data ty
 		current.K3sVersion = k3sVersion
 		changed = true
 	}
-	if len(archs) != 0 && !reflect.DeepEqual(archs, current.Archs) {
+	if len(archs) != 0 && !reflect.DeepEqual(archs, []string(current.Archs)) {
 		if err := airgap.ValidateArchs(archs); err != nil {
 			return types.APIObject{}, apierror.WrapFieldAPIError(err, validation.InvalidBodyContent, "archs", "arch(s) are invalid")
 		}

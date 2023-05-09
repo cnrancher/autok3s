@@ -115,6 +115,9 @@ func (d *downloader) downloadPackage() (er error) {
 		len(toDelArchs) == 0 &&
 		isDone(d.basePath) {
 		d.logger.Infof("the package %s is ready, skip downloading resources.", d.pkg.Name)
+		if d.pkg.State != common.PackageActive {
+			return updatePackageState(&d.pkg, common.PackageActive)
+		}
 		return nil
 	}
 
