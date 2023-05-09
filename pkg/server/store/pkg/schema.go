@@ -149,6 +149,7 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("{}"))
+	sendEvent(name, "Cancel")
 }
 
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
@@ -174,4 +175,12 @@ func getPackageFromContext(apiContext *types.APIRequest) (common.Package, error)
 		return common.Package{}, err
 	}
 	return pkgs[0], nil
+}
+
+func sendEvent(name, eventName string) {
+	common.DefaultDB.BroadcastObject(&common.LogEvent{
+		Name:        eventName,
+		ContextType: "package",
+		ContextName: name,
+	})
 }

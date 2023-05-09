@@ -119,11 +119,7 @@ func downloadAndUpdatepackage(pkg common.Package) {
 		logrus.Errorf("failed to download resource for package %s, %v", pkg.Name, err)
 		return
 	}
-	common.DefaultDB.BroadcastObject(&common.LogEvent{
-		Name:        "Downloaded",
-		ContextType: "package",
-		ContextName: pkg.Name,
-	})
+	sendEvent(pkg.Name, "Downloaded")
 }
 
 func saveAndDownload(current common.Package) (types.APIObject, error) {
