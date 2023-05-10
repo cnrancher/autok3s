@@ -7,6 +7,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/server"
 
+	"github.com/pkg/browser"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -31,11 +32,22 @@ func ServeCommand() *cobra.Command {
 	serveCmd.Run = func(cmd *cobra.Command, args []string) {
 		common.IsCLI = false
 		router := server.Start()
+		addr := fmt.Sprintf("%s:%s", bindAddress, bindPort)
 
 		// start kube-explorer for K3s clusters
 		go common.InitExplorer()
-		logrus.Infof("run as daemon, listening on %s:%s", bindAddress, bindPort)
-		logrus.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", bindAddress, bindPort), router))
+		stopChan := make(chan struct{})
+		go func(c chan struct{}) {
+			logrus.Infof("run as daemon, listening on %s:%s", bindAddress, bindPort)
+			if err := http.ListenAndServe(addr, router); err != nil {
+				logrus.Error(err)
+			}
+			close(c)
+		}(stopChan)
+		if err := browser.OpenURL("http://" + addr); err != nil {
+			logrus.Warnf("failed to open browser to addr %s", addr)
+		}
+		<-stopChan
 	}
 
 	return serveCmd

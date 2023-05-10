@@ -61,7 +61,10 @@ require (
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 )
 
-require sigs.k8s.io/yaml v1.3.0
+require (
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
+	sigs.k8s.io/yaml v1.3.0
+)
 
 require (
 	cloud.google.com/go/compute v1.6.1 // indirect
