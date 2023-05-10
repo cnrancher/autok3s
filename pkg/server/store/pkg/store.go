@@ -116,7 +116,8 @@ func downloadAndUpdatepackage(pkg common.Package) {
 	}
 
 	if err := airgap.DownloadPackage(pkg, logger); err != nil {
-		logrus.Errorf("failed to download resource for package %s, %v", pkg.Name, err)
+		logger.Errorf("failed to download resource for package %s, %v", pkg.Name, err)
+		sendEvent(pkg.Name, "Cancel")
 		return
 	}
 	sendEvent(pkg.Name, "Downloaded")
