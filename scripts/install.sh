@@ -13,7 +13,7 @@ SUCCESS_CMD="$REPO version"
 BINLOCATION=${BINLOCATION:-'/usr/local/bin'}
 KUBEEXPLORER_REPO=${KUBEEXPLORER_REPO:-'kube-explorer'}
 KUBEEXPLORER_DOWNLOAD_URL=https://github.com/$OWNER/$KUBEEXPLORER_REPO/releases/download
-KUBEEXPLORER_VERSION=v0.3.0
+KUBEEXPLORER_VERSION=v0.3.2
 SUDO=sudo
 if [ $(id -u) -eq 0 ]; then
     SUDO=
