@@ -3,7 +3,7 @@ module github.com/cnrancher/autok3s
 go 1.19
 
 replace (
-	github.com/docker/distribution => github.com/docker/distribution v2.8.0+incompatible
+	github.com/docker/distribution => github.com/docker/distribution v2.8.2-beta.1+incompatible
 	k8s.io/api => k8s.io/api v0.23.7
 	k8s.io/apimachinery => k8s.io/apimachinery v0.23.7
 
