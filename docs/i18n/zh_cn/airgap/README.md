@@ -16,6 +16,8 @@
 
 ![](../../../assets/airgap/airgap-packages-list.png)
 
+#### 创建离线包
+
 点击 `Create` 按钮可以创建一个新的 K3s 离线安装包。
 
 ![](../../../assets/airgap/create-new-airgap-package.png)
@@ -30,17 +32,37 @@
 | K3s Version         | 下载的 K3s 离线安装包版本                      |
 | Included Archs      | 离线安装包的内核架构，可以同时选择多个架构                |
 
-![](../../../assets/airgap/create-airgap-outofsync.png)
+创建完成后，该离线安装包的状态为 `OutOfSync`，AutoK3s 会根据用户配置自行拉取安装包，并更新离线包状态，显示下载日志，方便用户跟踪下载进度。
 
-创建完成后，该离线安装包的状态为 `OutOfSync`，AutoK3s 会根据用户配置自行拉取安装包，下载完成的安装包会保存在 `<config-path>/pakcage/<name>` 路径中。
+![](../../../assets/airgap/create-airgap-downloading.png)
+
+下载完成后，安装包的状态会变成 `Active`，下载完成的安装包会保存在 `<config-path>/pakcage/<name>` 路径中。
 
 ![](../../../assets/airgap/airgap-package-list-active.png)
 
-下载完成后，安装包的状态会变成 `Active`。接下来就可以在创建集群页面使用这个离线安装包部署 K3s 集群了。
+#### 更新离线包
 
 如果想更新离线安装包，点击右侧 `Edit` 按钮，即可修改安装包版本及内核架构。
 
 ![](../../../assets/airgap/update-airgap.png)
+
+#### 切换下载源
+
+离线安装包默认使用 Github 源下载，如果访问 Github 源网络不好，可以从 UI 上切换到 `aliyunoss` 源进行离线包的下载。
+
+![](../../../assets/airgap/switch-airgap-download-source.png)
+
+#### 离线包下载及取消
+
+如果使用的源下载速度过慢时，可以点击离线包右侧的下拉按钮，点击 `Cancel` 取消当前下载，切换下载源后重新尝试。
+
+![](../../../assets/airgap/airgap-cancel-downloading.png)
+
+如果离线包下载失败，或取消了之前的下载，可以点击离线包右侧的下拉按钮，点击 `Download` 重新下载。
+
+![](../../../assets/airgap/airgap-re-download.png)
+
+#### 使用离线包部署集群
 
 这里我们以 `Native Provider` 为例，在本地虚拟机上使用这个离线安装包部署 K3s 集群，创建集群的参数这里就不进行赘述了，在 K3s Cluster Options 选项中，选中 Install With Air-gap Package 并选择指定的离线包。
 
@@ -86,7 +108,7 @@ Use "autok3s airgap [command] --help" for more information about a command.
 使用命令 `autok3s airgap create <name>` 创建一个新的离线安装包，必输参数为 `arch` 以及 `k3s-version`。支持通过 CLI 交互的方式填写参数。  
 K3s 版本(`k3s-version`)列表可以在 Github 中 K3s 的[Release](https://github.com/k3s-io/k3s/releases)列表中找到。针对内核架构选择，支持 `amd64`, `arm64`, `arm`, 以及 `s390x`。需要注意的是 `s390x` 架构只在比较新的 K3s 版本中支持；如果在某个 K3s 版本下选择了并不支持的内核架构，创建离线安装包时会给出错误提示。
 
-当新的离线安装包被创建后，autok3s 会校验其合法性并开始从 K3s 二进制分发站点下载资源。默认情况下会从 `github` 进行下载，如果遇到 Github 站点访问困难的情况，可以通过 `autok3s serve` 开启UI界面，在 API UI中修改配置 `/v1/settings/package-download-source`，从 `github` 改为 `aliyunoss`，使 autok3s 从 aliyun OSS 分发站点中进行下载。在未来的版本会支持在CLI中修改该配置。
+当新的离线安装包被创建后，autok3s 会校验其合法性并开始从 K3s 二进制分发站点下载资源。 如果需要切换离线包下载源，可以参考[切换下载源](README.md#切换下载源)的描述。在未来的版本会支持在CLI中修改该配置。
 
 下载的离线安装包资源会存放在 `<config-path>/pakcage/<name>` 路径中，以下为每个安装包的目录结构：
 

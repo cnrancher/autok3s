@@ -59,10 +59,10 @@ Scenario 1 - Run with docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 # Standard Linux (Recommended)
-$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.7.0
+$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.8.0
 
 # MacOS
-$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST="" cnrancher/autok3s:v0.7.0
+$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST="" cnrancher/autok3s:v0.8.0
 ```
 
 Scenario 2 - Run with docker-compose
@@ -79,7 +79,7 @@ Scenario 3 - Run with cli:
 # The commands use the shell script on MacOS and Linux, or visit the Releases page to download the executable for Windows.
 curl -sS https://rancher-mirror.rancher.cn/autok3s/install.sh  | sh
 
-# The commands will start autok3s daemon with an interactionable UI.
+# The commands will start autok3s daemon and popup default browser with an interactionable UI.
 autok3s -d serve
 ```
 
