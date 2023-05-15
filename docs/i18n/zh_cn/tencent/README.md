@@ -134,8 +134,8 @@ OutBound    ALL         ALL       ALL                Allow All
 |:---------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------|:------------- 
 | Region                     | 腾讯云 CVM 区域                                                                                                                                                | `ap-guangzhou`
 | Zone                       | 腾讯云 CVM 地区                                                                                                                                                | `ap-guangzhou-3`
-| Machine Type               | 腾讯云 CVM 实例规格                                                                                                                                              | `SA1.MEDIUM4`(2vCPU/4GiB)
-| Image                      | 腾讯云 CVM 系统映像 ID                                                                                                                                           | `img-pi0ii46r`(Ubuntu 18.04)
+| Machine Type               | 腾讯云 CVM 实例规格                                                                                                                                              | `S5.MEDIUM4`(2vCPU/4GiB)
+| Image                      | 腾讯云 CVM 系统映像 ID                                                                                                                                           | `img-487zeit5`(Ubuntu 22.04)
 | Disk Category              | 根磁盘卷类型                                                                                                                                                    | `CLOUD_SSD`
 | Disk Size                  | 根磁盘卷大小                                                                                                                                                    | `50`(GiB)
 | Spot                       | 是否使用[竞价实例](https://cloud.tencent.com/document/product/213/17816)                                                                                          | `false`

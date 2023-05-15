@@ -91,7 +91,7 @@ OutBound    ALL         ALL       ALL                Allow All
 | Region                | GCE 区域                                                                                                                             | `us-central1`
 | Zone                  | GCE 地区                                                                                                                             | `us-central1-b`
 | Machine Type          | GCE 实例规格                                                                                                                           | `e2-medium`(2 vCPU (1/2 shared physical core) and 4 GB RAM)
-| Source Image          | GCE 系统映像                                                                                                                           | `ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20230107`(Ubuntu 22.04)
+| Source Image          | GCE 系统映像                                                                                                                           | `ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20230429`(Ubuntu 22.04)
 | Disk Type             | 磁盘卷类型                                                                                                                              | `pd-balanced`
 | Disk Size             | 磁盘卷大小                                                                                                                              | `10`(GiB)
 | Scopes                | 访问范围                                                                                                                               | `https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write`

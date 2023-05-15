@@ -40,7 +40,13 @@ Use "autok3s airgap [command] --help" for more information about a command.
 With the command `autok3s airgap create <name>`, the user can create a new package. Flags `arch` and `k3s-version` are required. Or you can input those flags with interact mode when not specified in create command.  
 You can easily find the k3s version in the Github release. One or more arches can be selected from the following options: `amd64`, `arm64`, `arm`, and `s390x`. The `s390x` arch will only be supported in the recent k3s version and autok3s will throw an error if the arch is not provided in the selected k3s version.
 
-After the package is created and validated, autok3s will start the download process from the configured site. For now, the default download site is `github` which is from the Github release page. You can change to `aliyunoss` which is from the Aliyun OSS k3s mirror via setting `/v1/settings/package-download-source` API with `autok3s serve` command. The config modification from CLI will be supported in the feature version.
+After the package is created and validated, autok3s will start the download process from the configured site. For now, the default download site is `github` which is from the Github release page. AutoK3s supports `github` and `aliyunoss` two kinds of download source.
+
+If you want to change the download source, please run AutoK3s with `autok3s serve` command and access to AutoK3s UI. Go to **Settings** > **Air-gap Packages** page. Switch download source from the drop-down button.
+
+![](../../../assets/airgap/switch-airgap-download-source.png)
+
+The config modification from CLI will be supported in the feature version.
 
 The downloaded resource will be stored in `<config-path>/pakcage/<name>` and the file struct will be following:
 

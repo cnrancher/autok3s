@@ -122,7 +122,7 @@ OutBound    ALL         ALL       ALL                Allow All
 | Region                    | AWS EC2 区域 | `us-east-1`
 | Zone                      | AWS EC2 地区 | `us-east-1a`
 | Machine Type              | AWS EC2 实例规格 | `t3a.medium`(2vCPU/4GiB)
-| AMI                       | AWS EC2 系统映像 | `ami-06878d265978313ca`(Ubuntu 22.04)
+| AMI                       | AWS EC2 系统映像 | `ami-007855ac798b5175e`(Ubuntu 22.04)
 | Volume Type               | 根磁盘卷类型 | `gp3`(通用型 SSD)
 | Root Size                 | 根磁盘卷大小 | `16`(GiB)
 | Request Spot Instance     | 是否请求[竞价实例](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances.html?icmpid=docs_ec2_console) | false
