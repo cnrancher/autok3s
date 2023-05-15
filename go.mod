@@ -3,7 +3,6 @@ module github.com/cnrancher/autok3s
 go 1.19
 
 replace (
-	github.com/docker/distribution => github.com/docker/distribution v2.8.2-beta.1+incompatible
 	k8s.io/api => k8s.io/api v0.23.7
 	k8s.io/apimachinery => k8s.io/apimachinery v0.23.7
 
@@ -84,7 +83,7 @@ require (
 	github.com/daviddengcn/go-colortext v0.0.0-20160507010035-511bcaf42ccd // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v20.10.17+incompatible // indirect
-	github.com/docker/distribution v2.8.1+incompatible // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/docker/go v1.5.1-1.0.20160303222718-d30aec9fd63c // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
