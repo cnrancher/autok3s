@@ -1,9 +1,11 @@
 package settings
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/settings"
 
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/store/empty"
@@ -24,10 +26,17 @@ func (s *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	if err != nil {
 		return types.APIObject{}, err
 	}
-	err = common.DefaultDB.SaveSetting(setting)
-	if err != nil {
-		return types.APIObject{}, err
+	if id == settings.HelmDashboardEnabled.Name {
+		if err := common.SwitchDashboard(context.TODO(), setting.Value); err != nil {
+			return types.APIObject{}, err
+		}
+	} else {
+		err = common.DefaultDB.SaveSetting(setting)
+		if err != nil {
+			return types.APIObject{}, err
+		}
 	}
+
 	return s.ByID(apiOp, schema, setting.Name)
 }
 

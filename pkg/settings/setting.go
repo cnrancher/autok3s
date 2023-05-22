@@ -31,6 +31,9 @@ var (
 	InstallScript         = newSetting("install-script", "", "The k3s offline install script with base64 encode")
 	ScriptUpdateSource    = newSetting("install-script-source-repo", "https://rancher-mirror.rancher.cn/k3s/k3s-install.sh", "The install script auto update source, github or aliyun oss")
 	PackageDownloadSource = newSetting("package-download-source", "github", "The airgap package download source, github and aliyunoss are validated.")
+
+	HelmDashboardEnabled = newSetting("helm-dashboard-enabled", "false", "The helm-dashboard is enabled or not")
+	HelmDashboardPort    = newSetting("helm-dashboard-port", "", "The helm-dashboard server port after enabled")
 )
 
 func newSetting(
