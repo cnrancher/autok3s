@@ -56,9 +56,11 @@ func EnableExplorer(ctx context.Context, config string) (int, error) {
 	}
 
 	// start kube-explorer
-	ctx, cancel := context.WithCancel(ctx)
+	explorerCtx, cancel := context.WithCancel(ctx)
 	ExplorerWatchers[config] = cancel
-	go StartKubeExplorer(ctx, config, exp.Port)
+	go func(ctx context.Context, config string, port int) {
+		StartKubeExplorer(ctx, config, port)
+	}(explorerCtx, config, exp.Port)
 	return exp.Port, nil
 }
 
@@ -99,19 +101,20 @@ func DisableExplorer(config string) error {
 }
 
 // InitExplorer will start kube-explorer server for all K3s clusters which enabled explorer setting
-func InitExplorer() {
+func InitExplorer(ctx context.Context) {
 	expList, err := DefaultDB.ListExplorer()
 	if err != nil {
 		logrus.Errorf("get kube-explorer settings error: %v", err)
+		return
 	}
 	for _, exp := range expList {
 		if exp.Enabled {
 			logrus.Infof("start kube-explorer for cluster %s", exp.ContextName)
-			go func(name string) {
-				if _, err = EnableExplorer(context.Background(), name); err != nil {
+			go func(ctx context.Context, name string) {
+				if _, err = EnableExplorer(ctx, name); err != nil {
 					logrus.Errorf("failed to start kube-explorer for cluster %s: %v", name, err)
 				}
-			}(exp.ContextName)
+			}(ctx, exp.ContextName)
 		}
 	}
 }

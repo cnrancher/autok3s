@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -35,7 +36,10 @@ func ServeCommand() *cobra.Command {
 		addr := fmt.Sprintf("%s:%s", bindAddress, bindPort)
 
 		// start kube-explorer for K3s clusters
-		go common.InitExplorer()
+		go func(ctx context.Context) {
+			common.InitExplorer(ctx)
+		}(serveCmd.Context())
+
 		stopChan := make(chan struct{})
 		go func(c chan struct{}) {
 			logrus.Infof("run as daemon, listening on %s:%s", bindAddress, bindPort)
