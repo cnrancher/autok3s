@@ -10,16 +10,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/settings"
 
 	"github.com/sirupsen/logrus"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 )
 
 const (
-	forwardProto               = "X-Forwarded-Proto"
-	whiteListDomainSettingName = "whitelist-domain"
-	hostRegex                  = "[A-Za-z0-9-]+"
+	forwardProto = "X-Forwarded-Proto"
+	hostRegex    = "[A-Za-z0-9-]+"
 )
 
 var (
@@ -51,12 +50,7 @@ func NewProxy(prefix string) http.Handler {
 }
 
 func (p *proxy) isAllowed(host string) bool {
-	setting, err := common.DefaultDB.GetSetting(whiteListDomainSettingName)
-	if err != nil || setting == nil {
-		logrus.Errorf("failed to get whitelist-domain setting, err %v", err)
-		return false
-	}
-	validHosts := strings.Split(setting.Value, ",")
+	validHosts := strings.Split(settings.WhitelistDomain.Get(), ",")
 	for _, valid := range validHosts {
 		if valid == host {
 			return true
