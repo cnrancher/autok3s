@@ -39,6 +39,10 @@ func ServeCommand() *cobra.Command {
 		go func(ctx context.Context) {
 			common.InitExplorer(ctx)
 		}(serveCmd.Context())
+		// start helm-dashboard server
+		go func(ctx context.Context) {
+			common.InitDashboard(ctx)
+		}(serveCmd.Context())
 
 		stopChan := make(chan struct{})
 		go func(c chan struct{}) {
