@@ -173,3 +173,20 @@ autok3s -d create \
     --volumes ${HOME}/.k3d/my-company-root.pem:/etc/ssl/certs/my-company-root.pem
 ```
 
+## Troubleshooting
+
+### Cannot set memory for K3d server
+
+If you're running AutoK3s by Docker and encounter the following errors when setting memory for K3d server.
+```
+time="2023-05-25T02:54:23Z" level=error msg="[k3d] cluster mem-test run failed: Failed Cluster Start: Failed to start server k3d-mem-test-server-0: runtime failed to start node 'k3d-mem-test-server-0': docker failed to start container for node 'k3d-mem-test-server-0': Error response from daemon: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting \"/root/.k3d/.k3d-mem-test-server-0/meminfo\" to rootfs at \"/proc/meminfo\": mount /root/.k3d/.k3d-mem-test-server-0/meminfo:/proc/meminfo (via /proc/self/fd/6), flags: 0x5001: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type"
+time="2023-05-25T02:54:23Z" level=info msg="[k3d] executing rollback logic..."
+```
+
+K3d needs to mount the resource limit file into k3s container which requires the k3d and the docker server are in the same host.
+
+Please mount the `.k3d` directory when start the AutoK3s by Docker. The following command is an example.
+```bash
+docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock -v /root/.k3d:/root/.k3d cnrancher/autok3s:v0.8.0
+```
+

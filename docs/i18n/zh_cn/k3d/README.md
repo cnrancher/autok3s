@@ -128,7 +128,7 @@ K3d 配置主要配置的内容为启动 K3s 集群所需的参数，例如 K3s 
 
 ![](../../../assets/enable-kube-explorer.png)
 
-开启后，在集群列表会增加 dashboard 跳转链接按钮，点击跳转链接便可以访问 kube-explorer dashboard 页面了。
+开启后，在集群列表会增加 Explorer 跳转链接按钮，点击跳转链接便可以访问 kube-explorer dashboard 页面了。
 
 ![](../../../assets/access-kube-explorer.png)
 
@@ -140,6 +140,22 @@ K3d 配置主要配置的内容为启动 K3s 集群所需的参数，例如 K3s 
 
 > 请注意：
 > - MacOS 下 Docker 不支持 Host Networking，如果在 MacOS 下使用 K3d provider，由于无法使用 Kubectl shell 功能操作 K3d 集群，所以我们无法使用 kube-explorer 功能。
+
+#### 开启 helm-dashboard
+
+可以在 Settings > Feature Flags 选择 helm-dashboard 选项来开启 helm-dashboard 功能。
+
+![](../../../assets/enable-helm-dashboard.png)
+
+开启后，在集群列表会增加 Dashboard 跳转链接按钮，点击跳转链接便可以访问 helm-dashboard 页面了。
+
+![](../../../assets/access-to-helm-dashboard.png)
+
+#### 关闭 helm-dashboard
+
+可以在 Settings > Feature Flags 将已经开启的 helm-dashboard 关闭。
+
+![](../../../assets/enable-helm-dashboard.png)
 
 ## CLI 使用说明
 
@@ -299,4 +315,19 @@ autok3s -d create \
     --worker 1 \
     --registry /etc/autok3s/registries.yaml
     --volumes ${HOME}/.k3d/my-company-root.pem:/etc/ssl/certs/my-company-root.pem
+```
+
+## 常见问题
+
+### 使用 K3d provider 设置内存后创建集群失败
+
+如果你使用 Docker 运行 AutoK3s，并且使用 K3d provider 创建集群时设置了内存，并且集群创建失败，出现如下类型的错误日志：
+```
+time="2023-05-25T02:54:23Z" level=error msg="[k3d] cluster mem-test run failed: Failed Cluster Start: Failed to start server k3d-mem-test-server-0: runtime failed to start node 'k3d-mem-test-server-0': docker failed to start container for node 'k3d-mem-test-server-0': Error response from daemon: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting \"/root/.k3d/.k3d-mem-test-server-0/meminfo\" to rootfs at \"/proc/meminfo\": mount /root/.k3d/.k3d-mem-test-server-0/meminfo:/proc/meminfo (via /proc/self/fd/6), flags: 0x5001: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type"
+time="2023-05-25T02:54:23Z" level=info msg="[k3d] executing rollback logic..."
+```
+
+如果出现以上问题，可以在启动 AutoK3s 容器时尝试将本地的 `.k3d` 目录挂载到 Docker 中，例如
+```bash
+docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock -v /root/.k3d:/root/.k3d cnrancher/autok3s:v0.8.0
 ```

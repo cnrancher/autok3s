@@ -234,7 +234,7 @@ K3s 参数配置项主要对 K3s 集群进行设置，例如是否部署 HA 模�
 
 ![](../../../assets/enable-kube-explorer.png)
 
-开启后，在集群列表会增加 dashboard 跳转链接按钮，点击跳转链接便可以访问 kube-explorer dashboard 页面了。
+开启后，在集群列表会增加 Explorer 跳转链接按钮，点击跳转链接便可以访问 kube-explorer 页面了。
 
 ![](../../../assets/access-kube-explorer.png)
 
@@ -243,6 +243,22 @@ K3s 参数配置项主要对 K3s 集群进行设置，例如是否部署 HA 模�
 对于已经开启了 kube-explorer 功能的集群，可以在右侧下拉菜单中选择 Disable Explorer 功能来关闭 kube-explorer 服务。
 
 ![](../../../assets/disable-kube-explorer.png)
+
+#### 开启 helm-dashboard
+
+可以在 Settings > Feature Flags 选择 helm-dashboard 选项来开启 helm-dashboard 功能。
+
+![](../../../assets/enable-helm-dashboard.png)
+
+开启后，在集群列表会增加 Dashboard 跳转链接按钮，点击跳转链接便可以访问 helm-dashboard 页面了。
+
+![](../../../assets/access-to-helm-dashboard.png)
+
+#### 关闭 helm-dashboard
+
+可以在 Settings > Feature Flags 将已经开启的 helm-dashboard 关闭。
+
+![](../../../assets/enable-helm-dashboard.png)
 
 ## CLI 使用说明
 
@@ -442,4 +458,16 @@ configs:
 ```bash
 autok3s explorer --context <context> --port 9999
 ```
-您可以通过 http://127.0.0.1:9999 访问 kube-explorer dashboard 页面。
+您可以通过 http://127.0.0.1:9999 访问 kube-explorer 页面。
+
+### 开启 helm-dashboard
+
+可以通过使用以下命令开启 [helm-dashboard](https://github.com/komodorio/helm-dashboard) 来管理 Helm Charts.
+
+```bash
+autok3s helm-dashboard --port 8888
+```
+
+您可以通过 `http://127.0.0.1:8888` 访问 helm-dashboard 页面
+
+> PS: 开启 helm-dashboard 至少保证集群列表有一个集群。
