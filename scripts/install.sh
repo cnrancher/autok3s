@@ -14,6 +14,8 @@ BINLOCATION=${BINLOCATION:-'/usr/local/bin'}
 KUBEEXPLORER_REPO=${KUBEEXPLORER_REPO:-'kube-explorer'}
 KUBEEXPLORER_DOWNLOAD_URL=https://github.com/$OWNER/$KUBEEXPLORER_REPO/releases/download
 KUBEEXPLORER_VERSION=v0.3.2
+HELM_DASHBOARD_DOWNLOAD_URL=https://github.com/komodorio/helm-dashboard/releases/download
+HELM_DASHBOARD_VERSION=1.3.3
 SUDO=sudo
 if [ $(id -u) -eq 0 ]; then
     SUDO=
@@ -210,6 +212,67 @@ getKubeExplorer() {
     fi
 }
 
+getHelmdashboard() {
+    uname=$(uname)
+    userid=$(id -u)
+    if [ -z "$ARCH" ]; then
+        ARCH=$(uname -m)
+    fi
+    case $ARCH in
+        amd64)
+            ARCH=x86_64
+            ;;
+        x86_64)
+            ARCH=x86_64
+            ;;
+        arm64)
+            ARCH=arm64
+            ;;
+        aarch64)
+            ARCH=arm64
+            ;;
+        *)
+            fatal "Unsupported architecture $ARCH"
+    esac
+
+    case $uname in
+      "Darwin")
+          suffix="_Darwin_$ARCH"
+          ;;
+      "MINGW"*)
+          suffix="_windows_$ARCH.exe"
+          BINLOCATION="$HOME/bin"
+          mkdir -p $BINLOCATION
+      ;;
+      "Linux")
+          suffix="_Linux_$ARCH"
+      ;;
+    esac
+
+    targetFile="/tmp/helm-dashboard_$HELM_DASHBOARD_VERSION$suffix.tar.gz"
+
+    if [ "$userid" != "0" ]; then
+        targetFile="$(pwd)/helm-dashboard_$HELM_DASHBOARD_VERSION$suffix.tar.gz"
+    fi
+
+    if [ -e "$targetFile" ]; then
+        rm "$targetFile"
+    fi
+
+    url=$HELM_DASHBOARD_DOWNLOAD_URL/v$HELM_DASHBOARD_VERSION/helm-dashboard_$HELM_DASHBOARD_VERSION$suffix.tar.gz
+    echo "Downloading package $url as $targetFile"
+
+    curl -sLf $url | tar xvzf - -C $BINLOCATION
+    echo "Download complete."
+
+    $SUDO chmod +x $BINLOCATION/helm-dashboard
+
+    if [ -e "$targetFile" ]; then
+        rm "$targetFile"
+    fi
+
+}
+
 create_symlinks() {
     if [ ! -e ${BINLOCATION}/kubectl ]; then
         which_cmd=$(command -v kubectl 2>/dev/null || true)
@@ -250,6 +313,7 @@ set -m
 
 rm -f ${BINLOCATION}/autok3s
 rm -f ${BINLOCATION}/kube-explorer
+rm -f ${BINLOCATION}/helm-dashboard
 
 EOF
     $SUDO chmod 755 ${BINLOCATION}/autok3s-uninstall.sh
@@ -258,5 +322,6 @@ EOF
 hasCli
 getPackage
 getKubeExplorer
+getHelmdashboard
 create_symlinks
 create_uninstall
