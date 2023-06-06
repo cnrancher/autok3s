@@ -333,8 +333,26 @@ autok3s explorer --context myk3s.ap-southeast-2.aws --port 9999
 
 You can enable kube-explorer when creating K3s Cluster by UI.
 
-![](../../../assets/enable-kube-explorer-by-create-cluster.png)
+![](../../../assets/launch-kube-explorer.png)
 
 You can also enable/disable kube-explorer any time from UI, and access kube-explorer dashboard by `dashboard` button.
 
-![](../../../assets/enable-kube-explorer-by-button.png)
+![](../../../assets/enable-kube-explorer.png)
+![](../../../assets/access-kube-explorer.png)
+
+### Enable helm-dashboard
+
+You can enable helm-dashboard using the following command.
+
+```bash
+autok3s helm-dashboard --port 8888
+```
+
+After the server started success, you can access the helm-dashboard by `http://127.0.0.1:8888`
+
+You can also enable/disable helm-dashboard any time from UI, and access helm-dashboard by `dashboard` button.
+
+![](../../../assets/enable-helm-dashboard.png)
+![](../../../assets/access-to-helm-dashboard.png)
+
+> PS: You can only enable helm-dashboard when you have a cluster at least.
