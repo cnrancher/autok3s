@@ -4,6 +4,7 @@ package aws
 type Options struct {
 	AccessKey                    string   `json:"access-key,omitempty" yaml:"access-key,omitempty"`
 	SecretKey                    string   `json:"secret-key,omitempty" yaml:"secret-key,omitempty"`
+	SessionToken                 string   `json:"session-token,omitempty" yaml:"session-token,omitempty"`
 	Region                       string   `json:"region,omitempty" yaml:"region,omitempty"`
 	AMI                          string   `json:"ami,omitempty" yaml:"ami,omitempty"`
 	KeypairName                  string   `json:"keypair-name,omitempty" yaml:"keypair-name,omitempty"`
