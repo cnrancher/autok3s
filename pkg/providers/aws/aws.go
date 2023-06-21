@@ -350,7 +350,7 @@ func (p *Amazon) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 func (p *Amazon) newClient() {
 	config := aws.NewConfig()
 	config = config.WithRegion(p.Region)
-	config = config.WithCredentials(credentials.NewStaticCredentials(p.AccessKey, p.SecretKey, ""))
+	config = config.WithCredentials(credentials.NewStaticCredentials(p.AccessKey, p.SecretKey, p.SessionToken))
 	sess := session.Must(session.NewSession(config))
 	p.client = ec2.New(sess)
 }
@@ -360,8 +360,19 @@ func (p *Amazon) runInstances(num int, master bool, ssh *types.SSH) error {
 	if err != nil {
 		return fmt.Errorf("[%s] --root-size is invalid %v, must be integer: %v", p.GetProviderName(), p.RootSize, err)
 	}
+	img, err := p.client.DescribeImages(&ec2.DescribeImagesInput{
+		ImageIds: aws.StringSlice([]string{p.AMI}),
+	})
+	if err != nil {
+		return fmt.Errorf("[%s] AMI %s is invalid: %v", p.GetProviderName(), p.AMI, err)
+	}
+	// get root device name from AMI
+	deviceName := aws.String(defaultDeviceName)
+	if len(img.Images) > 0 {
+		deviceName = img.Images[0].RootDeviceName
+	}
 	bdm := &ec2.BlockDeviceMapping{
-		DeviceName: aws.String(defaultDeviceName),
+		DeviceName: deviceName,
 		Ebs: &ec2.EbsBlockDevice{
 			VolumeSize:          aws.Int64(rootSize),
 			VolumeType:          aws.String(p.VolumeType),

@@ -140,6 +140,14 @@ func (p *Amazon) GetCredentialFlags() []types.Flag {
 			Required: true,
 			EnvVar:   "AWS_SECRET_ACCESS_KEY",
 		},
+		{
+			Name:     "session-token",
+			P:        &p.SessionToken,
+			V:        p.SessionToken,
+			Usage:    "AWS session token",
+			Required: false,
+			EnvVar:   "AWS_SESSION_TOKEN",
+		},
 	}
 
 	return fs
@@ -157,8 +165,9 @@ func (p *Amazon) GetSSHConfig() *types.SSH {
 // BindCredential bind aws credential.
 func (p *Amazon) BindCredential() error {
 	secretMap := map[string]string{
-		"access-key": p.AccessKey,
-		"secret-key": p.SecretKey,
+		"access-key":    p.AccessKey,
+		"secret-key":    p.SecretKey,
+		"session-token": p.SessionToken,
 	}
 	return p.SaveCredential(secretMap)
 }
