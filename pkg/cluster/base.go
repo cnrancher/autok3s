@@ -1142,10 +1142,18 @@ func (p *ProviderBase) RollbackCluster(rollbackInstance func(ids []string) error
 		if err := rollbackInstance(ids); err != nil {
 			return err
 		}
-		// remove context.
-		if err := common.FileManager.ClearCfgByContext(p.ContextName); err != nil {
-			logrus.Errorf("failed to remove cluster context %s from kube config", p.ContextName)
+
+		state, err := common.DefaultDB.GetCluster(p.Name, p.Provider)
+		if err != nil {
+			return err
 		}
+		if state == nil || state.Status != common.StatusRunning {
+			// remove context.
+			if err := common.FileManager.ClearCfgByContext(p.ContextName); err != nil {
+				logrus.Errorf("failed to remove cluster context %s from kube config", p.ContextName)
+			}
+		}
+
 		p.Logger.Infof("[%s] successfully executed rollback logic", p.Provider)
 	}
 
