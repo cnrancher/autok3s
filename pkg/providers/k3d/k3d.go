@@ -368,6 +368,13 @@ func (p *K3d) createK3d(ssh *types.SSH) (*types.Cluster, error) {
 		return nil, err
 	}
 
+	p.M.Range(func(key, val interface{}) bool {
+		v := val.(types.Node)
+		v.RollBack = true
+		p.M.Store(v.InstanceID, v)
+		return true
+	})
+
 	c := &types.Cluster{
 		Metadata: p.Metadata,
 		Options:  p.Options,
@@ -415,13 +422,13 @@ func (p *K3d) joinK3d(ssh *types.SSH) (*types.Cluster, error) {
 	sort.Ints(serverIndexes)
 	sort.Ints(agentIndexes)
 
+	index := 0
+	if len(serverIndexes) > 0 {
+		index = serverIndexes[len(serverIndexes)-1] + 1
+	}
 	for i := 0; i < masterNum; i++ {
-		index := 0
-		if len(serverIndexes)-1 > 0 {
-			index = serverIndexes[len(serverIndexes)-1]
-		}
 		node := &k3d.Node{
-			Name:  fmt.Sprintf("%s-%s-%s-%d", k3d.DefaultObjectNamePrefix, p.Name, "server", index+1+i),
+			Name:  fmt.Sprintf("%s-%s-%s-%d", k3d.DefaultObjectNamePrefix, p.Name, "server", index+i),
 			Role:  k3d.ServerRole,
 			Image: p.Image,
 			K3sNodeLabels: map[string]string{
@@ -435,13 +442,13 @@ func (p *K3d) joinK3d(ssh *types.SSH) (*types.Cluster, error) {
 		nodes = append(nodes, node)
 	}
 
+	index = 0
+	if len(agentIndexes) > 0 {
+		index = agentIndexes[len(agentIndexes)-1] + 1
+	}
 	for i := 0; i < workerNum; i++ {
-		index := 0
-		if len(agentIndexes)-1 > 0 {
-			index = agentIndexes[len(agentIndexes)-1]
-		}
 		node := &k3d.Node{
-			Name:  fmt.Sprintf("%s-%s-%s-%d", k3d.DefaultObjectNamePrefix, p.Name, "agent", index+1+i),
+			Name:  fmt.Sprintf("%s-%s-%s-%d", k3d.DefaultObjectNamePrefix, p.Name, "agent", index+i),
 			Role:  k3d.AgentRole,
 			Image: p.Image,
 			K3sNodeLabels: map[string]string{
