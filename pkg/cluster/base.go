@@ -37,7 +37,7 @@ const (
 	ui                  = false
 	embedEtcd           = false
 	defaultCidr         = "10.42.0.0/16"
-	uploadManifestCmd   = "echo \"%s\" | base64 -d | sudo tee \"%s/%s\""
+	uploadManifestCmd   = "echo \"%s\" | base64 -d | tee \"%s/%s\""
 	dockerInstallScript = "https://get.docker.com"
 )
 
@@ -1177,8 +1177,8 @@ func (p *ProviderBase) ReleaseManifests() error {
 			)
 
 			_ = dialer.SetStdio(&stdout, &stderr, nil).SetWriter(p.Logger.Out).
-				Cmd(fmt.Sprintf("sudo kubectl delete -f %s/ui.yaml", common.K3sManifestsDir)).
-				Cmd(fmt.Sprintf("sudo rm %s/ui.yaml", common.K3sManifestsDir)).Run()
+				Cmd(fmt.Sprintf("kubectl delete -f %s/ui.yaml", common.K3sManifestsDir)).
+				Cmd(fmt.Sprintf("rm %s/ui.yaml", common.K3sManifestsDir)).Run()
 			_ = dialer.Close()
 			break
 		}

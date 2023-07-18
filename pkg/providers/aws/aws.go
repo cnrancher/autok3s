@@ -40,7 +40,7 @@ const (
 )
 
 const (
-	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
+	deployCCMCommand = "echo \"%s\" | base64 -d | tee \"%s/cloud-controller-manager.yaml\""
 )
 
 var (

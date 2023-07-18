@@ -78,9 +78,8 @@ func ptyHandler(apiOp *types.APIRequest) error {
 		return err
 	}
 	wsDialer := hosts.NewWebSocketDialer(c, dialer)
-	wsDialer.SetDefaultSize(rows, columns)
 
-	err = wsDialer.Terminal()
+	err = wsDialer.Terminal(rows, columns)
 	if err != nil {
 		return err
 	}

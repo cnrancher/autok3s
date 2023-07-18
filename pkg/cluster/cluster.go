@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -22,9 +21,11 @@ import (
 	"github.com/cnrancher/autok3s/pkg/utils"
 
 	"github.com/k3d-io/k3d/v5/pkg/types/k3s"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -117,7 +118,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	// get k3s cluster config.
-	cfg, err := p.execute(&cluster.MasterNodes[0], []string{catCfgCommand})
+	cfg, err := p.executeWithRetry(3, &cluster.MasterNodes[0], []string{catCfgCommand})
 	if err != nil {
 		return err
 	}
@@ -487,17 +488,35 @@ func (p *ProviderBase) execute(n *types.Node, cmds []string) (string, error) {
 		stdout bytes.Buffer
 		stderr bytes.Buffer
 	)
-	dialer.SetStdio(&stdout, &stderr, nil).SetWriter(p.Logger.Out)
-
-	for _, cmd := range cmds {
-		dialer.Cmd(cmd)
-	}
-
-	if err := dialer.Run(); err != nil {
+	if err := dialer.SetStdio(&stdout, &stderr, nil).
+		SetWriter(p.Logger.Out).
+		Cmd(cmds...).
+		Run(); err != nil {
 		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
 	return stdout.String(), nil
+}
+
+func (p *ProviderBase) executeWithRetry(count int, n *types.Node, cmds []string) (string, error) {
+	backoff := wait.Backoff{
+		Duration: 2 * time.Second,
+		Factor:   1,
+		Steps:    count,
+	}
+	var rtn string
+	var lastError error
+	err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		rtn, lastError = p.execute(n, cmds)
+		if lastError != nil {
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		return "", errors.Wrapf(lastError, "failed to execute cmd with max retry count %d", count)
+	}
+	return rtn, nil
 }
 
 func terminal(n *types.Node) error {
@@ -537,7 +556,7 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 			return err
 		}
 	} else {
-		cmd = []string{fmt.Sprintf("sudo mkdir -p %s", registryPath)}
+		cmd = []string{fmt.Sprintf("mkdir -p %s", registryPath)}
 	}
 
 	registryContent, err := utils.RegistryToString(registry)
@@ -545,7 +564,7 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 		return err
 	}
 
-	cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"/etc/rancher/k3s/registries.yaml\"",
+	cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"/etc/rancher/k3s/registries.yaml\"",
 		base64.StdEncoding.EncodeToString([]byte(registryContent))))
 	_, err = p.execute(n, cmd)
 	return err
@@ -601,13 +620,13 @@ func saveRegistryTLS(registry *k3s.Registry, m map[string]map[string][]byte) ([]
 
 			// i.e /etc/rancher/k3s/mycustomreg:5000/.
 			path := fmt.Sprintf("/etc/rancher/k3s/%s", r)
-			cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", path))
+			cmd = append(cmd, fmt.Sprintf("mkdir -p %s", path))
 
 			for f, b := range c {
 				// i.e /etc/rancher/k3s/mycustomreg:5000/{ca,key,cert}.
 				file := fmt.Sprintf("%s/%s", path, f)
-				cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s\"", base64.StdEncoding.EncodeToString(b), file))
-				cmd = append(cmd, fmt.Sprintf("sudo chmod 755 %s", file))
+				cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s\"", base64.StdEncoding.EncodeToString(b), file))
+				cmd = append(cmd, fmt.Sprintf("chmod 755 %s", file))
 
 				switch f {
 				case "cert":
@@ -847,13 +866,13 @@ func (p *ProviderBase) scpFiles(clusterName string, pkg *common.Package, node *t
 
 func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluster) error {
 	cmd := make([]string, 0)
-	cmd = append(cmd, fmt.Sprintf("sudo mkdir -p %s", datastoreCertificatesPath))
+	cmd = append(cmd, fmt.Sprintf("mkdir -p %s", datastoreCertificatesPath))
 	if c.DataStoreCAFile != "" {
 		caFile, err := os.ReadFile(c.DataStoreCAFile)
 		if err != nil {
 			return err
 		}
-		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-ca.pem\"",
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s/ds-ca.pem\"",
 			base64.StdEncoding.EncodeToString(caFile), datastoreCertificatesPath))
 	}
 	if c.DataStoreCertFile != "" {
@@ -861,7 +880,7 @@ func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluste
 		if err != nil {
 			return err
 		}
-		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-cert.pem\"",
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s/ds-cert.pem\"",
 			base64.StdEncoding.EncodeToString(certFile), datastoreCertificatesPath))
 	}
 	if c.DataStoreKeyFile != "" {
@@ -869,19 +888,19 @@ func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluste
 		if err != nil {
 			return err
 		}
-		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-key.pem\"",
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s/ds-key.pem\"",
 			base64.StdEncoding.EncodeToString(keyFile), datastoreCertificatesPath))
 	}
 	if c.DataStoreCAFileContent != "" {
-		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-ca.pem\"",
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s/ds-ca.pem\"",
 			base64.StdEncoding.EncodeToString([]byte(p.DataStoreCAFileContent)), datastoreCertificatesPath))
 	}
 	if c.DataStoreKeyFileContent != "" {
-		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-key.pem\"",
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s/ds-key.pem\"",
 			base64.StdEncoding.EncodeToString([]byte(p.DataStoreKeyFileContent)), datastoreCertificatesPath))
 	}
 	if c.DataStoreCertFileContent != "" {
-		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | sudo tee \"%s/ds-cert.pem\"",
+		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s/ds-cert.pem\"",
 			base64.StdEncoding.EncodeToString([]byte(p.DataStoreCertFileContent)), datastoreCertificatesPath))
 	}
 	_, err := p.execute(n, cmd)

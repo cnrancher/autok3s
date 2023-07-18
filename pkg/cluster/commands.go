@@ -13,13 +13,13 @@ const (
 )
 
 var (
-	getTokenCommand        = "sudo cat /var/lib/rancher/k3s/server/node-token"
-	catCfgCommand          = "sudo cat /etc/rancher/k3s/k3s.yaml"
+	getTokenCommand        = "cat /var/lib/rancher/k3s/server/node-token"
+	catCfgCommand          = "cat /etc/rancher/k3s/k3s.yaml"
 	dockerCommand          = "if ! type docker; then curl -sSL %s | %s sh - %s; fi"
-	masterUninstallCommand = "sh /usr/local/bin/k3s-uninstall.sh"
-	workerUninstallCommand = "sh /usr/local/bin/k3s-agent-uninstall.sh"
-	k3sRestart             = `if [ -n "$(command -v systemctl)" ]; then sudo systemctl restart k3s; elif [ -n "$(command -v service)" ]; then sudo service k3s restart; fi`
-	k3sAgentRestart        = `if [ -n "$(command -v systemctl)" ]; then sudo systemctl restart k3s-agent; elif [ -n "$(command -v service)" ]; then sudo service k3s-agent restart; fi`
+	masterUninstallCommand = "[ -x /usr/local/bin/k3s-uninstall.sh ] && sh /usr/local/bin/k3s-uninstall.sh || true"
+	workerUninstallCommand = "[ -x /usr/local/bin/k3s-agent-uninstall.sh ] && sh /usr/local/bin/k3s-agent-uninstall.sh || true"
+	k3sRestart             = `if [ -n "$(command -v systemctl)" ]; then systemctl restart k3s; elif [ -n "$(command -v service)" ]; then service k3s restart; fi`
+	k3sAgentRestart        = `if [ -n "$(command -v systemctl)" ]; then systemctl restart k3s-agent; elif [ -n "$(command -v service)" ]; then service k3s-agent restart; fi`
 )
 
 // getCommand first node should be init

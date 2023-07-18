@@ -38,9 +38,6 @@ type DockerDialer struct {
 	Stderr io.Writer
 	Writer io.Writer
 
-	Height int
-	Weight int
-
 	ctx      context.Context
 	client   client.APIClient
 	response *dockertypes.HijackedResponse
@@ -150,12 +147,6 @@ func (d *DockerDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
 	d.Stdin = stdin
 }
 
-// SetWindowSize set dialer's default win size.
-func (d *DockerDialer) SetWindowSize(height, weight int) {
-	d.Height = height
-	d.Weight = weight
-}
-
 // SetWriter set dialer's logs writer.
 func (d *DockerDialer) SetWriter(w io.Writer) *DockerDialer {
 	d.Writer = w
@@ -189,7 +180,7 @@ func (d *DockerDialer) Terminal() error {
 }
 
 // OpenTerminal open docker websocket terminal.
-func (d *DockerDialer) OpenTerminal() error {
+func (d *DockerDialer) OpenTerminal(win WindowSize) error {
 	return d.ExecStart(false)
 }
 
@@ -444,7 +435,7 @@ func (d *DockerDialer) beginInputStream(restoreInput func()) (doneC <-chan struc
 }
 
 // ChangeWindowSize change tty window size for websocket.
-func (d *DockerDialer) ChangeWindowSize(win *WindowSize) error {
+func (d *DockerDialer) ChangeWindowSize(win WindowSize) error {
 	return d.ResizeTtyTo(d.ctx, uint(win.Height), uint(win.Width))
 }
 

@@ -3,10 +3,13 @@ package hosts
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +29,12 @@ var defaultBackoff = wait.Backoff{
 	Steps:    5,
 }
 
+const scriptWrapper = `#!/bin/sh
+set -e
+[ -n "%s" ] && set -x || true
+%s
+`
+
 // SSHDialer struct for ssh dialer.
 type SSHDialer struct {
 	sshKey          string
@@ -41,9 +50,6 @@ type SSHDialer struct {
 	Stderr io.Writer
 	Writer io.Writer
 
-	Height int
-	Weight int
-
 	Term  string
 	Modes ssh.TerminalModes
 
@@ -53,6 +59,9 @@ type SSHDialer struct {
 	cmd     *bytes.Buffer
 
 	err error
+
+	uid    int
+	logger *logrus.Logger
 }
 
 // NewSSHDialer returns new ssh dialer.
@@ -68,6 +77,7 @@ func NewSSHDialer(n *types.Node, timeout bool, logger *logrus.Logger) (*SSHDiale
 		useSSHAgentAuth: n.SSHAgentAuth,
 		sshCert:         n.SSHCert,
 		ctx:             context.Background(),
+		logger:          logger,
 	}
 
 	// IP addresses are preferred.
@@ -108,7 +118,13 @@ func NewSSHDialer(n *types.Node, timeout bool, logger *logrus.Logger) (*SSHDiale
 		return nil, fmt.Errorf("[ssh-dialer] init dialer [%s] error: %w", d.sshAddress, err)
 	}
 
-	return d, nil
+	session, err := d.conn.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	d.session = session
+
+	return d, d.getUserID()
 }
 
 // Dial handshake with ssh address.
@@ -124,16 +140,6 @@ func (d *SSHDialer) Dial(t bool) (*ssh.Client, error) {
 	}
 	// establish connection with SSH server.
 	return ssh.Dial("tcp", d.sshAddress, cfg)
-}
-
-// NewSession returns new session.
-func (d *SSHDialer) NewSession() error {
-	session, err := d.conn.NewSession()
-	if err != nil {
-		return err
-	}
-	d.session = session
-	return nil
 }
 
 // Wait waits for the remote command to exit.
@@ -172,14 +178,8 @@ func (d *SSHDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
 	d.Stdin = stdin
 }
 
-// SetWindowSize set dialer's default window size.
-func (d *SSHDialer) SetWindowSize(height, weight int) {
-	d.Height = height
-	d.Weight = weight
-}
-
 // ChangeWindowSize change the window size for current session.
-func (d *SSHDialer) ChangeWindowSize(win *WindowSize) error {
+func (d *SSHDialer) ChangeWindowSize(win WindowSize) error {
 	return d.session.WindowChange(win.Height, win.Width)
 }
 
@@ -190,15 +190,16 @@ func (d *SSHDialer) SetWriter(w io.Writer) *SSHDialer {
 }
 
 // Cmd pass commands in dialer, support multiple calls, e.g. d.Cmd("ls").Cmd("id").
-func (d *SSHDialer) Cmd(cmd string) *SSHDialer {
-	if d.cmd == nil {
-		d.cmd = bytes.NewBufferString(cmd + "\n")
-		return d
-	}
+func (d *SSHDialer) Cmd(cmds ...string) *SSHDialer {
+	for _, cmd := range cmds {
+		if d.cmd == nil {
+			d.cmd = bytes.NewBuffer([]byte{})
+		}
 
-	_, err := d.cmd.WriteString(cmd + "\n")
-	if err != nil {
-		d.err = err
+		_, err := d.cmd.WriteString(cmd + "\n")
+		if err != nil {
+			d.err = err
+		}
 	}
 
 	return d
@@ -215,6 +216,7 @@ func (d *SSHDialer) Run() error {
 
 // Terminal starts a login shell on the remote host for CLI.
 func (d *SSHDialer) Terminal() error {
+	var win WindowSize
 	fdInfo, _ := term.GetFdInfo(d.Stdout)
 	fd := int(fdInfo)
 
@@ -226,12 +228,12 @@ func (d *SSHDialer) Terminal() error {
 		return err
 	}
 
-	d.Weight, d.Height, err = terminal.GetSize(fd)
+	win.Width, win.Height, err = terminal.GetSize(fd)
 	if err != nil {
 		return err
 	}
 
-	if err := d.OpenTerminal(); err != nil {
+	if err := d.OpenTerminal(win); err != nil {
 		return err
 	}
 
@@ -239,14 +241,7 @@ func (d *SSHDialer) Terminal() error {
 }
 
 // OpenTerminal starts a login shell on the remote host.
-func (d *SSHDialer) OpenTerminal() error {
-	if d.session == nil {
-		session, err := d.conn.NewSession()
-		if err != nil {
-			return err
-		}
-		d.session = session
-	}
+func (d *SSHDialer) OpenTerminal(win WindowSize) error {
 	d.Term = os.Getenv("TERM")
 	if d.Term == "" {
 		d.Term = "xterm"
@@ -260,7 +255,7 @@ func (d *SSHDialer) OpenTerminal() error {
 	d.session.Stdout = d.Stdout
 	d.session.Stderr = d.Stderr
 
-	if err := d.session.RequestPty(d.Term, d.Height, d.Weight, d.Modes); err != nil {
+	if err := d.session.RequestPty(d.Term, win.Height, win.Width, d.Modes); err != nil {
 		return err
 	}
 
@@ -268,38 +263,18 @@ func (d *SSHDialer) OpenTerminal() error {
 }
 
 func (d *SSHDialer) executeCommands() error {
-	for {
-		cmd, err := d.cmd.ReadString('\n')
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		if err := d.executeCommand(cmd); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	encodedCMD := d.wrapCommands(d.cmd.String())
+	cmd := fmt.Sprintf("echo \"%s\" | base64 -d | %s sh -", encodedCMD, d.shouldRoot())
+	d.logger.Debugf("executing cmd: %s", cmd)
+	return d.executeCommand(cmd)
 }
 
 func (d *SSHDialer) executeCommand(cmd string) error {
-	session, err := d.conn.NewSession()
+	stdoutPipe, err := d.session.StdoutPipe()
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		_ = session.Close()
-	}()
-
-	stdoutPipe, err := session.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	stderrPipe, err := session.StderrPipe()
+	stderrPipe, err := d.session.StderrPipe()
 	if err != nil {
 		return err
 	}
@@ -327,7 +302,7 @@ func (d *SSHDialer) executeCommand(cmd string) error {
 		wg.Done()
 	}()
 
-	err = session.Run(cmd)
+	err = d.session.Run(cmd)
 
 	wg.Wait()
 
@@ -340,4 +315,51 @@ func (d *SSHDialer) Write(b []byte) error {
 
 func (d *SSHDialer) GetClient() *ssh.Client {
 	return d.conn
+}
+
+func (d *SSHDialer) getUserID() error {
+	session, err := d.conn.NewSession()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = session.Close() }()
+
+	output, err := session.Output("id -u")
+	if err != nil {
+		return fmt.Errorf("failed to get current user id from remote host %s, %v", d.sshAddress, err)
+	}
+	// it should return a number with user id if ok
+	d.uid, err = strconv.Atoi(strings.TrimSpace(string(output)))
+	if err != nil {
+		return fmt.Errorf("failed to parse uid output from remote host, output: %s, %v", string(output), err)
+	}
+	return nil
+}
+
+func (d *SSHDialer) shouldRoot() string {
+	if d.uid == 0 {
+		return ""
+	}
+	return "sudo"
+}
+
+func (d *SSHDialer) wrapCommands(cmd string) string {
+	// set the beginning debug flag
+	var debug string
+	if d.logger.Level == logrus.DebugLevel {
+		debug = "true"
+	}
+	arg := []any{debug, cmd}
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(scriptWrapper, arg...)))
+}
+
+func (d *SSHDialer) RenewSession() error {
+	_ = d.session.Close()
+	var err error
+	d.session, err = d.conn.NewSession()
+	if d.cmd != nil {
+		d.cmd.Reset()
+	}
+
+	return err
 }

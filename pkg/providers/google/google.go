@@ -36,7 +36,7 @@ const (
 	apiURL               = "https://www.googleapis.com/compute/v1/projects"
 	statusRunning        = "RUNNING"
 
-	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/gcp-cloud-controller-manager.yaml\""
+	deployCCMCommand = "echo \"%s\" | base64 -d | tee \"%s/gcp-cloud-controller-manager.yaml\""
 )
 
 // Google provider

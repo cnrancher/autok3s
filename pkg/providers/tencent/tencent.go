@@ -52,7 +52,7 @@ const providerName = "tencent"
 
 var (
 	k3sMirror        = "INSTALL_K3S_MIRROR=cn"
-	deployCCMCommand = "echo \"%s\" | base64 -d | sudo tee \"%s/cloud-controller-manager.yaml\""
+	deployCCMCommand = "echo \"%s\" | base64 -d | tee \"%s/cloud-controller-manager.yaml\""
 )
 
 // Tencent provider tencent struct.
