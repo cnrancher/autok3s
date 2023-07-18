@@ -140,8 +140,11 @@ func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, di
 		targetFilename := filepath.Join(targetPath, filename)
 
 		var stdout, stderr bytes.Buffer
+		if err := dialer.RenewSession(); err != nil {
+			return err
+		}
 		dialer = dialer.SetStdio(&stdout, &stderr, nil)
-		moveCMD := fmt.Sprintf("sudo mkdir -p %s;sudo mv %s %s", targetPath, remoteFileName, targetFilename)
+		moveCMD := fmt.Sprintf("mkdir -p %s;mv %s %s", targetPath, remoteFileName, targetFilename)
 		fieldLogger.Infof("executing cmd in remote server %s", moveCMD)
 		if err := dialer.Cmd(moveCMD).Run(); err != nil {
 			fieldLogger.Errorf("failed to execute cmd %s, stdout: %s, stderr: %s, %v", moveCMD, stdout.String(), stderr.String(), err)

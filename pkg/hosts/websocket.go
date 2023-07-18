@@ -14,9 +14,8 @@ import (
 // Dialer dialer interface definition.
 type Dialer interface {
 	SetIO(stdout, stderr io.Writer, stdin io.ReadCloser)
-	SetWindowSize(height, weight int)
-	ChangeWindowSize(win *WindowSize) error
-	OpenTerminal() error
+	ChangeWindowSize(win WindowSize) error
+	OpenTerminal(win WindowSize) error
 	Wait() error
 	Write(b []byte) error
 	Close() error
@@ -53,19 +52,14 @@ func (d *WebSocketDialer) Close() {
 	}
 }
 
-// SetDefaultSize set dialer's default window size.
-func (d *WebSocketDialer) SetDefaultSize(height, weight int) {
-	d.dialer.SetWindowSize(height, weight)
-}
-
 // Write write bytes to the websocket connection.
 func (d *WebSocketDialer) Write(bytes []byte) error {
 	return d.dialer.Write(bytes)
 }
 
 // Terminal open websocket terminal.
-func (d *WebSocketDialer) Terminal() error {
-	return d.dialer.OpenTerminal()
+func (d *WebSocketDialer) Terminal(height, width int) error {
+	return d.dialer.OpenTerminal(WindowSize{Height: height, Width: width})
 }
 
 // ReadMessage read websocket message.
@@ -74,7 +68,7 @@ func (d *WebSocketDialer) ReadMessage(ctx context.Context) error {
 }
 
 // ChangeWindowSize change websocket win size.
-func (d *WebSocketDialer) ChangeWindowSize(win *WindowSize) {
+func (d *WebSocketDialer) ChangeWindowSize(win WindowSize) {
 	err := d.dialer.ChangeWindowSize(win)
 	if err != nil {
 		logrus.Errorf("[websocket-dialer] failed to change window size: %s", err.Error())
@@ -113,7 +107,7 @@ func (s *BinaryWriter) Write(p []byte) (int, error) {
 type TerminalReader struct {
 	conn     *websocket.Conn
 	reader   io.Reader
-	resize   changeSizeFunc
+	resize   func(size WindowSize)
 	ClosedCh chan bool
 }
 
@@ -132,7 +126,7 @@ func (t *TerminalReader) Close() error {
 }
 
 // SetResizeFunction set terminal reader resize function.
-func (t *TerminalReader) SetResizeFunction(resizeFun func(size *WindowSize)) {
+func (t *TerminalReader) SetResizeFunction(resizeFun func(size WindowSize)) {
 	t.resize = resizeFun
 }
 
@@ -159,8 +153,8 @@ func (t *TerminalReader) Read(p []byte) (int, error) {
 				logrus.Errorf("[websocket-dialer] read text message error: %s", e.Error())
 				break
 			}
-			r := &WindowSize{}
-			if err = json.Unmarshal(body, r); err != nil {
+			r := WindowSize{}
+			if err = json.Unmarshal(body, &r); err != nil {
 				logrus.Errorf("[websocket-dialer] failed to convert resize object body: %s", err.Error())
 				break
 			}
@@ -180,8 +174,6 @@ type WindowSize struct {
 	Width  int
 	Height int
 }
-
-type changeSizeFunc func(size *WindowSize)
 
 func convert(err error) error {
 	if err == nil {

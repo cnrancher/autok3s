@@ -76,9 +76,7 @@ func handler(apiOp *types.APIRequest) error {
 	}
 	defer dialer.Close()
 
-	dialer.SetDefaultSize(rows, columns)
-
-	err = dialer.Terminal()
+	err = dialer.Terminal(rows, columns)
 	if err != nil {
 		return err
 	}

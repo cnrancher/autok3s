@@ -19,9 +19,6 @@ type PtyDialer struct {
 	Stderr io.Writer
 	Writer io.Writer
 
-	Height int
-	Weight int
-
 	ctx  context.Context
 	conn *os.File
 	cmd  *exec.Cmd
@@ -56,19 +53,12 @@ func (d *PtyDialer) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *Pty
 	return d
 }
 
-// SetDefaultSize set dialer's default win size.
-func (d *PtyDialer) SetDefaultSize(height, weight int) *PtyDialer {
-	d.Height = height
-	d.Weight = weight
-	return d
-}
-
 // WebSocketTerminal open pty websocket terminal.
 func (d *PtyDialer) WebSocketTerminal() error {
 	return fmt.Errorf("not support windows")
 }
 
 // ChangeSize changes to the current win size.
-func (d *PtyDialer) ChangeSize(win *WindowSize) error {
+func (d *PtyDialer) ChangeSize(win WindowSize) error {
 	return nil
 }
