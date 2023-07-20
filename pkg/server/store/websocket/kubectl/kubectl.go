@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/hosts/dialer"
 
 	"github.com/gorilla/websocket"
 	"github.com/rancher/apiserver/pkg/apierror"
@@ -73,7 +74,7 @@ func ptyHandler(apiOp *types.APIRequest) error {
 		_ = c.Close()
 	}()
 
-	dialer, err := hosts.NewPtyDialer(exec.CommandContext(apiOp.Request.Context(), "bash"))
+	dialer, err := dialer.NewPtyShell(exec.CommandContext(apiOp.Request.Context(), "bash"))
 	if err != nil {
 		return err
 	}

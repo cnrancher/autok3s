@@ -9,6 +9,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/hosts/dialer"
 	autok3stypes "github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/gorilla/websocket"
@@ -113,18 +114,22 @@ func newDialer(id, node string, conn *websocket.Conn) (*hosts.WebSocketDialer, e
 	for _, n := range allNodes {
 		if n.InstanceID == node {
 			if state.Provider == "k3d" {
-				dialer, err := hosts.NewDockerDialer(&n)
+				dialer, err := dialer.NewDockerShell(&n)
 				if err != nil {
 					return nil, err
 				}
 				wsDialer = hosts.NewWebSocketDialer(conn, dialer)
 				return wsDialer, nil
 			}
-			dialer, err := hosts.NewSSHDialer(&n, true, common.NewLogger(nil))
+			dialer, err := dialer.NewSSHDialer(&n, true, common.NewLogger(nil))
 			if err != nil {
 				return nil, err
 			}
-			wsDialer = hosts.NewWebSocketDialer(conn, dialer)
+			shell, err := dialer.OpenShell()
+			if err != nil {
+				return nil, err
+			}
+			wsDialer = hosts.NewWebSocketDialer(conn, shell)
 			return wsDialer, nil
 		}
 	}

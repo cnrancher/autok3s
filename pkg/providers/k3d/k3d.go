@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
-	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/hosts/dialer"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	typesk3d "github.com/cnrancher/autok3s/pkg/types/k3d"
@@ -530,16 +530,16 @@ func (p *K3d) attachNode(id string, cluster *types.Cluster) error {
 		}
 	}
 
-	// init docker dialer.
-	dialer, err := hosts.NewDockerDialer(&node)
+	// init docker shell.
+	shell, err := dialer.NewDockerShell(&node)
 	if err != nil {
 		return err
 	}
 
 	stdin, _, stderr := term.StdStreams()
-	dialer.SetWriter(p.Logger.Out).SetStdio(nil, stderr, stdin)
+	shell.SetStdio(nil, stderr, stdin)
 
-	return dialer.Terminal()
+	return shell.Terminal()
 }
 
 func (p *K3d) getK3dContainer(node *k3d.Node) (*dockertypes.Container, error) {

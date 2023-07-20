@@ -1,24 +1,22 @@
 package airgap
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/hosts/dialer"
 	"github.com/cnrancher/autok3s/pkg/settings"
 	"github.com/cnrancher/autok3s/pkg/types"
 
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh"
 )
 
 type fileMap struct {
@@ -60,7 +58,7 @@ var (
 	}
 )
 
-func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, dialer *hosts.SSHDialer, extraArgs string) (er error) {
+func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, dialer *dialer.SSHDialer, extraArgs string) (er error) {
 	dataPath := getDataPath(extraArgs)
 	conn := dialer.GetClient()
 	fieldLogger := logger.WithFields(logrus.Fields{
@@ -72,7 +70,7 @@ func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, di
 		return errors.New("install script must be configured")
 	}
 
-	arch, err := getRemoteArch(conn)
+	arch, err := getRemoteArch(dialer)
 	if err != nil {
 		return err
 	}
@@ -104,6 +102,7 @@ func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, di
 	}
 	defer scpClient.RemoveDirectory(tmpDir)
 
+	// scp files and execute post scp commands
 	for local, remote := range files {
 		filename := filepath.Base(local)
 		remoteFileName := filepath.Join(tmpDir, filename)
@@ -138,16 +137,10 @@ func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, di
 			targetPath = filepath.Join(dataPath, remote.dataDirSubpath)
 		}
 		targetFilename := filepath.Join(targetPath, filename)
-
-		var stdout, stderr bytes.Buffer
-		if err := dialer.RenewSession(); err != nil {
-			return err
-		}
-		dialer = dialer.SetStdio(&stdout, &stderr, nil)
 		moveCMD := fmt.Sprintf("mkdir -p %s;mv %s %s", targetPath, remoteFileName, targetFilename)
 		fieldLogger.Infof("executing cmd in remote server %s", moveCMD)
-		if err := dialer.Cmd(moveCMD).Run(); err != nil {
-			fieldLogger.Errorf("failed to execute cmd %s, stdout: %s, stderr: %s, %v", moveCMD, stdout.String(), stderr.String(), err)
+		if output, err := dialer.ExecuteCommands(moveCMD); err != nil {
+			fieldLogger.Errorf("failed to execute cmd %s, output: %s, %v", moveCMD, output, err)
 			return err
 		}
 
@@ -216,56 +209,12 @@ func PreparePackage(cluster *types.Cluster) (*common.Package, error) {
 	return rtn, nil
 }
 
-func getRemoteArch(conn *ssh.Client) (string, error) {
-	session, err := conn.NewSession()
+func getRemoteArch(executor hosts.Script) (string, error) {
+	line, err := executor.ExecuteCommands(unameCommand)
 	if err != nil {
 		return "", err
 	}
-	defer session.Close()
-
-	stdoutPipe, err := session.StdoutPipe()
-	if err != nil {
-		return "", err
-	}
-	stderrPipe, err := session.StderrPipe()
-	if err != nil {
-		return "", err
-	}
-
-	outWriter := bytes.NewBuffer([]byte{})
-	errWriter := bytes.NewBuffer([]byte{})
-
-	wg := sync.WaitGroup{}
-
-	wg.Add(1)
-	go func() {
-		_, _ = io.Copy(outWriter, stdoutPipe)
-		wg.Done()
-	}()
-
-	wg.Add(1)
-	go func() {
-		_, _ = io.Copy(errWriter, stderrPipe)
-		wg.Done()
-	}()
-
-	err = session.Run(unameCommand)
-
-	wg.Wait()
-	if err != nil {
-		return "", err
-	}
-	remoteErr := errWriter.String()
-	if remoteErr != "" {
-		return "", fmt.Errorf("got errors from remote server, %s", remoteErr)
-	}
-	bufferReader := bufio.NewReader(outWriter)
-	line, _, err := bufferReader.ReadLine()
-	if err != nil && err != io.EOF {
-		return "", err
-	} else if err == io.EOF {
-		line = []byte{}
-	}
+	line = strings.TrimSuffix(line, "\n")
 	return parseUnameArch(string(line)), nil
 }
 

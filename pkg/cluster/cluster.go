@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -15,7 +14,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/airgap"
 	"github.com/cnrancher/autok3s/pkg/common"
-	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/hosts/dialer"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
@@ -118,7 +117,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 	}
 
 	// get k3s cluster config.
-	cfg, err := p.executeWithRetry(3, &cluster.MasterNodes[0], []string{catCfgCommand})
+	cfg, err := p.executeWithRetry(3, &cluster.MasterNodes[0], catCfgCommand)
 	if err != nil {
 		return err
 	}
@@ -200,7 +199,7 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 			serverNode = added.WorkerNodes[0]
 		}
 		serverNode.PublicIPAddress = []string{merged.IP}
-		token, err := p.execute(&serverNode, []string{getTokenCommand})
+		token, err := p.execute(&serverNode, getTokenCommand)
 		if err != nil {
 			return err
 		}
@@ -283,7 +282,7 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 				PublicIPAddress: []string{merged.IP},
 				SSH:             merged.SSH,
 				Master:          true,
-			}, []string{catCfgCommand})
+			}, catCfgCommand)
 			if err == nil {
 				// merge current cluster to kube config.
 				if err := SaveCfg(cfg, merged.IP, p.ContextName); err != nil {
@@ -369,12 +368,12 @@ func SSHK3sNode(ip string, cluster *types.Cluster, ssh *types.SSH) error {
 func (p *ProviderBase) UninstallK3sNodes(nodes []types.Node) (warnMsg []string) {
 	for _, node := range nodes {
 		if node.Master {
-			_, e := p.execute(&node, []string{masterUninstallCommand})
+			_, e := p.execute(&node, masterUninstallCommand)
 			if e != nil {
 				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on master node %s: %s", node.InstanceID, e.Error()))
 			}
 		} else {
-			_, e := p.execute(&node, []string{workerUninstallCommand})
+			_, e := p.execute(&node, workerUninstallCommand)
 			if e != nil {
 				warnMsg = append(warnMsg, fmt.Sprintf("failed to uninstall k3s on worker node %s: %s", node.InstanceID, e.Error()))
 			}
@@ -420,7 +419,7 @@ func SaveCfg(cfg, ip, context string) error {
 
 // DeployExtraManifest deploy extra K3S manifest.
 func (p *ProviderBase) DeployExtraManifest(cluster *types.Cluster, cmds []string) error {
-	if _, err := p.execute(&cluster.MasterNodes[0], cmds); err != nil {
+	if _, err := p.execute(&cluster.MasterNodes[0], cmds...); err != nil {
 		return err
 	}
 	return nil
@@ -430,7 +429,7 @@ func (p *ProviderBase) initNode(isFirstMaster bool, fixedIP string, cluster *typ
 	if strings.Contains(extraArgs, "--docker") {
 		dockerCmd := fmt.Sprintf(dockerCommand, cluster.DockerScript, cluster.DockerArg, cluster.DockerMirror)
 		p.Logger.Infof("[cluster] install docker command %s", dockerCmd)
-		if _, err := p.execute(&node, []string{dockerCmd}); err != nil {
+		if _, err := p.execute(&node, dockerCmd); err != nil {
 			return err
 		}
 	}
@@ -463,19 +462,19 @@ func (p *ProviderBase) initNode(isFirstMaster bool, fixedIP string, cluster *typ
 
 	p.Logger.Infof("[cluster] k3s %s command: %s", nodeRole, cmd)
 
-	if _, err := p.execute(&node, []string{cmd}); err != nil {
+	if _, err := p.execute(&node, cmd); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *ProviderBase) execute(n *types.Node, cmds []string) (string, error) {
+func (p *ProviderBase) execute(n *types.Node, cmds ...string) (string, error) {
 	if len(cmds) <= 0 {
 		return "", nil
 	}
 
-	dialer, err := hosts.NewSSHDialer(n, true, p.Logger)
+	dialer, err := dialer.NewSSHDialer(n, true, p.Logger)
 	if err != nil {
 		return "", err
 	}
@@ -483,22 +482,15 @@ func (p *ProviderBase) execute(n *types.Node, cmds []string) (string, error) {
 	defer func() {
 		_ = dialer.Close()
 	}()
-
-	var (
-		stdout bytes.Buffer
-		stderr bytes.Buffer
-	)
-	if err := dialer.SetStdio(&stdout, &stderr, nil).
-		SetWriter(p.Logger.Out).
-		Cmd(cmds...).
-		Run(); err != nil {
-		return "", fmt.Errorf("%w: %s", err, stderr.String())
+	output, err := dialer.ExecuteCommands(cmds...)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", err, output)
 	}
 
-	return stdout.String(), nil
+	return output, nil
 }
 
-func (p *ProviderBase) executeWithRetry(count int, n *types.Node, cmds []string) (string, error) {
+func (p *ProviderBase) executeWithRetry(count int, n *types.Node, cmds ...string) (string, error) {
 	backoff := wait.Backoff{
 		Duration: 2 * time.Second,
 		Factor:   1,
@@ -507,7 +499,7 @@ func (p *ProviderBase) executeWithRetry(count int, n *types.Node, cmds []string)
 	var rtn string
 	var lastError error
 	err := wait.ExponentialBackoff(backoff, func() (bool, error) {
-		rtn, lastError = p.execute(n, cmds)
+		rtn, lastError = p.execute(n, cmds...)
 		if lastError != nil {
 			return false, nil
 		}
@@ -520,7 +512,7 @@ func (p *ProviderBase) executeWithRetry(count int, n *types.Node, cmds []string)
 }
 
 func terminal(n *types.Node) error {
-	dialer, err := hosts.NewSSHDialer(n, true, common.NewLogger(nil))
+	dialer, err := dialer.NewSSHDialer(n, true, common.NewLogger(nil))
 	if err != nil {
 		return err
 	}
@@ -528,10 +520,14 @@ func terminal(n *types.Node) error {
 	defer func() {
 		_ = dialer.Close()
 	}()
+	shell, err := dialer.OpenShell()
+	if err != nil {
+		return err
+	}
 
-	dialer.SetStdio(os.Stdout, os.Stderr, os.Stdin)
+	shell.SetIO(os.Stdout, os.Stderr, os.Stdin)
 
-	return dialer.Terminal()
+	return shell.Terminal()
 }
 
 func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err error) {
@@ -566,7 +562,7 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 
 	cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"/etc/rancher/k3s/registries.yaml\"",
 		base64.StdEncoding.EncodeToString([]byte(registryContent))))
-	_, err = p.execute(n, cmd)
+	_, err = p.execute(n, cmd...)
 	return err
 }
 
@@ -813,7 +809,7 @@ func (p *ProviderBase) Upgrade(cluster *types.Cluster) error {
 
 		p.Logger.Infof("[cluster] upgrading k3s master %d command: %s", i+1, cmd)
 
-		if _, err := p.execute(&node, []string{cmd}); err != nil {
+		if _, err := p.execute(&node, cmd); err != nil {
 			return err
 		}
 	}
@@ -838,7 +834,7 @@ func (p *ProviderBase) Upgrade(cluster *types.Cluster) error {
 
 		p.Logger.Infof("[cluster] upgrading k3s worker %d command: %s", i+1, cmd)
 
-		if _, err := p.execute(&node, []string{cmd}); err != nil {
+		if _, err := p.execute(&node, cmd); err != nil {
 			return err
 		}
 	}
@@ -855,12 +851,11 @@ func nodeByInstanceID(nodes []types.Node) map[string]types.Node {
 }
 
 func (p *ProviderBase) scpFiles(clusterName string, pkg *common.Package, node *types.Node, extraArgs string) error {
-	dialer, err := hosts.NewSSHDialer(node, true, p.Logger)
+	dialer, err := dialer.NewSSHDialer(node, true, p.Logger)
 	if err != nil {
 		return err
 	}
 	defer dialer.Close()
-	dialer.SetWriter(p.Logger.Out)
 	return airgap.ScpFiles(p.Logger, clusterName, pkg, dialer, extraArgs)
 }
 
@@ -903,6 +898,6 @@ func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluste
 		cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"%s/ds-cert.pem\"",
 			base64.StdEncoding.EncodeToString([]byte(p.DataStoreCertFileContent)), datastoreCertificatesPath))
 	}
-	_, err := p.execute(n, cmd)
+	_, err := p.execute(n, cmd...)
 	return err
 }

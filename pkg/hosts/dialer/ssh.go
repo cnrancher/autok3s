@@ -1,8 +1,7 @@
-package hosts
+package dialer
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 	"github.com/sirupsen/logrus"
@@ -31,9 +31,11 @@ var defaultBackoff = wait.Backoff{
 
 const scriptWrapper = `#!/bin/sh
 set -e
-[ -n "%s" ] && set -x || true
 %s
 `
+
+var _ hosts.Shell = &SSHShell{}
+var _ hosts.Script = &SSHDialer{}
 
 // SSHDialer struct for ssh dialer.
 type SSHDialer struct {
@@ -45,23 +47,12 @@ type SSHDialer struct {
 	passphrase      string
 	useSSHAgentAuth bool
 
-	Stdin  io.ReadCloser
-	Stdout io.Writer
-	Stderr io.Writer
-	Writer io.Writer
-
-	Term  string
-	Modes ssh.TerminalModes
-
-	ctx     context.Context
-	conn    *ssh.Client
-	session *ssh.Session
-	cmd     *bytes.Buffer
-
-	err error
+	conn *ssh.Client
 
 	uid    int
 	logger *logrus.Logger
+
+	shells map[hosts.Shell]hosts.Shell
 }
 
 // NewSSHDialer returns new ssh dialer.
@@ -69,15 +60,18 @@ func NewSSHDialer(n *types.Node, timeout bool, logger *logrus.Logger) (*SSHDiale
 	if len(n.PublicIPAddress) <= 0 && n.InstanceID == "" {
 		return nil, errors.New("[ssh-dialer] no node IP or node ID is specified")
 	}
-
+	if logger == nil {
+		logger = logrus.StandardLogger()
+	}
 	d := &SSHDialer{
 		username:        n.SSHUser,
 		password:        n.SSHPassword,
 		passphrase:      n.SSHKeyPassphrase,
 		useSSHAgentAuth: n.SSHAgentAuth,
 		sshCert:         n.SSHCert,
-		ctx:             context.Background(),
 		logger:          logger,
+		shells:          map[hosts.Shell]hosts.Shell{},
+		uid:             -1,
 	}
 
 	// IP addresses are preferred.
@@ -118,13 +112,7 @@ func NewSSHDialer(n *types.Node, timeout bool, logger *logrus.Logger) (*SSHDiale
 		return nil, fmt.Errorf("[ssh-dialer] init dialer [%s] error: %w", d.sshAddress, err)
 	}
 
-	session, err := d.conn.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	d.session = session
-
-	return d, d.getUserID()
+	return d, nil
 }
 
 // Dial handshake with ssh address.
@@ -142,8 +130,109 @@ func (d *SSHDialer) Dial(t bool) (*ssh.Client, error) {
 	return ssh.Dial("tcp", d.sshAddress, cfg)
 }
 
+func (d *SSHDialer) GetClient() *ssh.Client {
+	return d.conn
+}
+
+func (d *SSHDialer) getUserID() error {
+	if d.uid >= 0 {
+		return nil
+	}
+	session, err := d.conn.NewSession()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = session.Close() }()
+
+	output, err := session.Output("id -u")
+	if err != nil {
+		return fmt.Errorf("failed to get current user id from remote host %s, %v", d.sshAddress, err)
+	}
+	// it should return a number with user id if ok
+	d.uid, err = strconv.Atoi(strings.TrimSpace(string(output)))
+	if err != nil {
+		return fmt.Errorf("failed to parse uid output from remote host, output: %s, %v", string(output), err)
+	}
+	return nil
+}
+
+func (d *SSHDialer) Close() error {
+	if d.conn != nil {
+		return d.conn.Close()
+	}
+	for _, shell := range d.shells {
+		shell.Close()
+		delete(d.shells, shell)
+	}
+	return nil
+}
+
+func (d *SSHDialer) wrapCommands(cmd string) string {
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(scriptWrapper, cmd)))
+}
+
+func (d *SSHDialer) ExecuteCommands(cmds ...string) (string, error) {
+	if err := d.getUserID(); err != nil {
+		return "", err
+	}
+
+	sudo := ""
+	if d.uid > 0 {
+		sudo = "sudo"
+	}
+
+	session, err := d.conn.NewSession()
+	if err != nil {
+		return "", err
+	}
+	defer session.Close()
+
+	encodedCMD := d.wrapCommands(strings.Join(cmds, "\n"))
+	cmd := fmt.Sprintf("echo \"%s\" | base64 -d | %s sh -", encodedCMD, sudo)
+	d.logger.Debugf("executing cmd: %s", cmd)
+
+	output := bytes.NewBuffer([]byte{})
+	combinedOutput := singleWriter{
+		b: io.MultiWriter(d.logger.Out, output),
+	}
+	session.Stderr = &combinedOutput
+	session.Stdout = &combinedOutput
+	err = session.Run(cmd)
+
+	return output.String(), err
+}
+
+func (d *SSHDialer) OpenShell() (hosts.Shell, error) {
+	shell := &SSHShell{
+		dialer: d,
+	}
+	session, err := d.conn.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	shell.session = session
+	d.shells[shell] = shell
+	return shell, nil
+}
+
+type SSHShell struct {
+	Stdin  io.ReadCloser
+	Stdout io.Writer
+	Stderr io.Writer
+	Writer io.Writer
+
+	Term    string
+	Modes   ssh.TerminalModes
+	session *ssh.Session
+	dialer  *SSHDialer
+}
+
+func (d *SSHShell) Write(b []byte) error {
+	return nil
+}
+
 // Wait waits for the remote command to exit.
-func (d *SSHDialer) Wait() error {
+func (d *SSHShell) Wait() error {
 	if d.session != nil {
 		return d.session.Wait()
 	}
@@ -151,72 +240,37 @@ func (d *SSHDialer) Wait() error {
 }
 
 // Close close the SSH connection.
-func (d *SSHDialer) Close() error {
+func (d *SSHShell) Close() error {
+	defer delete(d.dialer.shells, d)
 	if d.session != nil {
 		if err := d.session.Close(); err != nil {
-			return err
-		}
-	}
-	if d.conn != nil {
-		if err := d.conn.Close(); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// SetStdio set dialer's reader and writer.
-func (d *SSHDialer) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *SSHDialer {
-	d.SetIO(stdout, stderr, stdin)
-	return d
-}
-
 // SetIO set dialer's reader and writer.
-func (d *SSHDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
+func (d *SSHShell) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
 	d.Stdout = stdout
 	d.Stderr = stderr
 	d.Stdin = stdin
 }
 
 // ChangeWindowSize change the window size for current session.
-func (d *SSHDialer) ChangeWindowSize(win WindowSize) error {
+func (d *SSHShell) ChangeWindowSize(win hosts.ShellWindowSize) error {
 	return d.session.WindowChange(win.Height, win.Width)
 }
 
 // SetWriter set dialer's logs writer.
-func (d *SSHDialer) SetWriter(w io.Writer) *SSHDialer {
+func (d *SSHShell) SetWriter(w io.Writer) *SSHShell {
 	d.Writer = w
 	return d
 }
 
-// Cmd pass commands in dialer, support multiple calls, e.g. d.Cmd("ls").Cmd("id").
-func (d *SSHDialer) Cmd(cmds ...string) *SSHDialer {
-	for _, cmd := range cmds {
-		if d.cmd == nil {
-			d.cmd = bytes.NewBuffer([]byte{})
-		}
-
-		_, err := d.cmd.WriteString(cmd + "\n")
-		if err != nil {
-			d.err = err
-		}
-	}
-
-	return d
-}
-
-// Run commands in remote server via SSH tunnel.
-func (d *SSHDialer) Run() error {
-	if d.err != nil {
-		return d.err
-	}
-
-	return d.executeCommands()
-}
-
 // Terminal starts a login shell on the remote host for CLI.
-func (d *SSHDialer) Terminal() error {
-	var win WindowSize
+func (d *SSHShell) Terminal() error {
+	var win hosts.ShellWindowSize
 	fdInfo, _ := term.GetFdInfo(d.Stdout)
 	fd := int(fdInfo)
 
@@ -241,7 +295,7 @@ func (d *SSHDialer) Terminal() error {
 }
 
 // OpenTerminal starts a login shell on the remote host.
-func (d *SSHDialer) OpenTerminal(win WindowSize) error {
+func (d *SSHShell) OpenTerminal(win hosts.ShellWindowSize) error {
 	d.Term = os.Getenv("TERM")
 	if d.Term == "" {
 		d.Term = "xterm"
@@ -262,104 +316,13 @@ func (d *SSHDialer) OpenTerminal(win WindowSize) error {
 	return d.session.Shell()
 }
 
-func (d *SSHDialer) executeCommands() error {
-	encodedCMD := d.wrapCommands(d.cmd.String())
-	cmd := fmt.Sprintf("echo \"%s\" | base64 -d | %s sh -", encodedCMD, d.shouldRoot())
-	d.logger.Debugf("executing cmd: %s", cmd)
-	return d.executeCommand(cmd)
+type singleWriter struct {
+	b  io.Writer
+	mu sync.Mutex
 }
 
-func (d *SSHDialer) executeCommand(cmd string) error {
-	stdoutPipe, err := d.session.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	stderrPipe, err := d.session.StderrPipe()
-	if err != nil {
-		return err
-	}
-
-	var outWriter, errWriter io.Writer
-	if d.Writer != nil {
-		outWriter = io.MultiWriter(d.Stdout, d.Writer)
-		errWriter = io.MultiWriter(d.Stderr, d.Writer)
-	} else {
-		outWriter = io.MultiWriter(os.Stdout, d.Stdout)
-		errWriter = io.MultiWriter(os.Stderr, d.Stderr)
-	}
-
-	wg := sync.WaitGroup{}
-
-	wg.Add(1)
-	go func() {
-		_, _ = io.Copy(outWriter, stdoutPipe)
-		wg.Done()
-	}()
-
-	wg.Add(1)
-	go func() {
-		_, _ = io.Copy(errWriter, stderrPipe)
-		wg.Done()
-	}()
-
-	err = d.session.Run(cmd)
-
-	wg.Wait()
-
-	return err
-}
-
-func (d *SSHDialer) Write(b []byte) error {
-	return nil
-}
-
-func (d *SSHDialer) GetClient() *ssh.Client {
-	return d.conn
-}
-
-func (d *SSHDialer) getUserID() error {
-	session, err := d.conn.NewSession()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = session.Close() }()
-
-	output, err := session.Output("id -u")
-	if err != nil {
-		return fmt.Errorf("failed to get current user id from remote host %s, %v", d.sshAddress, err)
-	}
-	// it should return a number with user id if ok
-	d.uid, err = strconv.Atoi(strings.TrimSpace(string(output)))
-	if err != nil {
-		return fmt.Errorf("failed to parse uid output from remote host, output: %s, %v", string(output), err)
-	}
-	return nil
-}
-
-func (d *SSHDialer) shouldRoot() string {
-	if d.uid == 0 {
-		return ""
-	}
-	return "sudo"
-}
-
-func (d *SSHDialer) wrapCommands(cmd string) string {
-	// set the beginning debug flag
-	var debug string
-	if d.logger.Level == logrus.DebugLevel {
-		debug = "true"
-	}
-	arg := []any{debug, cmd}
-	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(scriptWrapper, arg...)))
-}
-
-func (d *SSHDialer) RenewSession() error {
-	_ = d.session.Close()
-	var err error
-	d.session, err = d.conn.NewSession()
-	if d.cmd != nil {
-		d.cmd.Reset()
-	}
-
-	return err
+func (w *singleWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.b.Write(p)
 }

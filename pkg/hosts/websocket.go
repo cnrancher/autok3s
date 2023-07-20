@@ -11,11 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Dialer dialer interface definition.
-type Dialer interface {
+// Shell dialer interface definition.
+type Shell interface {
 	SetIO(stdout, stderr io.Writer, stdin io.ReadCloser)
-	ChangeWindowSize(win WindowSize) error
-	OpenTerminal(win WindowSize) error
+	ChangeWindowSize(win ShellWindowSize) error
+	Terminal() error
+	OpenTerminal(win ShellWindowSize) error
 	Wait() error
 	Write(b []byte) error
 	Close() error
@@ -23,13 +24,13 @@ type Dialer interface {
 
 // WebSocketDialer struct for websocket dialer.
 type WebSocketDialer struct {
-	dialer Dialer
+	dialer Shell
 	conn   *websocket.Conn
 	reader *TerminalReader
 }
 
 // NewWebSocketDialer returns new websocket dialer.
-func NewWebSocketDialer(conn *websocket.Conn, dialer Dialer) *WebSocketDialer {
+func NewWebSocketDialer(conn *websocket.Conn, dialer Shell) *WebSocketDialer {
 	d := &WebSocketDialer{
 		conn:   conn,
 		dialer: dialer,
@@ -59,7 +60,7 @@ func (d *WebSocketDialer) Write(bytes []byte) error {
 
 // Terminal open websocket terminal.
 func (d *WebSocketDialer) Terminal(height, width int) error {
-	return d.dialer.OpenTerminal(WindowSize{Height: height, Width: width})
+	return d.dialer.OpenTerminal(ShellWindowSize{Height: height, Width: width})
 }
 
 // ReadMessage read websocket message.
@@ -68,7 +69,7 @@ func (d *WebSocketDialer) ReadMessage(ctx context.Context) error {
 }
 
 // ChangeWindowSize change websocket win size.
-func (d *WebSocketDialer) ChangeWindowSize(win WindowSize) {
+func (d *WebSocketDialer) ChangeWindowSize(win ShellWindowSize) {
 	err := d.dialer.ChangeWindowSize(win)
 	if err != nil {
 		logrus.Errorf("[websocket-dialer] failed to change window size: %s", err.Error())
@@ -107,7 +108,7 @@ func (s *BinaryWriter) Write(p []byte) (int, error) {
 type TerminalReader struct {
 	conn     *websocket.Conn
 	reader   io.Reader
-	resize   func(size WindowSize)
+	resize   func(size ShellWindowSize)
 	ClosedCh chan bool
 }
 
@@ -126,7 +127,7 @@ func (t *TerminalReader) Close() error {
 }
 
 // SetResizeFunction set terminal reader resize function.
-func (t *TerminalReader) SetResizeFunction(resizeFun func(size WindowSize)) {
+func (t *TerminalReader) SetResizeFunction(resizeFun func(size ShellWindowSize)) {
 	t.resize = resizeFun
 }
 
@@ -153,7 +154,7 @@ func (t *TerminalReader) Read(p []byte) (int, error) {
 				logrus.Errorf("[websocket-dialer] read text message error: %s", e.Error())
 				break
 			}
-			r := WindowSize{}
+			r := ShellWindowSize{}
 			if err = json.Unmarshal(body, &r); err != nil {
 				logrus.Errorf("[websocket-dialer] failed to convert resize object body: %s", err.Error())
 				break
@@ -169,8 +170,8 @@ func (t *TerminalReader) Read(p []byte) (int, error) {
 	}
 }
 
-// WindowSize struct for window size.
-type WindowSize struct {
+// ShellWindowSize struct for window size.
+type ShellWindowSize struct {
 	Width  int
 	Height int
 }
