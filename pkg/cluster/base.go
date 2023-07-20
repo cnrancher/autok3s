@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -15,7 +14,7 @@ import (
 	"sync"
 
 	"github.com/cnrancher/autok3s/pkg/common"
-	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/hosts/dialer"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	pkgsshkey "github.com/cnrancher/autok3s/pkg/sshkey"
@@ -1166,20 +1165,16 @@ func (p *ProviderBase) ReleaseManifests() error {
 	masterIP := p.IP
 	for _, n := range p.Status.MasterNodes {
 		if n.InternalIPAddress[0] == masterIP {
-			dialer, err := hosts.NewSSHDialer(&n, true, p.Logger)
+			dialer, err := dialer.NewSSHDialer(&n, true, p.Logger)
 			if err != nil {
 				return err
 			}
-
-			var (
-				stdout bytes.Buffer
-				stderr bytes.Buffer
+			defer dialer.Close()
+			_, _ = dialer.ExecuteCommands(
+				fmt.Sprintf("kubectl delete -f %s/ui.yaml", common.K3sManifestsDir),
+				fmt.Sprintf("rm %s/ui.yaml", common.K3sManifestsDir),
 			)
 
-			_ = dialer.SetStdio(&stdout, &stderr, nil).SetWriter(p.Logger.Out).
-				Cmd(fmt.Sprintf("kubectl delete -f %s/ui.yaml", common.K3sManifestsDir)).
-				Cmd(fmt.Sprintf("rm %s/ui.yaml", common.K3sManifestsDir)).Run()
-			_ = dialer.Close()
 			break
 		}
 	}

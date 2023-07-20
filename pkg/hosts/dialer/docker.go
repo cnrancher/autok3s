@@ -1,4 +1,4 @@
-package hosts
+package dialer
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/cnrancher/autok3s/pkg/types"
 
 	dockertypes "github.com/docker/docker/api/types"
@@ -26,11 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+var _ hosts.Shell = &DockerShell{}
+
 // the default escape key sequence: ctrl-p, ctrl-q.
 var defaultEscapeKeys = []byte{16, 17}
 
-// DockerDialer struct for docker dialer.
-type DockerDialer struct {
+// DockerShell struct for docker dialer.
+type DockerShell struct {
 	execID string
 
 	Stdin  io.ReadCloser
@@ -44,12 +47,12 @@ type DockerDialer struct {
 }
 
 // NewDockerDialer returns new docker dialer.
-func NewDockerDialer(n *types.Node) (*DockerDialer, error) {
+func NewDockerShell(n *types.Node) (*DockerShell, error) {
 	if n.InstanceID == "" {
 		return nil, errors.New("[docker-dialer] no container ID is specified")
 	}
 
-	d := &DockerDialer{
+	d := &DockerShell{
 		ctx: context.Background(),
 	}
 
@@ -122,7 +125,7 @@ func NewDockerDialer(n *types.Node) (*DockerDialer, error) {
 }
 
 // Close close the Docker connection.
-func (d *DockerDialer) Close() error {
+func (d *DockerShell) Close() error {
 	if d.response != nil {
 		d.response.Close()
 	}
@@ -135,26 +138,26 @@ func (d *DockerDialer) Close() error {
 }
 
 // SetStdio set dialer's reader and writer.
-func (d *DockerDialer) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *DockerDialer {
+func (d *DockerShell) SetStdio(stdout, stderr io.Writer, stdin io.ReadCloser) *DockerShell {
 	d.SetIO(stdout, stderr, stdin)
 	return d
 }
 
 // SetIO set dialer's reader and writer.
-func (d *DockerDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
+func (d *DockerShell) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
 	d.Stdout = stdout
 	d.Stderr = stderr
 	d.Stdin = stdin
 }
 
 // SetWriter set dialer's logs writer.
-func (d *DockerDialer) SetWriter(w io.Writer) *DockerDialer {
+func (d *DockerShell) SetWriter(w io.Writer) *DockerShell {
 	d.Writer = w
 	return d
 }
 
 // Terminal open docker exec terminal.
-func (d *DockerDialer) Terminal() error {
+func (d *DockerShell) Terminal() error {
 	defer func() {
 		_ = d.Close()
 	}()
@@ -180,7 +183,7 @@ func (d *DockerDialer) Terminal() error {
 }
 
 // OpenTerminal open docker websocket terminal.
-func (d *DockerDialer) OpenTerminal(win WindowSize) error {
+func (d *DockerShell) OpenTerminal(win hosts.ShellWindowSize) error {
 	return d.ExecStart(false)
 }
 
@@ -189,7 +192,7 @@ func (d *DockerDialer) OpenTerminal(win WindowSize) error {
 // output, the user inputs the detach key sequence when in TTY mode, or when
 // the given context is cancelled.
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/hijack.go#L40.
-func (d *DockerDialer) ExecStart(needRestore bool) error {
+func (d *DockerShell) ExecStart(needRestore bool) error {
 	restoreInput, err := d.setInput(needRestore)
 	if err != nil {
 		return fmt.Errorf("[docker-dialer] unable to setup input stream: %s", err)
@@ -239,7 +242,7 @@ func (d *DockerDialer) ExecStart(needRestore bool) error {
 
 // Wait waits for the command to exit.
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/exec.go#L180.
-func (d *DockerDialer) Wait() error {
+func (d *DockerShell) Wait() error {
 	resp, err := d.client.ContainerExecInspect(d.ctx, d.execID)
 	if err != nil {
 		// if we can't connect, then the daemon probably died.
@@ -256,7 +259,7 @@ func (d *DockerDialer) Wait() error {
 }
 
 // ResizeTtyTo changes the size of the tty for an exec process running inside a container.
-func (d *DockerDialer) ResizeTtyTo(ctx context.Context, height, width uint) error {
+func (d *DockerShell) ResizeTtyTo(ctx context.Context, height, width uint) error {
 	if height == 0 && width == 0 {
 		return nil
 	}
@@ -268,7 +271,7 @@ func (d *DockerDialer) ResizeTtyTo(ctx context.Context, height, width uint) erro
 }
 
 // ResizeTty changes to the current win size.
-func (d *DockerDialer) ResizeTty(ctx context.Context) error {
+func (d *DockerShell) ResizeTty(ctx context.Context) error {
 	fd, _ := term.GetFdInfo(d.Stdout)
 	winSize, err := term.GetWinsize(fd)
 	if err != nil {
@@ -280,7 +283,7 @@ func (d *DockerDialer) ResizeTty(ctx context.Context) error {
 
 // MonitorTtySize monitor and change tty size.
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/tty.go#L71.
-func (d *DockerDialer) MonitorTtySize(ctx context.Context) error {
+func (d *DockerShell) MonitorTtySize(ctx context.Context) error {
 	ttyFunc := d.ResizeTty
 
 	if err := ttyFunc(ctx); err != nil {
@@ -335,7 +338,7 @@ func (d *DockerDialer) MonitorTtySize(ctx context.Context) error {
 }
 
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/hijack.go#L74.
-func (d *DockerDialer) setInput(needRestore bool) (restore func(), err error) {
+func (d *DockerShell) setInput(needRestore bool) (restore func(), err error) {
 	if d.Stdin == nil {
 		// no need to setup input TTY.
 		// the restore func is a nop.
@@ -375,7 +378,7 @@ func (d *DockerDialer) setInput(needRestore bool) (restore func(), err error) {
 }
 
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/hijack.go#L111.
-func (d *DockerDialer) beginOutputStream(restoreInput func()) <-chan error {
+func (d *DockerShell) beginOutputStream(restoreInput func()) <-chan error {
 	outputDone := make(chan error)
 	go func() {
 		var err error
@@ -399,7 +402,7 @@ func (d *DockerDialer) beginOutputStream(restoreInput func()) <-chan error {
 }
 
 // Borrowed from https://github.com/docker/cli/blob/master/cli/command/container/hijack.go#L144.
-func (d *DockerDialer) beginInputStream(restoreInput func()) (doneC <-chan struct{}, detachedC <-chan error) {
+func (d *DockerShell) beginInputStream(restoreInput func()) (doneC <-chan struct{}, detachedC <-chan error) {
 	inputDone := make(chan struct{})
 	detached := make(chan error)
 
@@ -435,11 +438,11 @@ func (d *DockerDialer) beginInputStream(restoreInput func()) (doneC <-chan struc
 }
 
 // ChangeWindowSize change tty window size for websocket.
-func (d *DockerDialer) ChangeWindowSize(win WindowSize) error {
+func (d *DockerShell) ChangeWindowSize(win hosts.ShellWindowSize) error {
 	return d.ResizeTtyTo(d.ctx, uint(win.Height), uint(win.Width))
 }
 
 // Write write implement.
-func (d *DockerDialer) Write(b []byte) error {
+func (d *DockerShell) Write(b []byte) error {
 	return nil
 }

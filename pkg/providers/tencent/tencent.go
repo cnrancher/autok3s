@@ -1,7 +1,6 @@
 package tencent
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -15,7 +14,7 @@ import (
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
-	"github.com/cnrancher/autok3s/pkg/hosts"
+	"github.com/cnrancher/autok3s/pkg/hosts/dialer"
 	"github.com/cnrancher/autok3s/pkg/providers"
 	putil "github.com/cnrancher/autok3s/pkg/providers/utils"
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -1372,7 +1371,7 @@ func (p *Tencent) allocateEIPForInstance(num int, master bool) ([]uint64, error)
 }
 
 func (p *Tencent) uploadKeyPair(node types.Node, publicKey string) error {
-	dialer, err := hosts.NewSSHDialer(&node, true, p.Logger)
+	dialer, err := dialer.NewSSHDialer(&node, true, p.Logger)
 	if err != nil {
 		return err
 	}
@@ -1381,20 +1380,15 @@ func (p *Tencent) uploadKeyPair(node types.Node, publicKey string) error {
 		_ = dialer.Close()
 	}()
 
-	var (
-		stdout bytes.Buffer
-		stderr bytes.Buffer
-	)
-
 	command := fmt.Sprintf("mkdir -p ~/.ssh; echo '%s' > ~/.ssh/authorized_keys", strings.Trim(publicKey, "\n"))
 
 	p.Logger.Infof("[%s] upload the public key with command: %s", p.GetProviderName(), command)
-
-	if err := dialer.SetStdio(&stdout, &stderr, nil).Cmd(command).Run(); err != nil || stderr.String() != "" {
-		return fmt.Errorf("%w: %s", err, stderr.String())
+	output, err := dialer.ExecuteCommands(command)
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, output)
 	}
 
-	p.Logger.Infof("[%s] upload keypair with output: %s", p.GetProviderName(), stdout.String())
+	p.Logger.Infof("[%s] upload keypair with output: %s", p.GetProviderName(), output)
 
 	return nil
 }

@@ -1,7 +1,7 @@
 //go:build darwin || linux
 // +build darwin linux
 
-package hosts
+package dialer
 
 import (
 	"context"
@@ -10,11 +10,14 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/cnrancher/autok3s/pkg/hosts"
 	"github.com/creack/pty"
 )
 
-// PtyDialer struct for pty dialer.
-type PtyDialer struct {
+var _ hosts.Shell = &PtyShell{}
+
+// PtyShell struct for pty dialer.
+type PtyShell struct {
 	Stdin  io.ReadCloser
 	Stdout io.Writer
 	Stderr io.Writer
@@ -26,16 +29,16 @@ type PtyDialer struct {
 }
 
 // NewPtyDialer returns new pty dialer struct.
-func NewPtyDialer(cmd *exec.Cmd) (*PtyDialer, error) {
+func NewPtyShell(cmd *exec.Cmd) (*PtyShell, error) {
 	if cmd == nil {
 		return nil, errors.New("[pty-dialer] no cmd is specified")
 	}
 
-	return &PtyDialer{ctx: context.Background(), cmd: cmd}, nil
+	return &PtyShell{ctx: context.Background(), cmd: cmd}, nil
 }
 
 // Close close the pty connection.
-func (d *PtyDialer) Close() error {
+func (d *PtyShell) Close() error {
 	if d.conn != nil {
 		if err := d.conn.Close(); err != nil {
 			return err
@@ -45,14 +48,18 @@ func (d *PtyDialer) Close() error {
 }
 
 // SetIO set dialer's reader and writer.
-func (d *PtyDialer) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
+func (d *PtyShell) SetIO(stdout, stderr io.Writer, stdin io.ReadCloser) {
 	d.Stdout = stdout
 	d.Stderr = stderr
 	d.Stdin = stdin
 }
 
+func (d *PtyShell) Terminal() error {
+	return errors.New("pty terminal not supported")
+}
+
 // OpenTerminal open pty websocket terminal.
-func (d *PtyDialer) OpenTerminal(win WindowSize) error {
+func (d *PtyShell) OpenTerminal(win hosts.ShellWindowSize) error {
 	p, err := pty.StartWithSize(d.cmd, &pty.Winsize{
 		Rows: uint16(win.Height),
 		Cols: uint16(win.Width),
@@ -75,7 +82,7 @@ func (d *PtyDialer) OpenTerminal(win WindowSize) error {
 }
 
 // ChangeWindowSize changes to the current window size.
-func (d *PtyDialer) ChangeWindowSize(win WindowSize) error {
+func (d *PtyShell) ChangeWindowSize(win hosts.ShellWindowSize) error {
 	return pty.Setsize(d.conn, &pty.Winsize{
 		Rows: uint16(win.Height),
 		Cols: uint16(win.Width),
@@ -83,11 +90,11 @@ func (d *PtyDialer) ChangeWindowSize(win WindowSize) error {
 }
 
 // Wait waits for the command to exit.
-func (d *PtyDialer) Wait() error {
+func (d *PtyShell) Wait() error {
 	return d.cmd.Wait()
 }
 
-func (d *PtyDialer) Write(b []byte) error {
+func (d *PtyShell) Write(b []byte) error {
 	_, err := d.conn.Write(b)
 	return err
 }
