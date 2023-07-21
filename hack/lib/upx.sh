@@ -15,8 +15,9 @@ function autok3s::upx::run() {
 
   autok3s::log::info "compressing binaries"
   for file in `ls ${ROOT_DIR}/dist`; do
-    if [[ "$file" == "autok3s_darwin_arm64" ]]; then
-      autok3s::log::info "darwin arm64 binary doesn't work well with upx, skipping compressing this binary."
+    if [[ $file == autok3s_darwin_* ]]; then
+      # Refer to issue: https://github.com/cnrancher/autok3s/issues/619 and https://github.com/cnrancher/autok3s/issues/516
+      autok3s::log::info "darwin binary doesn't work well with upx, skipping compressing this binary."
       continue
     fi
     autok3s::log::info "compressing $file"
