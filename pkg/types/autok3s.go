@@ -57,7 +57,7 @@ type Metadata struct {
 	DataStoreCAFileContent   string      `json:"datastore-cafile-content,omitempty" yaml:"datastore-cafile-content,omitempty"`
 	DataStoreCertFileContent string      `json:"datastore-certfile-content,omitempty" yaml:"datastore-certfile-content,omitempty"`
 	DataStoreKeyFileContent  string      `json:"datastore-keyfile-content,omitempty" yaml:"datastore-keyfile-content,omitempty"`
-	Rollback                 bool        `json:"rollback,omitempty" yaml:"rollback,omitempty" gorm:"type:bool"`
+	Rollback                 string      `json:"rollback,omitempty" yaml:"rollback,omitempty" gorm:"type:bool"`
 }
 
 // Status struct for status.

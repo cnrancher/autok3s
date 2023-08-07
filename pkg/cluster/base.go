@@ -69,7 +69,7 @@ func NewBaseProvider() *ProviderBase {
 			Worker:        worker,
 			ClusterCidr:   defaultCidr,
 			DockerScript:  dockerInstallScript,
-			Rollback:      true,
+			Rollback:      "true",
 		},
 		Status: types.Status{
 			MasterNodes: make([]types.Node, 0),
@@ -241,7 +241,7 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Name:  "rollback",
 			P:     &p.Rollback,
 			V:     p.Rollback,
-			Usage: "Whether to rollback when the K3s cluster installation or join nodes failed.",
+			Usage: "By default, the k3s installation/joining new nodes will rollback if failed. To disable rollback, set it to false.",
 		},
 	}
 
@@ -1131,7 +1131,7 @@ func (p *ProviderBase) Connect(ip string, ssh *types.SSH, c *types.Cluster, getS
 
 // RollbackCluster rollback when error occur.
 func (p *ProviderBase) RollbackCluster(rollbackInstance func(ids []string) error) error {
-	if !p.Rollback {
+	if p.Rollback == "false" {
 		p.Logger.Warnf("[%s] skip executing rollback logic. This is only used for troubleshooting, the instances and cluster is out of control by AutoK3s. Please check K3s error log and uninstalled manually if needed.", p.Provider)
 		return nil
 	}
