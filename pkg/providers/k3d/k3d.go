@@ -298,6 +298,7 @@ func (p *K3d) k3dStatus() ([]types.Node, error) {
 			InstanceStatus:    n.State.Status,
 			InternalIPAddress: []string{},
 			PublicIPAddress:   []string{},
+			LocalHostname:     "",
 		}
 		// save to the store because of the rollback logic needed.
 		p.M.Store(n.Name, nodeWrapper)

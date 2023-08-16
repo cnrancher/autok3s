@@ -59,6 +59,7 @@ type Metadata struct {
 	DataStoreCertFileContent string      `json:"datastore-certfile-content,omitempty" yaml:"datastore-certfile-content,omitempty"`
 	DataStoreKeyFileContent  string      `json:"datastore-keyfile-content,omitempty" yaml:"datastore-keyfile-content,omitempty"`
 	Rollback                 bool        `json:"rollback,omitempty" yaml:"rollback,omitempty" gorm:"type:bool"`
+	Values                   StringMap   `json:"values,omitempty" yaml:"values,omitempty" gorm:"type:stringMap"`
 }
 
 // Status struct for status.
@@ -82,6 +83,8 @@ type Node struct {
 	RollBack          bool     `json:"-" yaml:"-"`
 	Current           bool     `json:"-" yaml:"-"`
 	Standalone        bool     `json:"standalone"`
+
+	LocalHostname string `json:"local-hostname,omitempty" yaml:"local-hostname,omitempty"`
 }
 
 // SSH struct for ssh.

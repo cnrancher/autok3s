@@ -321,6 +321,7 @@ func (p *Native) syncNodesMap(ipList []string, master bool, ssh *types.SSH) {
 			InstanceStatus:    "-",
 			InternalIPAddress: []string{ip},
 			PublicIPAddress:   []string{ip},
+			LocalHostname:     "",
 			Current:           true,
 			SSH:               *ssh,
 		})
