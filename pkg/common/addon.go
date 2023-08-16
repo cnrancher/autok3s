@@ -6,7 +6,7 @@ import (
 )
 
 type Addon struct {
-	Name        string          `json:"name" gorm:"primaryKey;not null" wrangler:"required"`
+	Name        string          `json:"name" gorm:"primaryKey;not null" wrangler:"required,noupdate"`
 	Description string          `json:"description,omitempty"`
 	Manifest    []byte          `json:"manifest" gorm:"type:bytes" wrangler:"required"`
 	Values      types.StringMap `json:"values,omitempty" gorm:"type:stringMap"`

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/server/store/addon"
 	"github.com/cnrancher/autok3s/pkg/server/store/cluster"
 	"github.com/cnrancher/autok3s/pkg/server/store/credential"
 	"github.com/cnrancher/autok3s/pkg/server/store/explorer"
@@ -151,4 +152,13 @@ func initSSHKey(s *types.APISchemas) {
 			Output: "sshkey",
 		}
 	})
+}
+
+func initAddon(s *types.APISchemas) {
+	s.MustImportAndCustomize(common.Addon{}, func(schema *types.APISchema) {
+		schema.Store = &addon.Store{}
+		schema.CollectionMethods = []string{http.MethodPost, http.MethodGet}
+		schema.ResourceMethods = []string{http.MethodPut, http.MethodGet, http.MethodDelete}
+	})
+
 }
