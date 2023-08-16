@@ -2,6 +2,7 @@ package types
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -191,4 +192,34 @@ func (a StringArray) Contains(target string) bool {
 
 func (m *Metadata) GetID() string {
 	return m.ContextName
+}
+
+type StringMap map[string]string
+
+func (ss *StringMap) Scan(value interface{}) (err error) {
+	var ba []byte
+	switch v := value.(type) {
+	case string:
+		ba = []byte(v)
+	case []byte:
+		ba = v
+	default:
+		return fmt.Errorf("failed to scan value %v", value)
+	}
+	t := map[string]string{}
+	err = json.Unmarshal(ba, &t)
+	*ss = t
+	return err
+}
+
+func (ss StringMap) Value() (driver.Value, error) {
+	if ss == nil {
+		return nil, nil
+	}
+	ba, err := json.Marshal(ss)
+	return string(ba), err
+}
+
+func (ss StringMap) GormDataType() string {
+	return "bytes"
 }
