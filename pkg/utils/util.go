@@ -149,6 +149,8 @@ func MergeConfig(source, target reflect.Value) {
 				source.Type().Field(i).Name == target.Type().Field(j).Name {
 				if sField.Type().Kind() == reflect.Struct {
 					MergeConfig(sField, tField)
+				} else if sField.Type().Kind() == reflect.Bool {
+					sField.Set(tField)
 				} else {
 					// only merge non empty value
 					if !tField.IsZero() {

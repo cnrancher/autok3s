@@ -645,6 +645,8 @@ func (p *ProviderBase) overwriteMetadata(matched *common.ClusterState) {
 	p.DockerMirror = matched.DockerMirror
 	p.InstallScript = matched.InstallScript
 	p.Network = matched.Network
+	p.Cluster = matched.Cluster
+	p.Rollback = matched.Rollback
 	// needed to be overwrite.
 	if p.K3sChannel == "" {
 		p.K3sChannel = matched.K3sChannel
