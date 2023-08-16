@@ -650,7 +650,9 @@ func (p *Tencent) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			v.Current = true
 			v.InternalIPAddress = tencentCommon.StringValues(status.PrivateIpAddresses)
 			v.PublicIPAddress = tencentCommon.StringValues(status.PublicIpAddresses)
+			v.LocalHostname = ""
 			v.EipAllocationIds = eip
+
 			v.SSH = *ssh
 			// check upload keypair.
 			if uploadKeyPair {

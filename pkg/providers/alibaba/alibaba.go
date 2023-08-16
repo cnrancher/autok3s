@@ -498,6 +498,7 @@ func (p *Alibaba) assembleInstanceStatus(ssh *types.SSH, uploadKeyPair bool, pub
 			v.InternalIPAddress = status.VpcAttributes.PrivateIpAddress.IpAddress
 			v.PublicIPAddress = publicIPAddress
 			v.EipAllocationIds = eip
+			v.LocalHostname = status.HostName
 			v.SSH = *ssh
 			// check upload keypair
 			if uploadKeyPair {

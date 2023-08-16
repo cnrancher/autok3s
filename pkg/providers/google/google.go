@@ -528,6 +528,7 @@ func (p *Google) startInstance(num int, master bool) error {
 			InstanceStatus:    ins.Status,
 			InternalIPAddress: []string{networkInterface.NetworkIP},
 			PublicIPAddress:   []string{networkInterface.AccessConfigs[0].NatIP},
+			LocalHostname:     ins.Hostname,
 			SSH:               p.SSH,
 		})
 	}

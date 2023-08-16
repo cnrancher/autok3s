@@ -528,6 +528,7 @@ func (p *Amazon) getInstanceStatus(aimStatus string) error {
 						v.InstanceStatus = aimStatus
 						v.InternalIPAddress = []string{aws.StringValue(status.PrivateIpAddress)}
 						v.PublicIPAddress = []string{aws.StringValue(status.PublicIpAddress)}
+						v.LocalHostname = aws.StringValue(status.PrivateDnsName)
 						p.M.Store(aws.StringValue(status.InstanceId), v)
 					}
 					continue

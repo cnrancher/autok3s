@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/csv"
+	"fmt"
 	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -31,6 +32,8 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 					pf.StringArrayVar(f.P.(*[]string), f.Name, t, f.Usage)
 				case types.StringArray:
 					pf.Var(newStringArrayValue(t, f.P.(*types.StringArray)), f.Name, f.Usage)
+				case types.StringMap:
+					pf.Var(newStringMapValue(t, f.P.(*types.StringMap)), f.Name, f.Usage)
 				case int:
 					pf.IntVar(f.P.(*int), f.Name, t, f.Usage)
 				default:
@@ -54,6 +57,8 @@ func ConvertFlags(cmd *cobra.Command, fs []types.Flag) *pflag.FlagSet {
 					pf.StringArrayVarP(f.P.(*[]string), f.Name, f.ShortHand, t, f.Usage)
 				case types.StringArray:
 					pf.VarP(newStringArrayValue(t, f.P.(*types.StringArray)), f.Name, f.ShortHand, f.Usage)
+				case types.StringMap:
+					pf.Var(newStringMapValue(t, f.P.(*types.StringMap)), f.Name, f.Usage)
 				default:
 					continue
 				}
@@ -148,4 +153,72 @@ func writeAsCSV(ss []string) (string, error) {
 	}
 	w.Flush()
 	return strings.TrimSuffix(b.String(), "\n"), nil
+}
+
+type stringMapValue struct {
+	value   *types.StringMap
+	changed bool
+}
+
+func newStringMapValue(val map[string]string, p *types.StringMap) *stringMapValue {
+	ssv := new(stringMapValue)
+	ssv.value = p
+	*ssv.value = val
+	return ssv
+}
+
+func (s *stringMapValue) Set(val string) error {
+	var ss []string
+	//Format for: a=1,b=2
+	n := strings.Count(val, "=")
+	switch n {
+	case 0:
+		return fmt.Errorf("%s must be formatted as key=value", val)
+	case 1:
+		ss = append(ss, strings.Trim(val, `"`))
+	default:
+		r := csv.NewReader(strings.NewReader(val))
+		var err error
+		ss, err = r.Read()
+		if err != nil {
+			return err
+		}
+	}
+
+	out := make(map[string]string, len(ss))
+	for _, pair := range ss {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("%s must be formatted as key=value", pair)
+		}
+		out[kv[0]] = kv[1]
+	}
+	if !s.changed {
+		*s.value = out
+	} else {
+		for k, v := range out {
+			(*s.value)[k] = v
+		}
+	}
+	s.changed = true
+	return nil
+}
+
+func (s *stringMapValue) Type() string {
+	return "stringMap"
+}
+
+func (s *stringMapValue) String() string {
+	records := make([]string, 0, len(*s.value)>>1)
+	for k, v := range *s.value {
+		records = append(records, k+"="+v)
+	}
+
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	if err := w.Write(records); err != nil {
+		panic(err)
+	}
+	w.Flush()
+	return "[" + strings.TrimSpace(buf.String()) + "]"
 }
