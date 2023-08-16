@@ -26,6 +26,7 @@ var (
 		&Explorer{},
 		&Package{},
 		&SSHKey{},
+		&Addon{},
 	}
 )
 
