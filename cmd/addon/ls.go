@@ -13,7 +13,7 @@ import (
 var (
 	listCmd = &cobra.Command{
 		Use:   "ls",
-		Short: "List all addon list.",
+		Short: "List all add-on list.",
 	}
 )
 

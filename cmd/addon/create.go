@@ -13,15 +13,15 @@ import (
 var (
 	createCmd = &cobra.Command{
 		Use:   "create <name>",
-		Short: "Create a new addon",
+		Short: "Create a new add-on",
 		Args:  cobra.ExactArgs(1),
 	}
 )
 
 func init() {
-	createCmd.Flags().StringVar(&addonFlags.Description, "description", addonFlags.Description, "The description of addon")
-	createCmd.Flags().StringVar(&addonFlags.FromFile, "from", addonFlags.FromFile, "The manifest file path of addon")
-	createCmd.Flags().StringVar(&addonFlags.Manifest, "manifest", addonFlags.Manifest, "The manifest file content of addon, need to be base64 encode")
+	createCmd.Flags().StringVar(&addonFlags.Description, "description", addonFlags.Description, "The description of add-on")
+	createCmd.Flags().StringVar(&addonFlags.FromFile, "from", addonFlags.FromFile, "The manifest file path of add-on")
+	createCmd.Flags().StringVar(&addonFlags.Manifest, "manifest", addonFlags.Manifest, "The manifest file content of add-on, need to be base64 encode")
 	createCmd.Flags().StringToStringVar(&addonFlags.Values, "set", addonFlags.Values, "Set value to replace parameters defined in manifest")
 }
 
