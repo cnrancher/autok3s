@@ -104,7 +104,7 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			Name:  "enable",
 			P:     &p.Enable,
 			V:     p.Enable,
-			Usage: "(ui-components) Deploy packaged components (valid items: \"explorer\"), e.g.(--enable explorer), explorer is simplify UI for K3s(cnrnacher/kube-explorer)",
+			Usage: "Deploy add-ons (internal add-on: \"explorer\", \"rancher\"), e.g.(--enable explorer), explorer is simplify UI for K3s(cnrnacher/kube-explorer). Other add-ons can be found by `autok3s add-ons ls`",
 		},
 		{
 			Name:  "package-name",
@@ -122,7 +122,7 @@ func (p *ProviderBase) GetCreateOptions() []types.Flag {
 			Name:  "set",
 			P:     &p.Values,
 			V:     p.Values,
-			Usage: "set values for addon when enabled by --enable. e.g. --enable rancher --set rancher.Version=v2.7.5 --set rancher.Hostname=aa.bb.cc",
+			Usage: "set values for add-on when enabled by --enable. e.g. --enable rancher --set rancher.Version=v2.7.5 --set rancher.Hostname=aa.bb.cc",
 		},
 	}
 }

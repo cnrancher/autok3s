@@ -12,7 +12,7 @@ import (
 var (
 	getCmd = &cobra.Command{
 		Use:   "get <name>",
-		Short: "Get addon information.",
+		Short: "Get an add-on information.",
 		Args:  cobra.ExactArgs(1),
 	}
 )

@@ -12,7 +12,7 @@ import (
 var (
 	removeCmd = &cobra.Command{
 		Use:   "rm <name>",
-		Short: "Remove an addon.",
+		Short: "Remove an add-on.",
 		Args:  cobra.ExactArgs(1),
 	}
 )

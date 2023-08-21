@@ -5,8 +5,8 @@ import "github.com/spf13/cobra"
 var (
 	addonCmd = &cobra.Command{
 		Use:   "add-ons",
-		Short: "The addon management",
-		Long:  "The add-ons command helps to manage addons which can install to multiple K3s clusters",
+		Short: "The add-ons management",
+		Long:  "The add-ons command helps to manage add-ons which can install to multiple K3s clusters",
 	}
 )
 
