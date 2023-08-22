@@ -2,11 +2,11 @@ package addon
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -24,16 +24,14 @@ func GetCmd() *cobra.Command {
 		if err != nil {
 			logrus.Fatalln(err)
 		}
-		fmt.Println("Name: " + addon.Name)
-		fmt.Println("Description: " + addon.Description)
-		fmt.Println("Manifest: " + string(addon.Manifest))
-		if len(addon.Values) > 0 {
-			values := []string{}
-			for key, value := range addon.Values {
-				values = append(values, fmt.Sprintf("%s=%s", key, value))
-			}
-			fmt.Println("Values: " + strings.Join(values, ","))
+		addonMap := map[string]interface{}{
+			"Name":        addon.Name,
+			"Description": addon.Description,
+			"Manifest":    string(addon.Manifest),
+			"Values":      addon.Values,
 		}
+		data, _ := yaml.Marshal(addonMap)
+		fmt.Println(string(data))
 	}
 	return getCmd
 }

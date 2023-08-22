@@ -1,13 +1,16 @@
 package addon
 
 var (
-	addonFlags = flags{}
+	addonFlags = flags{
+		Values:       map[string]string{},
+		RemoveValues: []string{},
+	}
 )
 
 type flags struct {
-	Name        string
-	Description string
-	FromFile    string
-	Manifest    string
-	Values      map[string]string
+	Name         string
+	Description  string
+	FromFile     string
+	Values       map[string]string
+	RemoveValues []string
 }
