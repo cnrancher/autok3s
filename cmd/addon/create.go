@@ -20,8 +20,7 @@ var (
 
 func init() {
 	createCmd.Flags().StringVar(&addonFlags.Description, "description", addonFlags.Description, "The description of add-on")
-	createCmd.Flags().StringVar(&addonFlags.FromFile, "from", addonFlags.FromFile, "The manifest file path of add-on")
-	createCmd.Flags().StringVar(&addonFlags.Manifest, "manifest", addonFlags.Manifest, "The manifest file content of add-on, need to be base64 encode")
+	createCmd.Flags().StringVarP(&addonFlags.FromFile, "from", "f", addonFlags.FromFile, "The manifest file path of add-on")
 	createCmd.Flags().StringToStringVar(&addonFlags.Values, "set", addonFlags.Values, "Set value to replace parameters defined in manifest")
 }
 
@@ -31,18 +30,18 @@ func CreateCmd() *cobra.Command {
 		if err := common.ValidateName(name); err != nil {
 			return err
 		}
+		if addonFlags.FromFile == "" {
+			return errors.New("must set addon manifest by -f <file-path>")
+		}
 		if addonFlags.FromFile != "" && !utils.IsFileExists(addonFlags.FromFile) {
 			return fmt.Errorf("manifest file %s is not exist", addonFlags.FromFile)
-		}
-		if addonFlags.FromFile == "" && addonFlags.Manifest == "" {
-			return errors.New("must set addon manifest by --from <file-path> or --manifest <base64-encode-manifest>")
 		}
 		return nil
 	}
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
 		name := args[0]
-		manifest, err := common.GetManifest(addonFlags.FromFile, addonFlags.Manifest)
+		manifest, err := common.GetManifest(addonFlags.FromFile, "")
 		if err != nil {
 			logrus.Fatalln(err)
 		}

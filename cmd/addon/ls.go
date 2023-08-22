@@ -12,8 +12,9 @@ import (
 
 var (
 	listCmd = &cobra.Command{
-		Use:   "ls",
-		Short: "List all add-on list.",
+		Aliases: []string{"ls"},
+		Use:     "list",
+		Short:   "List all add-on list.",
 	}
 )
 
@@ -24,7 +25,7 @@ func ListCmd() *cobra.Command {
 		table.SetHeaderLine(false)
 		table.SetColumnSeparator("")
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetHeader([]string{"Name", "Description", "Manifest", "Values"})
+		table.SetHeader([]string{"Name", "Description", "Values"})
 
 		addons, err := common.DefaultDB.ListAddon()
 		if err != nil {
@@ -34,7 +35,6 @@ func ListCmd() *cobra.Command {
 			table.Append([]string{
 				addon.Name,
 				addon.Description,
-				strconv.Itoa(len(addon.Manifest)),
 				strconv.Itoa(len(addon.Values)),
 			})
 		}
