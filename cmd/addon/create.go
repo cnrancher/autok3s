@@ -3,6 +3,7 @@ package addon
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/utils"
@@ -41,7 +42,7 @@ func CreateCmd() *cobra.Command {
 
 	createCmd.Run = func(cmd *cobra.Command, args []string) {
 		name := args[0]
-		manifest, err := common.GetManifest(addonFlags.FromFile, "")
+		manifest, err := os.ReadFile(addonFlags.FromFile)
 		if err != nil {
 			logrus.Fatalln(err)
 		}

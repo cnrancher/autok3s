@@ -3,29 +3,14 @@ package common
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/cnrancher/autok3s/pkg/utils"
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/strvals"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 )
-
-func GetManifest(manifestFile, manifestContent string) (string, error) {
-	if manifestFile != "" {
-		fileByte, err := os.ReadFile(manifestFile)
-		if err != nil {
-			return "", err
-		}
-		return string(fileByte), nil
-	} else if manifestContent != "" {
-		return utils.StringSupportBase64(manifestContent), nil
-	}
-	return "", errors.New("can't get manifest with empty manifest file or content")
-}
 
 func GenerateValues(setValues map[string]string, defaultValues map[string]string) (map[string]interface{}, error) {
 	values := []string{}

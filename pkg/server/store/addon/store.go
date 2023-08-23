@@ -27,19 +27,14 @@ func (a *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	if err := common.ValidateName(input.Name); err != nil {
 		return types.APIObject{}, err
 	}
-	if input.Manifest == nil {
-		return types.APIObject{}, errors.New("manifest file or manifest file content cannot be empty")
-	}
-
-	manifest, err := common.GetManifest("", string(input.Manifest))
-	if err != nil {
-		return types.APIObject{}, err
+	if input.Manifest == nil || len(input.Manifest) == 0 {
+		return types.APIObject{}, errors.New("manifest file content cannot be empty")
 	}
 
 	addon := &common.Addon{
 		Name:        input.Name,
 		Description: input.Description,
-		Manifest:    []byte(manifest),
+		Manifest:    input.Manifest,
 		Values:      input.Values,
 	}
 	err = common.DefaultDB.SaveAddon(addon)
@@ -91,16 +86,10 @@ func (a *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data ty
 		return types.APIObject{}, err
 	}
 
-	manifestContent := addon.Manifest
-	if input.Manifest != nil {
-		manifestContent = input.Manifest
+	manifest := addon.Manifest
+	if len(input.Manifest) != 0 {
+		manifest = input.Manifest
 	}
-
-	manifestString, err := common.GetManifest("", string(manifestContent))
-	if err != nil {
-		return types.APIObject{}, err
-	}
-	manifest := []byte(manifestString)
 
 	isChanged := false
 	if input.Description != "" && input.Description != addon.Description {

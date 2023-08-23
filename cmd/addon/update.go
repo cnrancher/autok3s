@@ -2,6 +2,7 @@ package addon
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -54,7 +55,7 @@ func UpdateCmd() *cobra.Command {
 		}
 
 		if addonFlags.FromFile != "" {
-			manifestString, err := common.GetManifest(addonFlags.FromFile, "")
+			manifestString, err := os.ReadFile(addonFlags.FromFile)
 			if err != nil {
 				logrus.Error(err)
 				return
