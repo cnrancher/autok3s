@@ -16,7 +16,7 @@ const (
 	// KubeCfgTempName default temp kube config file name prefix.
 	KubeCfgTempName = "autok3s-temp-*"
 	// K3sManifestsDir k3s manifests dir.
-	K3sManifestsDir = "/var/lib/rancher/k3s/server/manifests"
+	K3sManifestsDir = "/var/lib/rancher/k3s/server/manifests/autok3s"
 	// MasterInstanceName master instance name.
 	MasterInstanceName = "autok3s.%s.master"
 	// WorkerInstanceName worker instance name.
