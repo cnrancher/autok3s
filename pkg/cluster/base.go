@@ -428,6 +428,10 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 		}
 	}
 
+	if _, err := p.execute(&c.MasterNodes[0], []string{fmt.Sprintf("mkdir -p %s", common.K3sManifestsDir)}...); err != nil {
+		return err
+	}
+
 	if deployPlugins != nil {
 		// install additional manifests to the current cluster.
 		extraManifests := deployPlugins()
