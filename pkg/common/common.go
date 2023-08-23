@@ -35,6 +35,8 @@ const (
 	StatusUpgrading = "Upgrading"
 	// StatusRemoving instance removing status.
 	StatusRemoving = "Removing"
+	// StatusUnknown instance unknown status
+	StatusUnknown = "Unknown"
 	// UsageInfoTitle usage info title.
 	UsageInfoTitle = "=========================== Prompt Info ==========================="
 	// UsageContext usage info context.
