@@ -995,6 +995,11 @@ func ListClusters(providerName string) ([]*types.ClusterInfo, error) {
 		}
 		isExist, _, err := provider.IsClusterExist()
 		if err != nil {
+			info := provider.GetCluster("")
+			info.Status = common.StatusUnknown
+			info.Master = state.Master
+			info.Worker = state.Worker
+			clusterList = append(clusterList, info)
 			logrus.Errorf("failed to check provider %s cluster %s exist, got error: %v ", state.Provider, state.Name, err)
 			continue
 		}
