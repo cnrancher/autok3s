@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/cnrancher/autok3s/pkg/settings"
+	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
+	"github.com/sirupsen/logrus"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -133,6 +135,21 @@ func InitStorage(ctx context.Context) error {
 	}
 
 	DefaultDB = store
+
+	_, err = DefaultDB.GetAddon("rancher")
+	if err != nil && err == gorm.ErrRecordNotFound {
+		// init default add-on for Rancher Manager
+		rancherAddon := &Addon{
+			Name:        "rancher",
+			Description: "Default Rancher Manager add-on",
+			Manifest:    []byte(DefaultRancherManifest),
+			Values:      make(types.StringMap),
+		}
+		err = DefaultDB.SaveAddon(rancherAddon)
+		if err != nil {
+			logrus.Errorf("failed to save default rancher manager add-on template: %v", err)
+		}
+	}
 
 	return settings.SetProvider(&DBSettingProvider{})
 }
