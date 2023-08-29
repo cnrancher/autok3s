@@ -14,6 +14,7 @@ AutoK3s 是用于简化 K3s 集群管理的轻量级工具，您可以使用 Aut
 - 多云之间弹性迁移，借助诸如 [backup-restore-operator](https://github.com/rancher/backup-restore-operator) 这样的工具进行弹性迁移。
 - [K3s离线安装](airgap/README.md)，K3s离线安装包管理以及使用离线安装方式部署集群。
 - [SSH Key管理](sshkey/README.md)，管理连接服务器的 SSH Key，用于部署 K3s 集群使用。
+- [插件管理](add-on/README.md)，简化插件的管理和部署，将应用程序无缝集成到 K3s 集群中。
 
 ## 云提供商
 
@@ -31,13 +32,13 @@ AutoK3s 可以支持以下云厂商，我们会根据社区反馈添加更多支
 您可以通过以下 Docker 命令，一键启动 AutoK3s 本地 UI，快速体验相关功能。
 
 ```bash
-docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.8.0
+docker run -itd --restart=unless-stopped -p 8080:8080 cnrancher/autok3s:v0.9.0
 ```
 
 如果您想要在 docker 中使用 K3d provider，那么您需要使用宿主机网络启动 AutoK3s 镜像。
 
 ```bash
-docker run -itd --restart=unless-stopped --net host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.8.0
+docker run -itd --restart=unless-stopped --net host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.9.0
 ```
 
 如果您是 MacOS 或者 Linux 系统，您也可以使用以下安装命令，一键安装 AutoK3s（Windows用户请前往 [Releases](https://github.com/cnrancher/autok3s/releases) 页面下载对应的程序）。
@@ -80,19 +81,19 @@ autok3s -d create -p aws --name myk3s --master 1 --worker 1
 
 ## 升级
 
-如果您使用 Docker 命令一键启动 AutoK3s 本地 UI，从 `v0.4.0` 升级到 `v0.7.0` 需要进行如下操作以保证历史数据的迁移。
+如果您使用 Docker 命令一键启动 AutoK3s 本地 UI，从 `v0.4.0` 升级到 `v0.9.0` 需要进行如下操作以保证历史数据的迁移。
 
 ```bash
 docker cp <old-container>:/root/.autok3s .
 docker rm -f <old-container>
-docker run -itd --restart=unless-stopped -p 8080:8080 -v $PWD/.autok3s:/root/.autok3s cnrancher/autok3s:v0.7.0
+docker run -itd --restart=unless-stopped -p 8080:8080 -v $PWD/.autok3s:/root/.autok3s cnrancher/autok3s:v0.9.0
 ```
 
 在 `v0.4.1` 以后的版本，可以直接通过 `--volumes-from` 来保证历史数据的迁移。
 
 ```bash
 docker stop <old-container>
-docker run -itd --restart=unless-stopped -p 8080:8080 --volumes-from <old-container> cnrancher/autok3s:v0.7.0
+docker run -itd --restart=unless-stopped -p 8080:8080 --volumes-from <old-container> cnrancher/autok3s:v0.9.0
 ```
 
 ## 开发者指南

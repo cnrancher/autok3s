@@ -40,6 +40,7 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 - Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator).
 - [Airgap](docs/i18n/en_us/airgap/README.md) K3s package management and installation.
 - [SSH Key Management](docs/i18n/en_us/sshkey/README.md) can manage the SSH keys are used to provision K3s clusters.
+- [Add-on](docs/i18n/en_us/add-on/README.md) streamlines the management and deployment of plugins, seamlessly integrating applications into K3s clusters.
 
 ## Providers
 
@@ -59,10 +60,10 @@ Scenario 1 - Run with docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 # Standard Linux (Recommended)
-$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.8.0
+$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.9.0
 
 # MacOS
-$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST="" cnrancher/autok3s:v0.8.0
+$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST="" cnrancher/autok3s:v0.9.0
 ```
 
 Scenario 2 - Run with docker-compose
