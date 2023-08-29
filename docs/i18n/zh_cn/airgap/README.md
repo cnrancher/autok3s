@@ -103,7 +103,7 @@ Global Environments:
 Use "autok3s airgap [command] --help" for more information about a command.
 ```
 
-## 创新离线安装包
+### 创建离线安装包
 
 使用命令 `autok3s airgap create <name>` 创建一个新的离线安装包，必输参数为 `arch` 以及 `k3s-version`。支持通过 CLI 交互的方式填写参数。  
 K3s 版本(`k3s-version`)列表可以在 Github 中 K3s 的[Release](https://github.com/k3s-io/k3s/releases)列表中找到。针对内核架构选择，支持 `amd64`, `arm64`, `arm`, 以及 `s390x`。需要注意的是 `s390x` 架构只在比较新的 K3s 版本中支持；如果在某个 K3s 版本下选择了并不支持的内核架构，创建离线安装包时会给出错误提示。
@@ -140,25 +140,25 @@ K3s 版本(`k3s-version`)列表可以在 Github 中 K3s 的[Release](https://git
   testtest  v1.23.9+k3s1  amd64,arm64  Active
 ```
 
-## 更新离线安装包
+### 更新离线安装包
 
 通过命令 `autok3s airgap update <name> [flags]` 可以更新离线安装包，与创建时一样，支持修改 `arch` 以及 `k3s-version`。  
 当你修改 K3s 版本或删除一个 已经下载的内核架构时，会提示确认。也可以通过添加参数 `-f, --force` 进行强制更新。
 
 更新操作只对受影响的内核架构资源文件进行变更。当更新 K3s 版本时，则所有选择的内核架构对应的资源都会被删除并重新下载。
 
-## 离线安装包导入导出
+### 离线安装包导入导出
 
 离线安装包可以通过命令 `autok3s airgap export <name> <path>` 进行导出。离线安装包名称 `name` 以及导出路径 `path` 是必须的。导出路径可以指定一个以 `tar.gz` 结尾的文件名，或指定一个目录 。当导出路径为目录时，导出的文件名则为 `name.tar.gz`。  
 已经导出的离线安装包可以通过命令 `autok3s airgap import <path> [name]` 进行导入。也可以在创建集群时，指定该安装包进行离线安装。
 
-## K3s安装脚本
+### K3s安装脚本
 
 
 根据[K3s官方文档](https://rancher.com/docs/k3s/latest/en/installation/airgap/#prerequisites)，安装脚本 `install.sh` 需要在离线安装前分发到待安装集群的节点上。  
 在 autok3s 中，我们在CI流程中内置了从 `https://get.k3s.io` 下载的脚本并存储在 `install-script` 设置中。通过命令 `autok3s airgap update-install-script` 可以联网更新最新的安装脚本到本地数据库中。安装脚本来源地址配置在设置 `install-script-source-repo` 中。
 
-## 使用离线安装包创建/升级集群
+### 使用离线安装包创建/升级集群
 
 目前离线安装集群支持除 `k3d` 外所有的 `云提供商`。你可以从帮助信息 `./autok3s create -p native --help` 中看到以下参数：
 
