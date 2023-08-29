@@ -23,6 +23,7 @@ RUN curl -sLf https://github.com/komodorio/helm-dashboard/releases/download/v${H
 ENV AUTOK3S_CONFIG /root/.autok3s
 ENV DOCKER_HOST unix:///var/run/docker.sock
 ENV HOME /root
+ENV AUTOK3S_HELM_DASHBOARD_ADDRESS=0.0.0.0
 
 WORKDIR /home/shell
 VOLUME /root/.autok3s

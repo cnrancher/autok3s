@@ -19,6 +19,8 @@ import (
 
 const HelmDashboardCommand = "helm-dashboard"
 
+var dashboardBindAddress = "127.0.0.1"
+
 func SwitchDashboard(ctx context.Context, enabled string) error {
 	if enabled == "true" {
 		// check if cluster list is empty
@@ -67,13 +69,16 @@ func InitDashboard(ctx context.Context) {
 
 func StartHelmDashboard(ctx context.Context, port string) error {
 	_ = os.Setenv(clientcmd.RecommendedConfigPathEnvVar, filepath.Join(CfgPath, KubeCfgFile))
-	dashboard := exec.CommandContext(ctx, HelmDashboardCommand, "-b", fmt.Sprintf("--port=%s", port))
+	if os.Getenv("AUTOK3S_HELM_DASHBOARD_ADDRESS") != "" {
+		dashboardBindAddress = os.Getenv("AUTOK3S_HELM_DASHBOARD_ADDRESS")
+	}
+	dashboard := exec.CommandContext(ctx, HelmDashboardCommand, fmt.Sprintf("--bind=%s", dashboardBindAddress), "-b", fmt.Sprintf("--port=%s", port))
 	dashboard.Stdout = os.Stdout
 	dashboard.Stderr = os.Stderr
 	if err := dashboard.Start(); err != nil {
 		logrus.Errorf("fail to start helm-dashboard: %v", err)
 	}
-	logrus.Infof("helm-dashboard will listen on 127.0.0.1:%s ...", port)
+	logrus.Infof("helm-dashboard will listen on %s:%s ...", dashboardBindAddress, port)
 	return dashboard.Wait()
 }
 
