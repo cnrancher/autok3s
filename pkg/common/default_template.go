@@ -9,7 +9,7 @@ import (
 
 var DefaultTemplates = map[string]interface{}{
 	"aws": aws.Options{
-		AMI:                    "ami-007855ac798b5175e", // Canonical, Ubuntu, 22.04 LTS, amd64 jammy image build on 2023-03-25
+		AMI:                    "ami-053b0d53c279acc90", // Canonical, Ubuntu, 22.04 LTS, amd64 jammy image build on 2023-05-16
 		InstanceType:           "t3a.medium",            // 2c/4g
 		VolumeType:             "gp3",
 		RootSize:               "16",
@@ -19,7 +19,7 @@ var DefaultTemplates = map[string]interface{}{
 		CloudControllerManager: false,
 	},
 	"alibaba": alibaba.Options{
-		Image:                   "ubuntu_22_04_x64_20G_alibase_20230208.vhd", // Ubuntu 22.04 64 bit
+		Image:                   "ubuntu_22_04_x64_20G_alibase_20230613.vhd", // Ubuntu 22.04 64 bit
 		InstanceType:            "ecs.c6.large",                              // 2c/4g
 		InternetMaxBandwidthOut: "5",
 		DiskCategory:            "cloud_essd",
@@ -48,7 +48,7 @@ var DefaultTemplates = map[string]interface{}{
 		Region:       "us-central1",
 		Zone:         "us-central1-b",
 		MachineType:  "e2-medium",
-		MachineImage: "ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20230429", // Ubuntu 22.04 amd64 jammy image built on 2023-04-29
+		MachineImage: "ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20230727", // Ubuntu 22.04 amd64 jammy image built on 2023-07-27
 		DiskType:     "pd-balanced",
 		DiskSize:     10,
 		VMNetwork:    "default",
