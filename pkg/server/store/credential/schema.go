@@ -61,7 +61,7 @@ func Formatter(request *types.APIRequest, resource *types.RawResource) {
 	resource.Schema.LinkHandlers = map[string]http.Handler{"forms": http.HandlerFunc(formsHandler)}
 }
 
-func formsHandler(w http.ResponseWriter, r *http.Request) {
+func formsHandler(_ http.ResponseWriter, r *http.Request) {
 	result := types.APIObjectList{}
 	apiContext := types.GetAPIContext(r.Context())
 

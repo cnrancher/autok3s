@@ -82,10 +82,8 @@ func MoveLogs() error {
 		if err := os.MkdirAll(filepath.Join(newRoot, rel), 0755); err != nil {
 			return err
 		}
-		if err := os.Rename(path, GetClusterLogFilePath(rel)); err != nil {
-			return err
-		}
-		return nil
+
+		return os.Rename(path, GetClusterLogFilePath(rel))
 	}); err != nil {
 		return err
 	}

@@ -17,7 +17,7 @@ type Store struct {
 	empty.Store
 }
 
-func (s *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
+func (s *Store) Create(_ *types.APIRequest, _ *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	rtn := common.SSHKey{}
 	if err := convert.ToObj(data.Object, &rtn); err != nil {
 		return types.APIObject{}, err
@@ -52,7 +52,7 @@ func (s *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	return *common.GetAPIObject(rtn), nil
 }
 
-func (s *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (s *Store) List(_ *types.APIRequest, _ *types.APISchema) (types.APIObjectList, error) {
 	var rtn types.APIObjectList
 	sshkeys, err := common.DefaultDB.ListSSHKey(nil)
 	if err != nil {
@@ -75,7 +75,7 @@ func (s *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 	return rtn, common.DefaultDB.DeleteSSHKey(id)
 }
 
-func (s *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (s *Store) ByID(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
 	rtn, err := common.DefaultDB.ListSSHKey(&id)
 	if err != nil {
 		return types.APIObject{}, err
@@ -85,6 +85,6 @@ func (s *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 	return *obj, nil
 }
 
-func (s *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, wr types.WatchRequest) (chan types.APIEvent, error) {
+func (s *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, _ types.WatchRequest) (chan types.APIEvent, error) {
 	return common.DefaultDB.Watch(apiOp, schema), nil
 }

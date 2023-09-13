@@ -916,7 +916,7 @@ func (p *Tencent) describeVpcTaskResult(taskID uint64) error {
 	request := vpc.NewDescribeTaskResultRequest()
 	request.TaskId = tencentCommon.Uint64Ptr(taskID)
 
-	if err := wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
+	return wait.ExponentialBackoff(common.Backoff, func() (bool, error) {
 		response, err := p.v.DescribeTaskResult(request)
 		if err != nil {
 			return false, nil
@@ -932,10 +932,7 @@ func (p *Tencent) describeVpcTaskResult(taskID uint64) error {
 		}
 
 		return true, nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
 func (p *Tencent) getInstanceStatus(aimStatus string) error {

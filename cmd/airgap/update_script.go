@@ -17,7 +17,7 @@ var (
 	}
 )
 
-func updateInstallScript(cmd *cobra.Command, args []string) error {
+func updateInstallScript(cmd *cobra.Command, _ []string) error {
 	buff := bytes.NewBuffer([]byte{})
 	if err := settings.GetScriptFromSource(buff); err != nil {
 		return err

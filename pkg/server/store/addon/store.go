@@ -44,7 +44,7 @@ func (a *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	return a.ByID(apiOp, schema, addon.Name)
 }
 
-func (a *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (a *Store) List(_ *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	result := types.APIObjectList{}
 	list, err := common.DefaultDB.ListAddon()
 	if err != nil {
@@ -62,7 +62,7 @@ func (a *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 	return result, nil
 }
 
-func (a *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (a *Store) ByID(_ *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	addon, err := common.DefaultDB.GetAddon(id)
 	if err != nil {
 		return types.APIObject{}, err
@@ -115,11 +115,11 @@ func (a *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	return a.ByID(apiOp, schema, id)
 }
 
-func (a *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (a *Store) Delete(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
 	err := common.DefaultDB.DeleteAddon(id)
 	return types.APIObject{}, err
 }
 
-func (a *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, wr types.WatchRequest) (chan types.APIEvent, error) {
+func (a *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, _ types.WatchRequest) (chan types.APIEvent, error) {
 	return common.DefaultDB.Watch(apiOp, schema), nil
 }

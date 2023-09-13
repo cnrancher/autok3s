@@ -18,7 +18,7 @@ type Store struct {
 }
 
 // List returns kubectl contexts.
-func (k *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (k *Store) List(_ *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	result := types.APIObjectList{}
 	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
 	clientConfig, err := clientcmd.LoadFromFile(kubeCfg)

@@ -227,7 +227,7 @@ type SSHShell struct {
 	dialer  *SSHDialer
 }
 
-func (d *SSHShell) Write(b []byte) error {
+func (d *SSHShell) Write(_ []byte) error {
 	return nil
 }
 

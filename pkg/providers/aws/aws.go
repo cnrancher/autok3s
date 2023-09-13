@@ -271,10 +271,7 @@ func (p *Amazon) SetConfig(config []byte) error {
 }
 
 func (p *Amazon) rollbackInstance(ids []string) error {
-	if err := p.terminateInstance(ids); err != nil {
-		return err
-	}
-	return nil
+	return p.terminateInstance(ids)
 }
 
 func (p *Amazon) generateInstance(ssh *types.SSH) (*types.Cluster, error) {

@@ -22,7 +22,7 @@ type Store struct {
 }
 
 // ByID returns credential by ID.
-func (cred *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (cred *Store) ByID(_ *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	credID, err := strconv.Atoi(id)
 	if err != nil {
 		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid id %s", id))
@@ -47,7 +47,7 @@ func (cred *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id str
 }
 
 // List returns credentials as list.
-func (cred *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (cred *Store) List(_ *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	credList, err := common.DefaultDB.ListCredential()
 	if err != nil {
 		return types.APIObjectList{}, err
@@ -69,7 +69,7 @@ func (cred *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types
 }
 
 // Create creates credential based on the request data.
-func (cred *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
+func (cred *Store) Create(_ *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	secrets := data.Data().Map("secrets")
 	p := data.Data().String("provider")
 	c, err := generateCredential(secrets, p)
@@ -112,7 +112,7 @@ func (cred *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data
 }
 
 // Delete deletes credential by ID.
-func (cred *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (cred *Store) Delete(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
 	credID, err := strconv.Atoi(id)
 	if err != nil {
 		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid id %s", id))

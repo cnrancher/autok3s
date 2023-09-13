@@ -26,7 +26,7 @@ func init() {
 	exportCmd.Flags().StringVarP(&sshKeyFlags.OutputPath, "output", "o", ".", "The path to write key pair files, will write to id_rsa, id_rsa.pub and pub.cert under the output path")
 }
 
-func validateFiles(cmd *cobra.Command, args []string) error {
+func validateFiles(_ *cobra.Command, args []string) error {
 	if err := pathExists(sshKeyFlags.OutputPath); err != nil {
 		return err
 	}
@@ -51,11 +51,8 @@ func validateFiles(cmd *cobra.Command, args []string) error {
 		}
 		toValidate = append(toValidate, filename)
 	}
-	if err := pathsNotExists(sshKeyFlags.OutputPath, toValidate...); err != nil {
-		return err
-	}
 
-	return nil
+	return pathsNotExists(sshKeyFlags.OutputPath, toValidate...)
 }
 
 func export(cmd *cobra.Command, args []string) error {

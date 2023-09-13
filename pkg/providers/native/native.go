@@ -68,13 +68,13 @@ func (p *Native) GenerateManifest() []string {
 }
 
 // GenerateMasterExtraArgs generates K3S master extra args.
-func (p *Native) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
+func (p *Native) GenerateMasterExtraArgs(_ *types.Cluster, _ types.Node) string {
 	// no need to support.
 	return ""
 }
 
 // GenerateWorkerExtraArgs generates K3S worker extra args.
-func (p *Native) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
+func (p *Native) GenerateWorkerExtraArgs(_ *types.Cluster, _ types.Node) string {
 	// no need to support.
 	return ""
 }
@@ -414,7 +414,7 @@ func (p *Native) getInstanceNodes() ([]types.Node, error) {
 	return nodes, nil
 }
 
-func (p *Native) uninstallCluster(f bool) (string, error) {
+func (p *Native) uninstallCluster(_ bool) (string, error) {
 	// don't uninstall cluster if it's not handled by autok3s
 	if p.Status.Standalone {
 		p.Logger.Infof("[%s] cluster %s is not handled by autok3s, we won't uninstall the cluster automatically", p.GetProviderName(), p.Name)
@@ -428,6 +428,6 @@ func (p *Native) uninstallCluster(f bool) (string, error) {
 	return p.ContextName, nil
 }
 
-func (p *Native) isInstanceRunning(state string) bool {
+func (p *Native) isInstanceRunning(_ string) bool {
 	return true
 }

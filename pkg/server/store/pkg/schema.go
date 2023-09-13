@@ -27,7 +27,7 @@ var (
 	}
 )
 
-func Format(request *types.APIRequest, resource *types.RawResource) {
+func Format(_ *types.APIRequest, resource *types.RawResource) {
 	linksToKeep := map[string]struct{}{}
 	actionsToKeep := map[string]struct{}{}
 	switch common.State(resource.APIObject.Data().String("state")) {
@@ -57,7 +57,7 @@ func CollectionFormat(request *types.APIRequest, collection *types.GenericCollec
 	collection.AddAction(request, "update-install-script")
 }
 
-func importHandler(w http.ResponseWriter, r *http.Request) {
+func importHandler(_ http.ResponseWriter, r *http.Request) {
 	apiContext := types.GetAPIContext(r.Context())
 	name := apiContext.Query.Get("name")
 	if name == "" {
