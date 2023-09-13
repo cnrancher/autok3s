@@ -24,10 +24,10 @@ func init() {
 	listCmd.Flags().BoolVarP(&airgapFlags.isJSON, "json", "j", airgapFlags.isJSON, "json output")
 }
 
-func list(cmd *cobra.Command, args []string) error {
+func list(cmd *cobra.Command, _ []string) error {
 	pkgs, err := common.DefaultDB.ListPackages(nil)
 	if err != nil {
-		return errors.Wrap(err, "failed to list airgap packages.")
+		return errors.Wrap(err, "failed to list airgap packages")
 	}
 	if airgapFlags.isJSON {
 		data, err := json.Marshal(pkgs)

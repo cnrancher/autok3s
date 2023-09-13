@@ -18,7 +18,7 @@ type Store struct {
 }
 
 // ByID returns explorer setting by ID.
-func (s *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (s *Store) ByID(_ *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	exp, err := common.DefaultDB.GetExplorer(id)
 	if err != nil {
 		return types.APIObject{}, err
@@ -34,7 +34,7 @@ func (s *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 }
 
 // List returns all K3s explorer settings
-func (s *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (s *Store) List(_ *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	result := types.APIObjectList{}
 	expList, err := common.DefaultDB.ListExplorer()
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 }
 
 // Watch explorer settings change
-func (s *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
+func (s *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, _ types.WatchRequest) (chan types.APIEvent, error) {
 	return common.DefaultDB.Watch(apiOp, schema), nil
 }
 

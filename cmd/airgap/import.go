@@ -19,10 +19,8 @@ var (
 			if err := cobra.MaximumNArgs(2)(cmd, args); err != nil {
 				return err
 			}
-			if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
-				return err
-			}
-			return nil
+
+			return cobra.MinimumNArgs(1)(cmd, args)
 		},
 		RunE: importFunc,
 	}

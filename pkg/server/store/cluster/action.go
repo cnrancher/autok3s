@@ -62,7 +62,7 @@ func LinkCluster(request *types.APIRequest) (types.APIObject, error) {
 
 type join struct{}
 
-func (j join) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (j join) ServeHTTP(_ http.ResponseWriter, req *http.Request) {
 	apiRequest := types.GetAPIContext(req.Context())
 	clusterID := apiRequest.Name
 	if clusterID == "" {
@@ -137,7 +137,7 @@ func (j join) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	apiRequest.WriteResponse(http.StatusOK, types.APIObject{})
 }
 
-func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func nodesHandler(_ *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	state, err := common.DefaultDB.GetClusterByID(id)
 	if err != nil || state == nil {
 		// find from failed cluster.
@@ -163,7 +163,7 @@ func nodesHandler(apiOp *types.APIRequest, schema *types.APISchema, id string) (
 
 type explorer struct{}
 
-func (e explorer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (e explorer) ServeHTTP(_ http.ResponseWriter, req *http.Request) {
 	apiRequest := types.GetAPIContext(req.Context())
 	clusterID := apiRequest.Name
 	if clusterID == "" {
@@ -198,7 +198,7 @@ func (e explorer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 type downloadKubeconfig struct{}
 
-func (d downloadKubeconfig) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (d downloadKubeconfig) ServeHTTP(_ http.ResponseWriter, req *http.Request) {
 	apiRequest := types.GetAPIContext(req.Context())
 	vars := mux.Vars(req)
 	clusterID := vars["name"]

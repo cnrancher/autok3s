@@ -77,12 +77,12 @@ func (s Setting) Set(value string) error {
 func GetScriptFromSource(writer io.Writer) error {
 	sourceURL := ScriptUpdateSource.Get()
 	if _, err := url.Parse(sourceURL); err != nil {
-		return errors.Wrap(err, "install script source url is not validated.")
+		return errors.Wrap(err, "install script source url is not validated")
 	}
 
 	resp, err := http.Get(sourceURL)
 	if err != nil {
-		return errors.Wrap(err, "failed to make request to install script source url.")
+		return errors.Wrap(err, "failed to make request to install script source url")
 	}
 	defer resp.Body.Close()
 

@@ -21,12 +21,12 @@ type Store struct {
 	empty.Store
 }
 
-func (e *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (e *Store) Delete(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
 	defer airgap.RemovePackage(id)
 	return types.APIObject{}, common.DefaultDB.DeletePackage(id)
 }
 
-func (e *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (e *Store) ByID(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
 	rtn, err := common.DefaultDB.ListPackages(&id)
 	if err != nil {
 		return types.APIObject{}, err
@@ -35,7 +35,7 @@ func (e *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 	return *obj, nil
 }
 
-func (e *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (e *Store) List(_ *types.APIRequest, _ *types.APISchema) (types.APIObjectList, error) {
 	var rtn types.APIObjectList
 	pkgs, err := common.DefaultDB.ListPackages(nil)
 	if err != nil {
@@ -48,7 +48,7 @@ func (e *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 	return rtn, nil
 }
 
-func (e *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
+func (e *Store) Create(_ *types.APIRequest, _ *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	rtn := common.Package{}
 	if err := convert.ToObj(data.Object, &rtn); err != nil {
 		return types.APIObject{}, err
@@ -68,7 +68,7 @@ func (e *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	return saveAndDownload(rtn)
 }
 
-func (e *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject, id string) (types.APIObject, error) {
+func (e *Store) Update(_ *types.APIRequest, _ *types.APISchema, data types.APIObject, id string) (types.APIObject, error) {
 	currents, err := common.DefaultDB.ListPackages(&id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -103,7 +103,7 @@ func (e *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	return saveAndDownload(current)
 }
 
-func (e *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, wr types.WatchRequest) (chan types.APIEvent, error) {
+func (e *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, _ types.WatchRequest) (chan types.APIEvent, error) {
 	return common.DefaultDB.Watch(apiOp, schema), nil
 }
 

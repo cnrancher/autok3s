@@ -249,7 +249,7 @@ func (d *downloader) validateVersion() error {
 	downloadURL := fmt.Sprintf("%s/%s", sourceURL, imageListFilename)
 	resp, err := doRequestWithCtx(d.ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
-		return errors.Wrapf(err, "failed to download image list of k3s version %s, this version may be not validated.", d.pkg.K3sVersion)
+		return errors.Wrapf(err, "failed to download image list of k3s version %s, this version may be not validated", d.pkg.K3sVersion)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

@@ -55,7 +55,7 @@ func (t *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 }
 
 // List returns templates as list.
-func (t *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (t *Store) List(_ *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	result := types.APIObjectList{}
 	templates, err := common.DefaultDB.ListTemplates()
 	if err != nil {
@@ -111,7 +111,7 @@ func (t *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 }
 
 // ByID returns template by ID.
-func (t *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (t *Store) ByID(_ *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	context := strings.Split(id, ".")
 	if len(context) != 2 {
 		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid template id %s", id))
@@ -182,7 +182,7 @@ func (t *Store) Update(apiOp *types.APIRequest, schema *types.APISchema, data ty
 }
 
 // Delete deletes template by ID.
-func (t *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (t *Store) Delete(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
 	context := strings.Split(id, ".")
 	if len(context) != 2 {
 		return types.APIObject{}, apierror.NewAPIError(validation.InvalidOption, fmt.Sprintf("invalid template id %s", id))
@@ -192,7 +192,7 @@ func (t *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 }
 
 // Watch watches template.
-func (t *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
+func (t *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, _ types.WatchRequest) (chan types.APIEvent, error) {
 	result := make(chan types.APIEvent)
 	data := common.DefaultDB.Watch(apiOp, schema)
 	go func() {

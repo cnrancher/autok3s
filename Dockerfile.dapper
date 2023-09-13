@@ -1,12 +1,19 @@
-FROM registry.suse.com/bci/golang:1.19
+# FROM registry.suse.com/bci/golang:1.20
+FROM registry.suse.com/bci/bci-base:latest
 ARG PROXY
 ARG GOPROXY
-RUN zypper -n install netcat wget curl gawk
+ARG ARCH=amd64
+ARG GO_VERSION=1.20.8
+RUN curl -sSL https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz -o /tmp/go.tar.gz \
+    && rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz \
+    && /usr/local/go/bin/go version
+ENV GOPATH=/go PATH=/go/bin:/usr/local/go/bin:/root/go/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+RUN zypper -n install netcat wget curl gawk git make
 RUN zypper install -y -f docker
 ## install golangci-lint
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
     export HTTPS_PROXY=${PROXY}; \
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.50.1; \
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.54.2; \
     golangci-lint --version; \
     fi
 ## install mockgen

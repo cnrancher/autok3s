@@ -34,7 +34,7 @@ function autok3s::lint::lint() {
 
   if autok3s::lint::validate; then
     for path in "$@"; do
-      golangci-lint run "${path}"
+      golangci-lint -v run "${path}"
     done
   else
     autok3s::log::warn "no golangci-lint available, using go fmt/vet instead"

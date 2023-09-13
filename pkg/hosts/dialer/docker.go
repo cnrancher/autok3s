@@ -183,7 +183,7 @@ func (d *DockerShell) Terminal() error {
 }
 
 // OpenTerminal open docker websocket terminal.
-func (d *DockerShell) OpenTerminal(win hosts.ShellWindowSize) error {
+func (d *DockerShell) OpenTerminal(_ hosts.ShellWindowSize) error {
 	return d.ExecStart(false)
 }
 
@@ -443,6 +443,6 @@ func (d *DockerShell) ChangeWindowSize(win hosts.ShellWindowSize) error {
 }
 
 // Write write implement.
-func (d *DockerShell) Write(b []byte) error {
+func (d *DockerShell) Write(_ []byte) error {
 	return nil
 }

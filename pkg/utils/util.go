@@ -164,12 +164,9 @@ func MergeConfig(source, target reflect.Value) {
 }
 
 func waitForBackoff(fn func() (bool, error), backoff wait.Backoff) error {
-	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+	return wait.ExponentialBackoff(backoff, func() (bool, error) {
 		return fn()
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
 func StringSupportBase64(value string) string {

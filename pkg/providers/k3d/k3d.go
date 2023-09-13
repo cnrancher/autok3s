@@ -241,12 +241,12 @@ func (p *K3d) JoinCheck() error {
 }
 
 // GenerateMasterExtraArgs generates K3S master extra args.
-func (p *K3d) GenerateMasterExtraArgs(cluster *types.Cluster, master types.Node) string {
+func (p *K3d) GenerateMasterExtraArgs(_ *types.Cluster, _ types.Node) string {
 	return ""
 }
 
 // GenerateWorkerExtraArgs generates K3S worker extra args.
-func (p *K3d) GenerateWorkerExtraArgs(cluster *types.Cluster, worker types.Node) string {
+func (p *K3d) GenerateWorkerExtraArgs(_ *types.Cluster, _ types.Node) string {
 	return ""
 }
 
@@ -340,7 +340,7 @@ func (p *K3d) obtainKubeCfg() (kubeCfg, ip string, err error) {
 	return
 }
 
-func (p *K3d) createK3d(ssh *types.SSH) (*types.Cluster, error) {
+func (p *K3d) createK3d(_ *types.SSH) (*types.Cluster, error) {
 	masterNum, _ := strconv.Atoi(p.Master)
 	workerNum, _ := strconv.Atoi(p.Worker)
 

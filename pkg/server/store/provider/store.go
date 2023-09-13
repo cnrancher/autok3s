@@ -19,7 +19,7 @@ type Store struct {
 }
 
 // ByID returns provider by ID.
-func (p *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (p *Store) ByID(_ *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	provider, err := providers.GetProvider(id)
 	if err != nil {
 		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, err.Error())
@@ -28,7 +28,7 @@ func (p *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 }
 
 // List returns providers as list.
-func (p *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
+func (p *Store) List(_ *types.APIRequest, schema *types.APISchema) (types.APIObjectList, error) {
 	list := providers.ListProviders()
 	result := types.APIObjectList{}
 	for _, object := range list {

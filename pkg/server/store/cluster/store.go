@@ -24,7 +24,7 @@ type Store struct {
 }
 
 // Create creates cluster based on the request data.
-func (c *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
+func (c *Store) Create(_ *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	providerName := data.Data().String("provider")
 	b, err := json.Marshal(data.Data())
 	if err != nil {
@@ -83,7 +83,7 @@ func (c *Store) List(apiOp *types.APIRequest, schema *types.APISchema) (types.AP
 }
 
 // ByID returns cluster by ID.
-func (c *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (c *Store) ByID(_ *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	state, err := common.DefaultDB.GetClusterByID(id)
 	if err != nil || state == nil {
 		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found, got error: %v", id, err))
@@ -121,7 +121,7 @@ func (c *Store) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string
 }
 
 // Delete deletes cluster by ID.
-func (c *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (c *Store) Delete(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
 	state, err := common.DefaultDB.GetClusterByID(id)
 	if err != nil || state == nil {
 		return types.APIObject{}, apierror.NewAPIError(validation.NotFound, fmt.Sprintf("cluster %s is not found, got error: %v", id, err))
@@ -156,7 +156,7 @@ func (c *Store) Delete(apiOp *types.APIRequest, schema *types.APISchema, id stri
 }
 
 // Watch watches cluster change event.
-func (c *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, w types.WatchRequest) (chan types.APIEvent, error) {
+func (c *Store) Watch(apiOp *types.APIRequest, schema *types.APISchema, _ types.WatchRequest) (chan types.APIEvent, error) {
 	result := make(chan types.APIEvent)
 	data := common.DefaultDB.Watch(apiOp, schema)
 	go func() {
