@@ -60,10 +60,10 @@ Scenario 1 - Run with docker:
 ```bash
 # The commands will start autok3s daemon with an interactionable UI.
 # Standard Linux (Recommended)
-$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.9.0
+$ docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock cnrancher/autok3s:v0.9.1
 
 # MacOS
-$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST="" cnrancher/autok3s:v0.9.0
+$ docker run -itd --restart=unless-stopped -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock -e DOCKER_HOST="" cnrancher/autok3s:v0.9.1
 ```
 
 Scenario 2 - Run with docker-compose
@@ -123,7 +123,7 @@ AutoK3s is 100% open-source software. The project source code is spread across a
 
 # License
 
-Copyright (c) 2023 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2023 [SUSE](https://www.suse.com/)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
