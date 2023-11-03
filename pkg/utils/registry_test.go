@@ -3,7 +3,7 @@ package utils
 import (
 	"testing"
 
-	"github.com/k3d-io/k3d/v5/pkg/types/k3s"
+	"github.com/rancher/wharfie/pkg/registries"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,8 +14,8 @@ mirrors:
     endpoint:
       - "https://docker.nju.edu.cn"
 `
-	expected := &k3s.Registry{
-		Mirrors: map[string]k3s.Mirror{
+	expected := &registries.Registry{
+		Mirrors: map[string]registries.Mirror{
 			"docker.io": {
 				Endpoints: []string{"https://docker.nju.edu.cn"},
 			},

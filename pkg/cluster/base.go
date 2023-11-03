@@ -428,22 +428,13 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 		}
 	}
 
-	if _, err := p.execute(&c.MasterNodes[0], []string{fmt.Sprintf("mkdir -p %s", common.K3sManifestsDir)}...); err != nil {
-		return err
-	}
-
+	cmds := []string{}
 	if deployPlugins != nil {
 		// install additional manifests to the current cluster.
 		extraManifests := deployPlugins()
-		if extraManifests != nil && len(extraManifests) > 0 {
-			if err = p.DeployExtraManifest(c, extraManifests); err != nil {
-				return err
-			}
-			p.Logger.Infof("[%s] successfully deployed manifests", p.Provider)
-		}
+		cmds = append(cmds, extraManifests...)
 	}
 
-	cmds := []string{}
 	if p.Manifests != "" {
 		deployCmd, err := p.GetCustomManifests()
 		if err != nil {
