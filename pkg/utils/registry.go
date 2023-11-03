@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/k3d-io/k3d/v5/pkg/types/k3s"
+	"github.com/rancher/wharfie/pkg/registries"
 	"sigs.k8s.io/yaml"
 )
 
-func VerifyRegistryFileContent(path, content string) (*k3s.Registry, error) {
-	var registry k3s.Registry
+func VerifyRegistryFileContent(path, content string) (*registries.Registry, error) {
+	var registry registries.Registry
 	var err error
 	contentBytes := []byte(content)
 	if path != "" && content == "" {
@@ -29,7 +29,7 @@ func VerifyRegistryFileContent(path, content string) (*k3s.Registry, error) {
 	return &registry, nil
 }
 
-func RegistryToString(registry *k3s.Registry) (string, error) {
+func RegistryToString(registry *registries.Registry) (string, error) {
 	if registry == nil {
 		return "", fmt.Errorf("can't save registry file: registry is nil")
 	}

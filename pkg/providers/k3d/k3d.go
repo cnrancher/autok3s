@@ -24,7 +24,7 @@ import (
 	"github.com/k3d-io/k3d/v5/pkg/client"
 	"github.com/k3d-io/k3d/v5/pkg/config"
 	k3dtypes "github.com/k3d-io/k3d/v5/pkg/config/types"
-	k3dconf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha4"
+	k3dconf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
 	k3dlogger "github.com/k3d-io/k3d/v5/pkg/logger"
 	"github.com/k3d-io/k3d/v5/pkg/runtimes"
 	dockerutils "github.com/k3d-io/k3d/v5/pkg/runtimes/docker"

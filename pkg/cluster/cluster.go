@@ -19,8 +19,8 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/k3d-io/k3d/v5/pkg/types/k3s"
 	"github.com/pkg/errors"
+	"github.com/rancher/wharfie/pkg/registries"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -419,6 +419,9 @@ func SaveCfg(cfg, ip, context string) error {
 
 // DeployExtraManifest deploy extra K3S manifest.
 func (p *ProviderBase) DeployExtraManifest(cluster *types.Cluster, cmds []string) error {
+	if _, err := p.execute(&cluster.MasterNodes[0], []string{fmt.Sprintf("mkdir -p %s", common.K3sManifestsDir)}...); err != nil {
+		return err
+	}
 	if _, err := p.execute(&cluster.MasterNodes[0], cmds...); err != nil {
 		return err
 	}
@@ -566,7 +569,7 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 	return err
 }
 
-func registryTLSMap(registry *k3s.Registry) (m map[string]map[string][]byte, err error) {
+func registryTLSMap(registry *registries.Registry) (m map[string]map[string][]byte, err error) {
 	m = make(map[string]map[string][]byte)
 	if registry == nil {
 		err = fmt.Errorf("registry is nil")
@@ -606,7 +609,7 @@ func registryTLSMap(registry *k3s.Registry) (m map[string]map[string][]byte, err
 	return
 }
 
-func saveRegistryTLS(registry *k3s.Registry, m map[string]map[string][]byte) ([]string, error) {
+func saveRegistryTLS(registry *registries.Registry, m map[string]map[string][]byte) ([]string, error) {
 	cmd := make([]string, 0)
 	for r, c := range m {
 		if r != "" {

@@ -1,4 +1,4 @@
-FROM registry.suse.com/bci/golang:1.20
+FROM registry.suse.com/bci/golang:1.21
 # confirm that suse bci golang version upgraded to 1.20.10 after 2023-11-14
 ARG PROXY
 ARG GOPROXY
