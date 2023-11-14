@@ -27,11 +27,10 @@ RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
     ginkgo version; \
     fi
 ## install upx
-RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
-    export HTTPS_PROXY=${PROXY}; \
-    curl -sSL https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz | tar -xvJf - -C /tmp/; \
-    mv /tmp/upx-3.96-amd64_linux/upx /usr/bin/ && rm -rf /tmp/upx-3.96-amd64_linux; \
-    fi
+ENV UPX_VERSION 4.2.1
+RUN export HTTPS_PROXY=${PROXY}; \
+    curl -sL https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-${ARCH}_linux.tar.xz | tar xvJf - --strip-components=1 -C /tmp && \
+    mv /tmp/upx /usr/bin/
 # -- for make rules
 
 # -- for dapper
