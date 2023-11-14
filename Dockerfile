@@ -1,4 +1,4 @@
-FROM registry.suse.com/bci/bci-base:15.3
+FROM registry.suse.com/bci/bci-base:15.5
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETOS
