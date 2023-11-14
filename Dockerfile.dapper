@@ -1,13 +1,8 @@
-# FROM registry.suse.com/bci/golang:1.20
-FROM registry.suse.com/bci/bci-base:latest
+FROM registry.suse.com/bci/golang:1.20
+# confirm that suse bci golang version upgraded to 1.20.10 after 2023-11-14
 ARG PROXY
 ARG GOPROXY
 ARG ARCH=amd64
-ARG GO_VERSION=1.20.8
-RUN curl -sSL https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz -o /tmp/go.tar.gz \
-    && rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz \
-    && /usr/local/go/bin/go version
-ENV GOPATH=/go PATH=/go/bin:/usr/local/go/bin:/root/go/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 RUN zypper -n install netcat wget curl gawk git make
 RUN zypper install -y -f docker
 ## install golangci-lint
