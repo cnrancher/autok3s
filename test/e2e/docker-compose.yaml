@@ -1,0 +1,16 @@
+services:
+  testing:
+    build: .
+    depends_on:
+      autok3s:
+        condition: service_healthy
+    links:
+      - autok3s
+  autok3s:
+    image: cnrancher/autok3s:latest
+    healthcheck:
+      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/8080"]
+      interval: 3s
+      timeout: 60s
+      retries: 10
+      start_period: 3s

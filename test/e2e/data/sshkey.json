@@ -1,0 +1,6 @@
+{
+    "name": "{{randAlpha 4}}",
+    "generate-key": true,
+    "bits": 2048,
+    "ssh-passphrase": ""
+}

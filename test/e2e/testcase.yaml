@@ -1,0 +1,100 @@
+name: autok3s
+param:
+  server: http://autok3s:8080
+spec:
+  kind: HTTP
+api: http://autok3s:8080/v1
+items:
+- name: createAlibabaCredential
+  request:
+    api: /credentials
+    method: POST
+    header:
+      Content-Type: application/json
+    bodyFromFile: data/credential-alibaba.json
+  expect:
+    statusCode: 201
+- name: createAwsCredential
+  request:
+    api: /credentials
+    method: POST
+    bodyFromFile: data/credential-aws.json
+  expect:
+    statusCode: 201
+- name: createGoogleCredential
+  request:
+    api: /credentials
+    method: POST
+    bodyFromFile: data/credential-google.json
+  expect:
+    statusCode: 201
+- name: createTencentCredential
+  request:
+    api: /credentials
+    method: POST
+    bodyFromFile: data/credential-tencent.json
+  expect:
+    statusCode: 201
+
+- name: createK3dCluster
+  request:
+    api: /clusters
+    bodyFromFile: data/cluster-k3d.json
+    method: POST
+  expect:
+    statusCode: 201
+- name: createNativeCluster
+  request:
+    api: /clusters
+    bodyFromFile: data/cluster-native.json
+    method: POST
+  expect:
+    statusCode: 201
+- name: createAlibabaCluster
+  request:
+    api: /clusters
+    bodyFromFile: data/cluster-alibaba.json
+    method: POST
+  expect:
+    statusCode: 422
+- name: clusters
+  request:
+    api: /clusters
+    method: GET
+  expect:
+    verify:
+    - len(data.data) == 2
+- name: getCluster
+  request:
+    api: /clusters/{{(index .clusters.data 0).id}}?link=nodes
+    method: GET
+- name: deleteCluster
+  request:
+    api: /clusters/{{(index .clusters.data 0).id}}
+    method: DELETE
+
+## ssh key related APIs
+- name: generateSSHKey
+  request:
+    api: /sshKeys
+    method: POST
+    bodyFromFile: data/sshkey.json
+  expect:
+    statusCode: 201
+- name: getSSHKeyList
+  request:
+    api: /sshKeys
+  expect:
+    verify:
+    - len(data.data) == 1
+- name: deleteSSHKey
+  request:
+    api: /sshKeys/{{(index .getSSHKeyList.data 0).id}}
+
+## addon related APIs
+- name: getAddonList
+  request:
+    api: /addons
+  expect:
+    verify:
+    - len(data.data) == 1
