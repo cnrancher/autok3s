@@ -332,7 +332,7 @@ func (p *ProviderBase) GetCommonConfig(sshFunc func() *types.SSH) (map[string]sc
 
 // InitCluster init K3S cluster.
 func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []string,
-	cloudInstanceFunc func(ssh *types.SSH) (*types.Cluster, error), customInstallK3s func() (string, string, error), rollbackInstance func(ids []string) error) error {
+	cloudInstanceFunc func(ssh *types.SSH) (*types.Cluster, error), customInstallK3s func() (string, string, error), rollbackInstance func(ids []string) error) (er error) {
 	logFile, err := common.GetLogFile(p.ContextName)
 	if err != nil {
 		return err
@@ -345,8 +345,8 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 		Status:   p.Status,
 	}
 	defer func() {
-		if err != nil {
-			p.Logger.Errorf("%v", err)
+		if er != nil {
+			p.Logger.Errorf("%v", er)
 			// save failed status.
 			if c == nil {
 				c = &types.Cluster{
@@ -360,7 +360,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 			_ = common.DefaultDB.SaveCluster(c)
 			_ = p.RollbackCluster(rollbackInstance)
 		}
-		if err == nil && len(p.Status.MasterNodes) > 0 {
+		if er == nil && len(p.Status.MasterNodes) > 0 {
 			p.Logger.Info(common.UsageInfoTitle)
 			p.Logger.Infof(common.UsageContext, p.ContextName)
 			p.Logger.Info(common.UsagePods)
@@ -497,13 +497,13 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 		p.Logger.Infof("[%s] successfully deployed custom manifests", p.Provider)
 	}
 
-	return nil
+	return
 }
 
 // JoinNodes join K3S nodes.
 // nolint: gocyclo
 func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.Cluster, error),
-	syncExistInstance func() error, isAutoJoined bool, rollbackInstance func(ids []string) error) error {
+	syncExistInstance func() error, isAutoJoined bool, rollbackInstance func(ids []string) error) (er error) {
 	if p.M == nil {
 		p.M = new(syncmap.Map)
 	}
@@ -519,7 +519,7 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 		return fmt.Errorf("[%s] cluster %s is not exist", p.Provider, p.Name)
 	}
 	defer func() {
-		if err != nil {
+		if er != nil {
 			// join failed.
 			state.Status = common.StatusRunning
 			_ = common.DefaultDB.SaveClusterState(state)
@@ -584,9 +584,7 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 
 	if !isAutoJoined {
 		// execute k3s script to join nodes.
-		if err := p.Join(c, added); err != nil {
-			return err
-		}
+		err = p.Join(c, added)
 	} else {
 		// some providers do not need to execute the K3s join logic,
 		// so we need to fill in the missing key information.
@@ -601,7 +599,7 @@ func (p *ProviderBase) JoinNodes(cloudInstanceFunc func(ssh *types.SSH) (*types.
 	}
 
 	p.Logger.Infof("[%s] successfully executed join logic", p.Provider)
-	return nil
+	return err
 }
 
 // MergeConfig merge cluster config.
