@@ -19,7 +19,7 @@ function autok3s::dapper::validate() {
 
   autok3s::log::info "installing dapper"
   if autok3s::dapper::install; then
-    autok3s::log::info "dapper: $(dapper -v)"
+    autok3s::log::info "dapper: $(.dapper -v)"
     return 0
   fi
   autok3s::log::error "no dapper available"
