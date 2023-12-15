@@ -50,7 +50,7 @@ function autok3s::version::get_version_vars() {
     fi
   fi
 
-  if [[ -n ${GIT_VERSION:-} ]] || GIT_VERSION="$(git rev-parse --abbrev-ref HEAD | sed -E 's/[^a-zA-Z0-9]+/-/g' 2>/dev/null)"; then
+  if [[ -n ${GIT_VERSION:-} ]] || HEAD_TAG="$(git rev-parse --abbrev-ref HEAD | sed -E 's/[^a-zA-Z0-9]+/-/g' 2>/dev/null)"; then
     # check if the HEAD is tagged.
     if git_tag=$(git tag -l --contains HEAD | head -n 1 2>/dev/null) && [[ -n ${DRONE_TAG:-${git_tag}} ]]; then
       GIT_VERSION="${DRONE_TAG:-${git_tag}}"
@@ -61,6 +61,8 @@ function autok3s::version::get_version_vars() {
       Current value is: ${GIT_VERSION}
       Please see more details here: https://semver.org"
       fi
+    else
+      GIT_VERSION="v0.0.0-$HEAD_TAG"
     fi
 
     # append suffix if the tree is dirty.
