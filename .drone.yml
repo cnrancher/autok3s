@@ -21,6 +21,7 @@ steps:
       DIRTY_CHECK: "true"
     commands:
       - dapper build
+      - bin/${DRONE_STAGE_OS}/${DRONE_STAGE_ARCH}/autok3s version
     volumes:
       - name: docker
         path: /var/run/docker.sock
