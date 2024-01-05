@@ -184,12 +184,44 @@ func TestGetCCMVersion(t *testing.T) {
 	}
 	for _, c := range []testCase{
 		{
+			k3sversion: "v1.21.14+k3s1",
+			ccmVersion: ccmVersionMap["~1.21"],
+		},
+		{
+			k3sversion: "v1.22.17+k3s1",
+			ccmVersion: ccmVersionMap["~1.22"],
+		},
+		{
+			k3sversion: "v1.23.7+k3s1",
+			ccmVersion: ccmVersionMap["~1.23"],
+		},
+		{
+			k3sversion: "v1.25.16+k3s4",
+			ccmVersion: ccmVersionMap["~1.25"],
+		},
+		{
+			k3sversion: "v1.26.11+k3s2",
+			ccmVersion: ccmVersionMap["~1.26"],
+		},
+		{
+			k3sversion: "v1.27.8+k3s2",
+			ccmVersion: ccmVersionMap[">= 1.27"],
+		},
+		{
+			k3sversion: "v1.28.4+k3s2",
+			ccmVersion: ccmVersionMap[">= 1.27"],
+		},
+		{
 			k3sversion: "v1.20.15+k3s1",
 			ccmVersion: ccmVersionMap["~1.20"],
 		},
 		{
 			k3sversion: "v1.24.3+k3s1",
-			ccmVersion: ccmVersionMap[">= 1.24"],
+			ccmVersion: ccmVersionMap["~1.24"],
+		},
+		{
+			k3sversion: "v1.19.16+k3s1",
+			ccmVersion: ccmVersionMap["~1.19"],
 		},
 		{
 			k3sversion: "v1.18.20+k3s1",

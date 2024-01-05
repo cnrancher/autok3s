@@ -49,11 +49,14 @@ var (
 	// the version according to this docs.
 	// The map key should be semver constraint and the value is the aws ccm version
 	ccmVersionMap = map[string]string{
-		">= 1.24": "v1.24.0",
-		"~1.23":   "v1.23.1",
-		"~1.22":   "v1.22.3",
-		"~1.21":   "v1.21.2",
-		"~1.20":   "v1.20.2",
+		">= 1.27": "v1.27.1",
+		"~1.26":   "v1.26.1",
+		"~1.25":   "v1.25.3",
+		"~1.24":   "v1.24.4",
+		"~1.23":   "v1.23.6",
+		"~1.22":   "v1.22.7",
+		"~1.21":   "v1.21.6",
+		"~1.20":   "v1.20.4",
 		"~1.19":   "v1.19.0-alpha.1",
 		"~1.18":   "v1.18.0-alpha.1",
 		"< 1.18":  "v1.18.0-alpha.1",
@@ -1041,18 +1044,10 @@ func (p *Amazon) deleteInstance(f bool) (string, error) {
 		}
 		return p.ContextName, nil
 	}
-	ui := p.UI
-	for _, comp := range p.Enable {
-		if !ui && comp == "dashboard" {
-			ui = true
-		}
-	}
-	// This is for backward compatibility as we don't support deploying kubernetes dashboard anymore.
-	// CCM will create elb for kubernetes dashboard so we need to delete dashboard before delete instance/cluster.
-	if ui && p.CloudControllerManager {
-		if err = p.ReleaseManifests(); err != nil {
-			return "", err
-		}
+
+	// CCM will create elb for kubernetes service
+	if p.CloudControllerManager {
+		p.Logger.Warnf("[%s] Please ensure all services has released before remove the cluster, if not, please check the AWS ELB to ensure all ELB has been released.", p.GetProviderName())
 	}
 	if err = p.terminateInstance(ids); err != nil {
 		return "", err
@@ -1230,7 +1225,7 @@ func getCCMVersion(k3sversion string) (string, error) {
 	}
 
 	// should never meet this condition because the version map covers all k8s version.
-	return ccmVersionMap[">= 1.24"], nil
+	return ccmVersionMap[">= 1.27"], nil
 }
 
 func getCCMExtraArgs(k3sversion string) ([]string, error) {
