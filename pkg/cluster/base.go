@@ -254,6 +254,12 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			V:     p.Rollback,
 			Usage: "Whether to rollback when the K3s cluster installation or join nodes failed.",
 		},
+		{
+			Name:  "install-env",
+			P:     &p.InstallEnv,
+			V:     p.InstallEnv,
+			Usage: "The install environment variables config for K3s with install script(only support env starts with INSTALL_), e.g. --install-env INSTALL_K3S_SKIP_SELINUX_RPM=true, see: https://docs.k3s.io/installation/configuration#configuration-with-install-script",
+		},
 	}
 
 	fs = append(fs, p.GetSSHOptions()...)
@@ -750,6 +756,18 @@ func (p *ProviderBase) CheckCreateArgs(checkClusterExist func() (bool, []string,
 		return fmt.Errorf("[%s] failed to check --datastore-keyfile %s", p.Provider, p.DataStoreKeyFile)
 	}
 
+	if p.InstallEnv != nil {
+		unsupportEnv := []string{}
+		for key, value := range p.InstallEnv {
+			if !strings.HasPrefix(key, "INSTALL_") {
+				unsupportEnv = append(unsupportEnv, fmt.Sprintf("%v=%v", key, value))
+			}
+		}
+		if len(unsupportEnv) > 0 {
+			return fmt.Errorf("[%s] Invalid install environment %v. Only support INSTALL_* environments. For K3S_* variables please use config file args", p.Provider, unsupportEnv)
+		}
+	}
+
 	return nil
 }
 
@@ -789,6 +807,18 @@ func (p *ProviderBase) CheckJoinArgs(checkClusterExist func() (bool, []string, e
 		}
 		if masterNum < 1 && workerNum < 1 {
 			return fmt.Errorf("[%s] calling preflight error: `--master` or `--worker` number must >= 1", p.Provider)
+		}
+	}
+
+	if p.InstallEnv != nil {
+		unsupportEnv := []string{}
+		for key, value := range p.InstallEnv {
+			if !strings.HasPrefix(key, "INSTALL_") {
+				unsupportEnv = append(unsupportEnv, fmt.Sprintf("%v=%v", key, value))
+			}
+		}
+		if len(unsupportEnv) > 0 {
+			return fmt.Errorf("[%s] Invalid install environment %v. Only support INSTALL_* environments. For K3S_* variables please use config file args", p.Provider, unsupportEnv)
 		}
 	}
 
