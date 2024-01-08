@@ -26,6 +26,15 @@ var (
 func getCommand(isFirstMaster bool, fixedIP string, cluster *types.Cluster, node types.Node, extraArgs []string) string {
 	var commandPrefix, commandSuffix string
 	envVar := map[string]string{}
+	// prepare for install env
+	for key, value := range cluster.InstallEnv {
+		if key == "INSTALL_K3S_EXEC" {
+			// add install exec to extraArgs
+			extraArgs = append(extraArgs, value)
+			continue
+		}
+		envVar[key] = value
+	}
 	// airgap install
 	if cluster.PackageName != "" || cluster.PackagePath != "" {
 		commandSuffix = "install.sh"

@@ -60,6 +60,7 @@ type Metadata struct {
 	DataStoreKeyFileContent  string      `json:"datastore-keyfile-content,omitempty" yaml:"datastore-keyfile-content,omitempty"`
 	Rollback                 bool        `json:"rollback" yaml:"rollback" gorm:"type:bool"`
 	Values                   StringMap   `json:"values,omitempty" yaml:"values,omitempty" gorm:"type:stringMap"`
+	InstallEnv               StringMap   `json:"install-env,omitempty" yaml:"install-env,omitempty" gorm:"type:stringMap"`
 }
 
 // Status struct for status.
