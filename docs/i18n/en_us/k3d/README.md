@@ -187,6 +187,6 @@ K3d needs to mount the resource limit file into k3s container which requires the
 
 Please mount the `.k3d` directory when start the AutoK3s by Docker. The following command is an example.
 ```bash
-docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock -v /root/.k3d:/root/.k3d cnrancher/autok3s:v0.8.0
+docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock -v /root/.config/k3d:/root/.config/k3d cnrancher/autok3s:v0.9.2
 ```
 
