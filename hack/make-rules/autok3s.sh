@@ -9,7 +9,7 @@ CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 # The root of the autok3s directory
 ROOT_DIR="${CURR_DIR}"
 CROSS=${CROSS:-}
-UI_VERSION="v0.9.2-rc1"
+UI_VERSION="v0.9.2"
 
 source "${ROOT_DIR}/hack/lib/init.sh"
 source "${CURR_DIR}/hack/lib/constant.sh"
@@ -34,7 +34,7 @@ function mod() {
 }
 
 function ui() {
-  autok3s::log::info "downloading autok3s ui"
+  autok3s::log::info "downloading autok3s ui ${UI_VERSION}"
   cd pkg/server/ui
   curl -sL https://autok3s-ui.s3-ap-southeast-2.amazonaws.com/${UI_VERSION}.tar.gz | tar xvzf -
   cd ${CURR_DIR}

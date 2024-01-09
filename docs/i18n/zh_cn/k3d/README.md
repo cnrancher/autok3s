@@ -329,5 +329,5 @@ time="2023-05-25T02:54:23Z" level=info msg="[k3d] executing rollback logic..."
 
 如果出现以上问题，可以在启动 AutoK3s 容器时尝试将本地的 `.k3d` 目录挂载到 Docker 中，例如
 ```bash
-docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock -v /root/.k3d:/root/.k3d cnrancher/autok3s:v0.8.0
+docker run -itd --restart=unless-stopped --net=host -v /var/run/docker.sock:/var/run/docker.sock -v /root/.config/k3d:/root/.config/k3d cnrancher/autok3s:v0.9.2
 ```
