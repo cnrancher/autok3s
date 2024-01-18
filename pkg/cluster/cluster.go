@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cnrancher/autok3s/pkg/airgap"
@@ -71,50 +72,57 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		publicIP = cluster.MasterNodes[0].PublicIPAddress[0]
 	}
 
-	workerExtraArgs := cluster.WorkerExtraArgs
-
-	for i, master := range cluster.MasterNodes {
-		p.Logger.Infof("[%s] creating k3s master-%d...", p.Provider, i+1)
-		masterExtraArgs := cluster.MasterExtraArgs
-		providerExtraArgs := provider.GenerateMasterExtraArgs(cluster, master)
-		if providerExtraArgs != "" {
-			masterExtraArgs += providerExtraArgs
+	// initialize the first master node and worker node to validate the K3s configuration.
+	var firstControl, firstWorker types.Node
+	controlNodes := []types.Node{}
+	for i, control := range cluster.MasterNodes {
+		if i == 0 {
+			firstControl = control
+			continue
 		}
+		controlNodes = append(controlNodes, control)
+	}
+	workerNodes := []types.Node{}
+	if len(p.WorkerNodes) > 0 {
+		for i, w := range cluster.WorkerNodes {
+			if i == 0 {
+				firstWorker = w
+				continue
+			}
+			workerNodes = append(workerNodes, w)
+		}
+	}
 
-		if err := p.initNode(i == 0, publicIP, cluster, master, masterExtraArgs, pkg); err != nil {
+	err = p.validateClusterConfig(cluster, provider, publicIP, pkg, firstControl, firstWorker)
+	if err != nil {
+		return err
+	}
+
+	for i, master := range controlNodes {
+		p.Logger.Infof("[%s] join k3s control-%d...", p.Provider, i+1)
+		if err := p.initControlNode(cluster, provider, publicIP, pkg, master, false); err != nil {
 			return err
 		}
-
 		p.Logger.Infof("[%s] successfully created k3s master-%d", p.Provider, i+1)
 	}
 
-	errGroup := utils.NewFirstErrorGroup()
-	for i, worker := range cluster.WorkerNodes {
-		errGroup.Go(func(i int, worker types.Node) func() error {
-			return func() error {
-				p.Logger.Infof("[%s] creating k3s worker-%d...", p.Provider, i+1)
-				extraArgs := workerExtraArgs
-				providerExtraArgs := provider.GenerateWorkerExtraArgs(cluster, worker)
-				if providerExtraArgs != "" {
-					extraArgs += providerExtraArgs
-				}
-				if err := p.initNode(false, publicIP, cluster, worker, extraArgs, pkg); err != nil {
-					return err
-				}
-				p.Logger.Infof("[%s] successfully created k3s worker-%d", p.Provider, i+1)
-				return nil
+	// batch join worker nodes
+	var wg sync.WaitGroup
+	var l sync.RWMutex
+	for i, worker := range workerNodes {
+		wg.Add(1)
+		go func(i int, worker types.Node) {
+			defer wg.Done()
+			p.Logger.Infof("[%s] creating k3s worker-%d...", p.Provider, i+1)
+			if err := p.initWorkerNode(cluster, provider, publicIP, pkg, worker); err != nil {
+				l.Lock()
+				p.ErrM[worker.InstanceID] = err.Error()
+				l.Unlock()
 			}
-		}(i, worker))
+			p.Logger.Infof("[%s] successfully created k3s worker-%d", p.Provider, i+1)
+		}(i, worker)
 	}
-
-	// will block here to get the first error
-	if err, _ := <-errGroup.FirstError(); err != nil {
-		go func() {
-			errCount := errGroup.Wait()
-			p.Logger.Debugf("%d error occurs", errCount)
-		}()
-		return err
-	}
+	wg.Wait()
 
 	// get k3s cluster config.
 	cfg, err := p.executeWithRetry(3, &cluster.MasterNodes[0], catCfgCommand)
@@ -231,38 +239,34 @@ func (p *ProviderBase) Join(merged, added *types.Cluster) error {
 		p.Logger.Infof("[%s] successfully joined k3s master-%d", merged.Provider, i+1)
 	}
 
-	errGroup := utils.NewFirstErrorGroup()
+	var wg sync.WaitGroup
+	var l sync.RWMutex
+
 	for i := 0; i < len(added.Status.WorkerNodes); i++ {
 		currentNode := added.WorkerNodes[i]
 		full, ok := workerNodes[currentNode.InstanceID]
 		if !ok {
 			continue
 		}
+		wg.Add(1)
 
-		errGroup.Go(func(i int, node types.Node) func() error {
-			return func() error {
-				p.Logger.Infof("[%s] joining k3s worker-%d...", merged.Provider, i+1)
-				extraArgs := merged.WorkerExtraArgs
-				additionalExtraArgs := provider.GenerateWorkerExtraArgs(added, full)
-				if additionalExtraArgs != "" {
-					extraArgs += additionalExtraArgs
-				}
-				if err := p.initNode(false, publicIP, merged, full, extraArgs, pkg); err != nil {
-					return err
-				}
-				p.Logger.Infof("[%s] successfully joined k3s worker-%d", merged.Provider, i+1)
-				return nil
+		go func(i int, node types.Node) {
+			defer wg.Done()
+			p.Logger.Infof("[%s] joining k3s worker-%d...", merged.Provider, i+1)
+			extraArgs := merged.WorkerExtraArgs
+			additionalExtraArgs := provider.GenerateWorkerExtraArgs(added, full)
+			if additionalExtraArgs != "" {
+				extraArgs += additionalExtraArgs
 			}
-		}(i, full))
+			if err := p.initNode(false, publicIP, merged, full, extraArgs, pkg); err != nil {
+				l.Lock()
+				p.ErrM[full.InstanceID] = err.Error()
+				l.Unlock()
+			}
+			p.Logger.Infof("[%s] successfully joined k3s worker-%d", merged.Provider, i+1)
+		}(i, full)
 	}
-
-	if err, _ := <-errGroup.FirstError(); err != nil {
-		go func() {
-			errCount := errGroup.Wait()
-			p.Logger.Debugf("%d error occurs", errCount)
-		}()
-		return err
-	}
+	wg.Wait()
 
 	// sync master & worker numbers.
 	merged.Master = strconv.Itoa(len(merged.MasterNodes))
@@ -903,4 +907,43 @@ func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluste
 	}
 	_, err := p.execute(n, cmd...)
 	return err
+}
+
+func (p *ProviderBase) validateClusterConfig(cluster *types.Cluster, provider providers.Provider, publicIP string, pkg *common.Package, firstControl, firstWorker types.Node) error {
+	p.Logger.Infof("[%s] initialize control node...", p.Provider)
+	if err := p.initControlNode(cluster, provider, publicIP, pkg, firstControl, true); err != nil {
+		return err
+	}
+	p.Logger.Infof("[%s] successfully initialize the first control node", p.Provider)
+
+	if len(firstWorker.PublicIPAddress) <= 0 && firstWorker.InstanceID == "" {
+		// skip with empty worker node
+		return nil
+	}
+	p.Logger.Infof("[%s] initialize worker node...", p.Provider)
+	if err := p.initWorkerNode(cluster, provider, publicIP, pkg, firstWorker); err != nil {
+		return err
+	}
+	p.Logger.Infof("[%s] successfully initialize the first worker node", p.Provider)
+
+	return nil
+}
+
+func (p *ProviderBase) initControlNode(cluster *types.Cluster, provider providers.Provider, publicIP string, pkg *common.Package, controlNode types.Node, isFirst bool) error {
+	masterExtraArgs := cluster.MasterExtraArgs
+	providerExtraArgs := provider.GenerateMasterExtraArgs(cluster, controlNode)
+	if providerExtraArgs != "" {
+		masterExtraArgs += providerExtraArgs
+	}
+
+	return p.initNode(isFirst, publicIP, cluster, controlNode, masterExtraArgs, pkg)
+}
+
+func (p *ProviderBase) initWorkerNode(cluster *types.Cluster, provider providers.Provider, publicIP string, pkg *common.Package, workerNode types.Node) error {
+	workerExtraArgs := cluster.WorkerExtraArgs
+	providerExtraArgs := provider.GenerateWorkerExtraArgs(cluster, workerNode)
+	if providerExtraArgs != "" {
+		workerExtraArgs += providerExtraArgs
+	}
+	return p.initNode(false, publicIP, cluster, workerNode, workerExtraArgs, pkg)
 }
