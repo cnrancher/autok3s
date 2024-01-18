@@ -164,6 +164,23 @@ func (p *Native) MergeClusterOptions() error {
 			if option.WorkerIps != "" {
 				workerIps = strings.Split(option.WorkerIps, ",")
 			}
+			// remove invalid worker-ip
+			requeuedWorkerIps := []string{}
+			if len(p.WorkerNodes) > 0 {
+				for _, ip := range workerIps {
+					isContained := false
+					for _, n := range p.WorkerNodes {
+						if n.PublicIPAddress[0] == ip {
+							isContained = true
+							break
+						}
+					}
+					if isContained {
+						requeuedWorkerIps = append(requeuedWorkerIps, ip)
+					}
+				}
+				workerIps = requeuedWorkerIps
+			}
 			optionWorkerIps := strings.Split(p.WorkerIps, ",")
 			for _, ip := range optionWorkerIps {
 				if !slice.ContainsString(workerIps, ip) {

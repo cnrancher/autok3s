@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -132,6 +133,51 @@ func (p *Native) rollbackInstance(ids []string) error {
 		if node, ok := p.M.Load(id); ok {
 			nodes = append(nodes, node.(types.Node))
 		}
+	}
+	kubeCfg := filepath.Join(common.CfgPath, common.KubeCfgFile)
+	client, err := cluster.GetClusterConfig(p.ContextName, kubeCfg)
+	if err != nil {
+		p.Logger.Errorf("[%s] failed to get kubeclient for rollback: %v", p.GetProviderName(), err)
+	}
+	if err == nil {
+		timeout := int64(5 * time.Second)
+		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{TimeoutSeconds: &timeout})
+		if err == nil && nodeList != nil {
+			rNodeList := []v1.Node{}
+			for _, id := range ids {
+				if v, ok := p.M.Load(id); ok {
+					n := v.(types.Node)
+					for _, node := range nodeList.Items {
+						var externalIP string
+						addressList := node.Status.Addresses
+						for _, address := range addressList {
+							switch address.Type {
+							case v1.NodeExternalIP:
+								externalIP = address.Address
+							default:
+								continue
+							}
+						}
+						if n.PublicIPAddress[0] == externalIP {
+							rNodeList = append(rNodeList, node)
+						}
+					}
+				}
+			}
+			if len(rNodeList) > 0 {
+				for _, rNode := range rNodeList {
+					p.Logger.Infof("[%s] remove node %s for rollback", p.GetProviderName(), rNode.Name)
+					e := client.CoreV1().Nodes().Delete(context.TODO(), rNode.Name, metav1.DeleteOptions{})
+					if e != nil {
+						p.Logger.Errorf("[%s] failed to remove node %s for rollback: %v", p.GetProviderName(), rNode.Name, err)
+					}
+				}
+			}
+		}
+	}
+
+	if err != nil {
+		p.Logger.Errorf("[%s] failed to get node list for rollback: %v", p.GetProviderName(), err)
 	}
 	warnMsg := p.UninstallK3sNodes(nodes)
 	for _, w := range warnMsg {
@@ -394,11 +440,19 @@ func (p *Native) syncInstanceNodes() ([]types.Node, error) {
 	// sync cluster nodes
 	masterBytes, _ := json.Marshal(masterNodes)
 	workerBytes, _ := json.Marshal(workerNodes)
-	state.MasterNodes = masterBytes
-	state.WorkerNodes = workerBytes
-	state.Master = strconv.Itoa(len(masterNodes))
-	state.Worker = strconv.Itoa(len(workerNodes))
-	err = common.DefaultDB.SaveClusterState(state)
+
+	// check difference
+	if !reflect.DeepEqual(state.MasterNodes, masterBytes) ||
+		!reflect.DeepEqual(state.WorkerNodes, workerBytes) ||
+		!strings.EqualFold(state.Master, strconv.Itoa(len(masterNodes))) ||
+		!strings.EqualFold(state.Worker, strconv.Itoa(len(workerNodes))) {
+		state.MasterNodes = masterBytes
+		state.WorkerNodes = workerBytes
+		state.Master = strconv.Itoa(len(masterNodes))
+		state.Worker = strconv.Itoa(len(workerNodes))
+		err = common.DefaultDB.SaveClusterState(state)
+	}
+
 	return nodes, err
 }
 
