@@ -14,7 +14,7 @@
 
 English / [简体中文](docs/i18n/zh_cn/README.md)
 
-[K3s](https://github.com/k3s-io/k3s) is a fully certified Kubernetes offering, it can replace the "full-fat" K8s in some cases.
+[K3s](https://k3s.io/) is a Lightweight Kubernetes which is great for Edge, IoT, CI, Development, ARM and so on.
 
 AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it can help you **Run K3s Everywhere**.
 
@@ -32,14 +32,9 @@ AutoK3s is a lightweight tool for simplifying the cluster management of K3s, it 
 
 ## Key Features
 
-- Shorter provisioning time with API, CLI and UI dashboard.
-- Cloud provider Integration(simplifies the setup process of [CCM](https://kubernetes.io/docs/concepts/architecture/cloud-controller) on cloud providers).
 - Flexible installation options, like K3s cluster HA and datastore(embedded etcd, RDS, SQLite, etc.).
-- Low cost(try spot instances in each cloud).
 - Simplify operations by UI dashboard.
-- Portability between clouds by leveraging tools like [backup-restore-operator](https://github.com/rancher/backup-restore-operator).
 - [Airgap](docs/i18n/en_us/airgap/README.md) K3s package management and installation.
-- [SSH Key Management](docs/i18n/en_us/sshkey/README.md) can manage the SSH keys are used to provision K3s clusters.
 - [Add-on](docs/i18n/en_us/add-on/README.md) streamlines the management and deployment of plugins, seamlessly integrating applications into K3s clusters.
 
 ## Providers
@@ -103,6 +98,10 @@ Watch the demo:
 
 ![](docs/assets/autok3s-v0.7.0-demo.gif)
 
+## Use Cases
+
+- [Quickly create K3s cluster and add K3s nodes with GUI Tool using AutoK3s (Installation guide in WSL)](https://dev.to/msh2050/quickly-create-k3s-cluster-and-add-k3s-nodes-with-gui-tool-using-autok3s-installation-guide-in-wsl-3e5d)
+
 ## Developers' Guide
 
 Use `dapper` to manage project compilation, testing and packaging.
@@ -121,9 +120,11 @@ AutoK3s is 100% open-source software. The project source code is spread across a
 - https://github.com/cnrancher/autok3s-ui
 - https://github.com/cnrancher/kube-explorer
 
+Contributed by SUSE(Rancher E&I) Team
+
 # License
 
-Copyright (c) 2023 [SUSE](https://www.suse.com/)
+Copyright (c) 2024 [SUSE](https://www.suse.com/)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
