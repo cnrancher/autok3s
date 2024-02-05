@@ -9,7 +9,7 @@ import (
 
 var DefaultTemplates = map[string]interface{}{
 	"aws": aws.Options{
-		AMI:                    "ami-053b0d53c279acc90", // Canonical, Ubuntu, 22.04 LTS, amd64 jammy image build on 2023-05-16
+		AMI:                    "ami-0c7217cdde317cfec", // Canonical, Ubuntu, 22.04 LTS, amd64 jammy image build on 2023-12-07
 		InstanceType:           "t3a.medium",            // 2c/4g
 		VolumeType:             "gp3",
 		RootSize:               "16",
@@ -20,7 +20,7 @@ var DefaultTemplates = map[string]interface{}{
 	},
 	"alibaba": alibaba.Options{
 		Image:                   "ubuntu_22_04_x64_20G_alibase_20230613.vhd", // Ubuntu 22.04 64 bit
-		InstanceType:            "ecs.c6.large",                              // 2c/4g
+		InstanceType:            "ecs.e-c1m2.large",                          // 2c/4g
 		InternetMaxBandwidthOut: "5",
 		DiskCategory:            "cloud_essd",
 		DiskSize:                "40",
@@ -39,7 +39,7 @@ var DefaultTemplates = map[string]interface{}{
 		SystemDiskType:          "CLOUD_SSD",
 		SystemDiskSize:          "50",
 		Region:                  "ap-guangzhou",
-		Zone:                    "ap-guangzhou-3",
+		Zone:                    "ap-guangzhou-6",
 		PublicIPAssignedEIP:     false,
 		Spot:                    false,
 		CloudControllerManager:  false,
