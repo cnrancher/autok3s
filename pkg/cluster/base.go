@@ -22,7 +22,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/rancher/wrangler/pkg/schemas"
+	"github.com/rancher/wrangler/v2/pkg/schemas"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 	"k8s.io/client-go/tools/clientcmd"

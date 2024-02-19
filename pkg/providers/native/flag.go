@@ -6,7 +6,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 	"github.com/cnrancher/autok3s/pkg/types/native"
 
-	"github.com/rancher/wrangler/pkg/slice"
+	"github.com/rancher/wrangler/v2/pkg/slice"
 )
 
 const createUsageExample = `  autok3s -d create \

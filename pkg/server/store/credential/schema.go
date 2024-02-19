@@ -13,7 +13,7 @@ import (
 
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/types"
-	"github.com/rancher/wrangler/pkg/schemas/validation"
+	"github.com/rancher/wrangler/v2/pkg/schemas/validation"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	raw "google.golang.org/api/compute/v1"
