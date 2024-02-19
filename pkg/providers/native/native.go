@@ -18,7 +18,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types/native"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	"github.com/rancher/wrangler/pkg/slice"
+	"github.com/rancher/wrangler/v2/pkg/slice"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

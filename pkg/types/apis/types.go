@@ -3,7 +3,7 @@ package apis
 import (
 	"github.com/cnrancher/autok3s/pkg/types"
 
-	"github.com/rancher/wrangler/pkg/schemas"
+	"github.com/rancher/wrangler/v2/pkg/schemas"
 )
 
 // Provider struct for provider.

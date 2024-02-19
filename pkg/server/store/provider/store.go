@@ -8,8 +8,8 @@ import (
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/store/empty"
 	"github.com/rancher/apiserver/pkg/types"
-	"github.com/rancher/wrangler/pkg/schemas"
-	"github.com/rancher/wrangler/pkg/schemas/validation"
+	"github.com/rancher/wrangler/v2/pkg/schemas"
+	"github.com/rancher/wrangler/v2/pkg/schemas/validation"
 	"github.com/sirupsen/logrus"
 )
 

@@ -20,7 +20,7 @@ import (
 	autok3stypes "github.com/cnrancher/autok3s/pkg/types/apis"
 
 	"github.com/rancher/apiserver/pkg/types"
-	wranglertypes "github.com/rancher/wrangler/pkg/schemas"
+	wranglertypes "github.com/rancher/wrangler/v2/pkg/schemas"
 )
 
 func initProvider(s *types.APISchemas) {
