@@ -692,11 +692,11 @@ func (p *ProviderBase) CheckCreateArgs(checkClusterExist func() (bool, []string,
 			return fmt.Errorf("[%s] calling preflight error: `--master` number must >= 1",
 				p.Provider)
 		}
-		if masterNum > 1 && !p.Cluster && p.DataStore == "" {
+		if p.Provider != "k3d" && masterNum > 1 && !p.Cluster && p.DataStore == "" {
 			return fmt.Errorf("[%s] calling preflight error: need to set `--cluster` or `--datastore` when `--master` number > 1",
 				p.Provider)
 		}
-		if strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
+		if p.Provider != "k3d" && strings.Contains(p.MasterExtraArgs, "--datastore-endpoint") && p.DataStore != "" {
 			return fmt.Errorf("[%s] calling preflight error: `--masterExtraArgs='--datastore-endpoint'` is duplicated with `--datastore`",
 				p.Provider)
 		}
