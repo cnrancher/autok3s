@@ -49,7 +49,10 @@ var (
 	// the version according to this docs.
 	// The map key should be semver constraint and the value is the aws ccm version
 	ccmVersionMap = map[string]string{
-		">= 1.27": "v1.27.1",
+		">= 1.30": "v1.30.1",
+		"~1.29":   "v1.29.3",
+		"~1.28":   "v1.28.1",
+		"~1.27":   "v1.27.1",
 		"~1.26":   "v1.26.1",
 		"~1.25":   "v1.25.3",
 		"~1.24":   "v1.24.4",
@@ -63,7 +66,10 @@ var (
 	}
 	// extra args for ccm with the k8s version
 	ccmExtraArgs = map[string][]string{
-		">= 1.21": {"--use-service-account-credentials=true"},
+		">= 1.21": {
+			"--use-service-account-credentials=true",
+			"--configure-cloud-routes=false",
+		},
 	}
 	ccmTemplate = template.Must(template.New("aws-ccm").Parse(amazonCCMTmpl))
 )

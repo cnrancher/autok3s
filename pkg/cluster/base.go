@@ -333,7 +333,7 @@ func (p *ProviderBase) GetCommonConfig(sshFunc func() *types.SSH) (map[string]sc
 }
 
 // InitCluster init K3S cluster.
-func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []string,
+func (p *ProviderBase) InitCluster(options interface{}, deployCCM func() []string,
 	cloudInstanceFunc func(ssh *types.SSH) (*types.Cluster, error), customInstallK3s func() (string, string, error), rollbackInstance func(ids []string) error) (er error) {
 	logFile, err := common.GetLogFile(p.ContextName)
 	if err != nil {
@@ -427,7 +427,7 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 
 	if customInstallK3s == nil {
 		// use install scripts to initialize K3s cluster.
-		if err = p.InitK3sCluster(c); err != nil {
+		if err = p.InitK3sCluster(c, deployCCM); err != nil {
 			return err
 		}
 	} else {
@@ -450,11 +450,11 @@ func (p *ProviderBase) InitCluster(options interface{}, deployPlugins func() []s
 	}
 
 	cmds := []string{}
-	if deployPlugins != nil {
-		// install additional manifests to the current cluster.
-		extraManifests := deployPlugins()
-		cmds = append(cmds, extraManifests...)
-	}
+	//if deployCCM != nil {
+	//	// install additional manifests to the current cluster.
+	//	extraManifests := deployCCM()
+	//	cmds = append(cmds, extraManifests...)
+	//}
 
 	if p.Manifests != "" {
 		deployCmd, err := p.GetCustomManifests()
