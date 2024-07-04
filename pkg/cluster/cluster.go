@@ -37,7 +37,7 @@ var (
 )
 
 // InitK3sCluster initial K3S cluster.
-func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
+func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster, deployCCM func() []string) error {
 	p.Logger.Infof("[%s] executing init k3s cluster logic...", p.Provider)
 
 	provider, err := providers.GetProvider(p.Provider)
@@ -93,7 +93,7 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster) error {
 		}
 	}
 
-	err = p.validateClusterConfig(cluster, provider, publicIP, pkg, firstControl, firstWorker)
+	err = p.validateClusterConfig(cluster, provider, publicIP, pkg, firstControl, firstWorker, deployCCM)
 	if err != nil {
 		return err
 	}
@@ -909,10 +909,17 @@ func (p *ProviderBase) handleDataStoreCertificate(n *types.Node, c *types.Cluste
 	return err
 }
 
-func (p *ProviderBase) validateClusterConfig(cluster *types.Cluster, provider providers.Provider, publicIP string, pkg *common.Package, firstControl, firstWorker types.Node) error {
+func (p *ProviderBase) validateClusterConfig(cluster *types.Cluster, provider providers.Provider, publicIP string, pkg *common.Package, firstControl, firstWorker types.Node, deployCCM func() []string) error {
 	p.Logger.Infof("[%s] initialize control node...", p.Provider)
 	if err := p.initControlNode(cluster, provider, publicIP, pkg, firstControl, true); err != nil {
 		return err
+	}
+	if deployCCM != nil {
+		extraManifests := deployCCM()
+		err := p.DeployExtraManifest(cluster, extraManifests)
+		if err != nil {
+			return err
+		}
 	}
 	p.Logger.Infof("[%s] successfully initialize the first control node", p.Provider)
 
