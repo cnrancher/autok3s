@@ -461,6 +461,11 @@ func (p *ProviderBase) initNode(isFirstMaster bool, fixedIP string, cluster *typ
 		}
 	}
 
+	// handle configuration file
+	if err := p.handleConfiguration(&node, cluster); err != nil {
+		return err
+	}
+
 	cmd := getCommand(isFirstMaster, fixedIP, cluster, node, []string{extraArgs})
 	nodeRole := "master"
 	if !node.Master {
@@ -569,6 +574,48 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 
 	cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"/etc/rancher/k3s/registries.yaml\"",
 		base64.StdEncoding.EncodeToString([]byte(registryContent))))
+	_, err = p.execute(n, cmd...)
+	return err
+}
+
+func (p *ProviderBase) handleConfiguration(n *types.Node, c *types.Cluster) (err error) {
+	if c.ServerConfigFileContent == "" && c.ServerConfigFile == "" && c.AgentConfigFileContent == "" && c.AgentConfigFile == "" {
+		return nil
+	}
+	var configFileContent []byte
+	if n.Master {
+		if c.ServerConfigFileContent != "" {
+			configFileContent, err = base64.StdEncoding.DecodeString(c.ServerConfigFileContent)
+			if err != nil {
+				return err
+			}
+		}
+		if c.ServerConfigFile != "" && c.ServerConfigFileContent == "" {
+			configFileContent, err = ioutil.ReadFile(c.ServerConfigFile)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		if c.AgentConfigFileContent != "" {
+			configFileContent, err = base64.StdEncoding.DecodeString(c.AgentConfigFileContent)
+			if err != nil {
+				return err
+			}
+		}
+		if c.AgentConfigFile != "" && c.AgentConfigFileContent == "" {
+			configFileContent, err = ioutil.ReadFile(c.AgentConfigFile)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if len(configFileContent) == 0 {
+		return errors.New("configuration file is empty")
+	}
+	cmd := []string{"mkdir -p /etc/rancher/k3s"}
+	cmd = append(cmd, fmt.Sprintf("echo \"%s\" | base64 -d | tee \"/etc/rancher/k3s/config.yaml\"",
+		base64.StdEncoding.EncodeToString(configFileContent)))
 	_, err = p.execute(n, cmd...)
 	return err
 }

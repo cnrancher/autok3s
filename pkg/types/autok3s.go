@@ -61,6 +61,10 @@ type Metadata struct {
 	Rollback                 bool        `json:"rollback" yaml:"rollback" gorm:"type:bool"`
 	Values                   StringMap   `json:"values,omitempty" yaml:"values,omitempty" gorm:"type:stringMap"`
 	InstallEnv               StringMap   `json:"install-env,omitempty" yaml:"install-env,omitempty" gorm:"type:stringMap"`
+	ServerConfigFileContent  string      `json:"server-config-file-content,omitempty" yaml:"server-config-file-content,omitempty"`
+	ServerConfigFile         string      `json:"server-config-file,omitempty" yaml:"server-config-file,omitempty"`
+	AgentConfigFileContent   string      `json:"agent-config-file-content,omitempty" yaml:"agent-config-file-content,omitempty"`
+	AgentConfigFile          string      `json:"agent-config-file,omitempty" yaml:"agent-config-file,omitempty"`
 }
 
 // Status struct for status.
