@@ -260,6 +260,18 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			V:     p.InstallEnv,
 			Usage: "The install environment variables config for K3s with install script(only support env starts with INSTALL_), e.g. --install-env INSTALL_K3S_SKIP_SELINUX_RPM=true, see: https://docs.k3s.io/installation/configuration#configuration-with-install-script",
 		},
+		{
+			Name:  "server-config-file",
+			P:     &p.ServerConfigFile,
+			V:     p.ServerConfigFile,
+			Usage: "Config K3s server with configuration file which can do more complex configuration than environment variables and CLI arguments, see: https://docs.k3s.io/installation/configuration#configuration-file",
+		},
+		{
+			Name:  "agent-config-file",
+			P:     &p.AgentConfigFile,
+			V:     p.AgentConfigFile,
+			Usage: "Config K3s agent with configuration file which can do more complex configuration than environment variables and CLI arguments, see: https://docs.k3s.io/installation/configuration#configuration-file",
+		},
 	}
 
 	fs = append(fs, p.GetSSHOptions()...)

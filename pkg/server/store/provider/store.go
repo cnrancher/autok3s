@@ -85,6 +85,18 @@ func toProviderObject(provider providers.Provider, schema *types.APISchema, id s
 		Required:    false,
 		Default:     "",
 	}
+	config["server-config-file-content"] = schemas.Field{
+		Type:        "string",
+		Description: "Config K3s server with configuration file which can do more complex configuration than environment variables and CLI arguments, see: https://docs.k3s.io/installation/configuration#configuration-file",
+		Required:    false,
+		Default:     "",
+	}
+	config["agent-config-file-content"] = schemas.Field{
+		Type:        "string",
+		Description: "Config K3s agent with configuration file which can do more complex configuration than environment variables and CLI arguments, see: https://docs.k3s.io/installation/configuration#configuration-file",
+		Required:    false,
+		Default:     "",
+	}
 	obj := types.APIObject{
 		Type: schema.ID,
 		ID:   id,
