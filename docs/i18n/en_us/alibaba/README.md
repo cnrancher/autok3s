@@ -163,6 +163,41 @@ Run the command below and create an HA K3s cluster with an external database:
 autok3s -d create -p alibaba --name myk3s --master 2 --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
 
+### Advanced Settings
+
+The AutoK3s supports more advanced settings to customize your K3s cluster.
+
+#### Installation Environments
+
+If you want to add more installation environments, please set the args below:
+
+```bash
+--install-env INSTALL_K3S_SKIP_SELINUX_RPM=true --install-env  INSTALL_K3S_FORCE_RESTART=true
+```
+
+> We recommend you to only use INSTALL_* parameters for this case because this is a global setting to your K3s cluster. If you want to set the K3S_* environments, please use the K3s configuration file args.
+
+#### Server/Agent Configuration File
+
+In addition to configuring K3s with environment variables and CLI arguments, K3s can also use a config file.
+
+If you want to do more customize and complex configurations for your K3s cluster, such as etcd snapshot or datastore. This arg is what you need.
+
+Here's an example of a K3s server configuration with etcd snapshot information and change the node port range.
+```yaml
+etcd-snapshot-schedule-cron: "* * * * *"
+etcd-snapshot-retention: 15
+service-node-port-range: "20000-30000"
+```
+
+Save this yaml file to your local path, such as `myk3s-server-config.yaml`. Then pass this file by the following arg:
+
+```bash
+--server-config-file /your/path/myk3s-server-config.yaml
+```
+
+If you want to set the configuration file to your agent node, use the arg `--agent-config-file /your/path/agent-config.yaml`
+
 ## Join K3s Nodes
 
 Please use `autok3s join` command to add one or more nodes for an existing K3s cluster.

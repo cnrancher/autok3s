@@ -102,8 +102,11 @@ K3s 参数配置项主要对 K3s 集群进行设置，例如是否部署 HA 模�
 | Datastore CA File            | 数据源 CA 文件，如果数据源设置了 TLS 需要配置此项                                                                                                                                                    |
 | Datastore Cert File          | 数据源 Cert 文件，如果数据源设置了 TLS 需要配置此项                                                                                                                                                  |
 | Datastore Key File           | 数据源 Key 文件，如果数据源设置了 TLS 需要配置此项                                                                                                                                                   |
+| Install Env                  | K3s 集群安装时环境变量参数设置，例如在 centos 上安装 K3s 需要设置 `INSTALL_K3S_SKIP_SELINUX_RPM=true` 来禁用 selinux       |
 | Master Extra Args            | Master 节点额外参数设置，例如 `--no-deploy traefik` |
+| Server Config File           | Server 节点额外参数设置，以 config.yaml 文件格式进行一些复杂选项的配置，例如 `etcd-snapshot-schedule-cron` 等            |
 | Worker Extra Args            | Worker 节点额外参数设置，例如 `--node-taint key=value:NoExecute` |
+| Agent Config File            | Agent 节点额外参数设置，以 config.yaml 文件格式进行一些复杂选项的配置                                                   |
 | Token                        | 用于将server或agent加入集群的共享secret，如果不设置，会自动生成一个Token |
 | Manifests                    | 自动部署应用清单目录，这里支持设置某个manifest文件或者包含多个manifest文件的目录路径（仅支持一层目录），具体功能可查看[这里](http://docs.rancher.cn/docs/k3s/advanced/_index/#%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2%E6%B8%85%E5%8D%95) |
 | TLS Sans                     | 在 TLS 证书中添加其他主机名或 IP 作为主题备用名称，具体功能可查看[这里](https://docs.rancher.cn/docs/k3s/installation/install-options/server-config/_index#%E7%9B%91%E5%90%AC) |
@@ -279,6 +282,41 @@ autok3s -d create \
     --master-ips <master-ip-1,master-ip-2> \
     --datastore "mysql://<user>:<password>@tcp(<ip>:<port>)/<db>"
 ```
+
+### 高级选项
+
+AutoK3s 支持更多的高级选项来自定义你的 K3s 集群
+
+#### 安装环境变量设置
+
+如果你想要在安装集群时设置环境变量，可以使用一下的参数：
+
+```bash
+--install-env INSTALL_K3S_SKIP_SELINUX_RPM=true --install-env  INSTALL_K3S_FORCE_RESTART=true
+```
+
+> 由于这是一个全局的设置选项，我们建议你**只**使用 INSTALL_* 类型的环境变量。如果你想要使用 K3S_* 的环境变量对集群进行自定义配置，请使用下面描述的 configuration file 参数的设置方式。
+
+#### Server/Agent Configuration File
+
+K3s 集群可以使用环境变量或者 CLI 参数进行设置，也可以通过配置文件进行设置。
+
+如果你想要对集群进行更多更复杂的自定义配置，例如 etcd snapshot 或 datastore，你可以使用以下参数。
+
+这里时一个 K3s server 配置了 etcd snapshot 和 node port 范围的配置文件示例。
+```yaml
+etcd-snapshot-schedule-cron: "* * * * *"
+etcd-snapshot-retention: 15
+service-node-port-range: "20000-30000"
+```
+
+将以上文件保存到本地，例如保存到名称为 `myk3s-server-config.yaml` 的文件中，然后通过以下参数将此文件传给 AutoK3s:
+
+```bash
+--server-config-file /your/path/myk3s-server-config.yaml
+```
+
+如果你想要对 agent 节点进行设置，可以通过 `--agent-config-file /your/path/agent-config.yaml` 参数来进行传值。
 
 ### 添加 K3s 节点
 
