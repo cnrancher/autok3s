@@ -15,7 +15,7 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.381
 	github.com/aws/aws-sdk-go v1.38.65
 	github.com/creack/pty v1.1.18
-	github.com/docker/docker v24.0.9+incompatible
+	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/glebarez/sqlite v1.4.3
@@ -29,7 +29,6 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.29.0
-	github.com/opencontainers/runc v1.1.12 // indirect
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/pkg/errors v0.9.1
@@ -94,11 +93,13 @@ require (
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
+	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fvbommel/sortorder v1.1.0 // indirect
 	github.com/glebarez/go-sqlite v1.16.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
@@ -148,6 +149,7 @@ require (
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
+	github.com/moby/sys/user v0.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
@@ -176,6 +178,10 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
+	go.opentelemetry.io/otel v1.19.0 // indirect
+	go.opentelemetry.io/otel/metric v1.19.0 // indirect
+	go.opentelemetry.io/otel/trace v1.19.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go4.org/netipx v0.0.0-20230728184502-ec4c8b891b28 // indirect
