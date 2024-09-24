@@ -1,4 +1,4 @@
-FROM registry.suse.com/bci/golang:1.21
+FROM registry.suse.com/bci/golang:1.23
 # confirm that suse bci golang version upgraded to 1.20.10 after 2023-11-14
 ARG PROXY
 ARG GOPROXY
@@ -8,7 +8,7 @@ RUN zypper install -y -f docker
 ## install golangci-lint
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
     export HTTPS_PROXY=${PROXY}; \
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.54.2; \
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.61.0; \
     golangci-lint --version; \
     fi
 ## install mockgen
@@ -29,7 +29,7 @@ RUN export HTTPS_PROXY=${PROXY}; \
 # -- for make rules
 
 # -- for dapper
-ENV DAPPER_RUN_ARGS --privileged --network host
+ENV DAPPER_RUN_ARGS --privileged --network host -v autok3s-pkg:/go/pkg
 ENV GO111MODULE=on
 ENV AUTOK3S_DEV_MODE=true
 ENV DAPPER_ENV CROSS DRONE_TAG REPO TAG OS ARCH IMAGE_NAME DIRTY_CHECK GOPROXY
