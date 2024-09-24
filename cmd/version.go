@@ -35,7 +35,7 @@ func VersionCommand(gitVersion, gitCommit, gitTreeState, buildDate string) *cobr
 		Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 	}
 
-	versionCmd.Run = func(cmd *cobra.Command, args []string) {
+	versionCmd.Run = func(_ *cobra.Command, _ []string) {
 		if short {
 			fmt.Printf("Version: %s\n", version.Short())
 		} else {

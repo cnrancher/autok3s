@@ -6,7 +6,6 @@ package kubectl
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"strconv"
 	"time"
@@ -30,8 +29,8 @@ var upgrader = websocket.Upgrader{
 
 // Shell struct for shell.
 type Shell struct {
-	conn *websocket.Conn
-	ptmx *os.File
+	// conn *websocket.Conn
+	// ptmx *os.File
 }
 
 // KubeHandler kubectl handler for websocket.
@@ -63,7 +62,7 @@ func ptyHandler(apiOp *types.APIRequest) error {
 		}
 	}
 
-	upgrader.CheckOrigin = func(r *http.Request) bool {
+	upgrader.CheckOrigin = func(_ *http.Request) bool {
 		return true
 	}
 	c, err := upgrader.Upgrade(apiOp.Response, apiOp.Request, nil)

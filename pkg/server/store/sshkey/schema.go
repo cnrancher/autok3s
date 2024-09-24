@@ -26,7 +26,6 @@ func exportHandler(_ http.ResponseWriter, r *http.Request) {
 	}
 	obj := common.GetAPIObject(*sshkeys[0])
 	apiContext.WriteResponse(200, *obj)
-	return
 }
 
 func Format(request *types.APIRequest, resource *types.RawResource) {

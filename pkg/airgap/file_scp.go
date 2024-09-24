@@ -74,7 +74,7 @@ func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, di
 	if err != nil {
 		return err
 	}
-	if ok, _ := ValidatedArch[arch]; !ok {
+	if ValidatedArch[arch] {
 		return errors.Wrapf(errArchNotSupport, "remote server arch: %s", arch)
 	}
 	if !pkg.Archs.Contains(arch) {
@@ -100,7 +100,7 @@ func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, di
 	if err := scpClient.MkdirAll(tmpDir); err != nil {
 		return err
 	}
-	defer scpClient.RemoveDirectory(tmpDir)
+	defer func() { _ = scpClient.RemoveDirectory(tmpDir) }()
 
 	// scp files and execute post scp commands
 	for local, remote := range files {

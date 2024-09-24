@@ -43,7 +43,7 @@ func CreateCommand() *cobra.Command {
 		createCmd.Use = fmt.Sprintf("create -p %s", pStr)
 	}
 
-	createCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	createCmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		if cProvider == "" {
 			logrus.Fatalln("required flag(s) \"--provider\" not set")
 		}
@@ -55,7 +55,7 @@ func CreateCommand() *cobra.Command {
 		return nil
 	}
 
-	createCmd.Run = func(cmd *cobra.Command, args []string) {
+	createCmd.Run = func(_ *cobra.Command, _ []string) {
 		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou.<provider>".
 		cp.GenerateClusterName()
 		if err := cp.BindCredential(); err != nil {

@@ -72,7 +72,7 @@ func MoveLogs() error {
 	}
 	newRoot := CfgPath
 
-	if err := filepath.Walk(oldRoot, func(path string, info fs.FileInfo, err error) error {
+	if err := filepath.Walk(oldRoot, func(path string, info fs.FileInfo, _ error) error {
 		// skip all the dirs because we store all the logs with cluster context name and no dirs exists in logs dir
 		if info.IsDir() {
 			return nil

@@ -28,7 +28,7 @@ func init() {
 }
 
 func UpdateCmd() *cobra.Command {
-	updateCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	updateCmd.PreRunE = func(_ *cobra.Command, _ []string) error {
 		if addonFlags.FromFile != "" && !utils.IsFileExists(addonFlags.FromFile) {
 			return fmt.Errorf("manifest file %s is not exist", addonFlags.FromFile)
 		}
@@ -69,9 +69,7 @@ func UpdateCmd() *cobra.Command {
 
 		// unset values
 		for _, v := range addonFlags.RemoveValues {
-			if _, ok := newAddon.Values[v]; ok {
-				delete(newAddon.Values, v)
-			}
+			delete(newAddon.Values, v)
 		}
 		// re-set values
 		for k, v := range addonFlags.Values {

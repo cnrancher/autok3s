@@ -59,7 +59,7 @@ func EnableExplorer(ctx context.Context, config string) (int, error) {
 	explorerCtx, cancel := context.WithCancel(ctx)
 	ExplorerWatchers[config] = cancel
 	go func(ctx context.Context, config string, port int) {
-		StartKubeExplorer(ctx, config, port)
+		_ = StartKubeExplorer(ctx, config, port)
 	}(explorerCtx, config, exp.Port)
 	return exp.Port, nil
 }

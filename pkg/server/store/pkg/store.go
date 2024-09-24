@@ -22,7 +22,7 @@ type Store struct {
 }
 
 func (e *Store) Delete(_ *types.APIRequest, _ *types.APISchema, id string) (types.APIObject, error) {
-	defer airgap.RemovePackage(id)
+	defer func() { _ = airgap.RemovePackage(id) }()
 	return types.APIObject{}, common.DefaultDB.DeletePackage(id)
 }
 

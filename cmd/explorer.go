@@ -25,13 +25,13 @@ func init() {
 
 // ExplorerCommand will start a kube-explorer server for specified K3s cluster
 func ExplorerCommand() *cobra.Command {
-	explorerCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	explorerCmd.PreRunE = func(_ *cobra.Command, _ []string) error {
 		if clusterID == "" {
 			logrus.Fatalln("required flag(s) \"--context\" not set")
 		}
 		return nil
 	}
-	explorerCmd.Run = func(cmd *cobra.Command, args []string) {
+	explorerCmd.Run = func(_ *cobra.Command, _ []string) {
 		if err := common.CheckCommandExist(common.KubeExplorerCommand); err != nil {
 			logrus.Fatalln(err)
 		}
@@ -42,7 +42,7 @@ func ExplorerCommand() *cobra.Command {
 			}
 			explorerPort = port
 		}
-		common.StartKubeExplorer(explorerCmd.Context(), clusterID, explorerPort)
+		_ = common.StartKubeExplorer(explorerCmd.Context(), clusterID, explorerPort)
 	}
 
 	return explorerCmd

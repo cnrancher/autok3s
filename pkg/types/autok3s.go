@@ -178,7 +178,7 @@ func (a *StringArray) Scan(value interface{}) (err error) {
 
 // Value gorm Value implement.
 func (a StringArray) Value() (driver.Value, error) {
-	if a == nil || len(a) == 0 {
+	if len(a) == 0 {
 		return nil, nil
 	}
 	return strings.Join(a, ","), nil

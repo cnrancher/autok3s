@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -54,7 +55,7 @@ func WriteLastLogs(t *tail.Tail, w http.ResponseWriter, f http.Flusher, logFileP
 	if err != nil {
 		return err
 	}
-	_, err = logFile.Seek(offset, os.SEEK_CUR)
+	_, err = logFile.Seek(offset, io.SeekCurrent)
 	if err != nil {
 		return err
 	}

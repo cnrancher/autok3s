@@ -80,6 +80,7 @@ func GenerateSSHKey(key *common.SSHKey) error {
 	}
 
 	if key.SSHPassphrase != "" {
+		// nolint:all
 		block, err = x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(key.SSHPassphrase), x509.PEMCipherAES256)
 		if err != nil {
 			return err

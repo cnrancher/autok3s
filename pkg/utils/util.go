@@ -182,8 +182,8 @@ func StringSupportBase64(value string) string {
 }
 
 func GenerateRand() int {
-	mrand.Seed(time.Now().UnixNano())
-	return mrand.Intn(255)
+	r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
+	return r.Intn(255)
 }
 
 func IsTerm() bool {

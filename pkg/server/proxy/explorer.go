@@ -24,7 +24,7 @@ func (ep *ExplorerHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	clusterID := vars["name"]
 	if clusterID == "" {
 		rw.WriteHeader(http.StatusNotFound)
-		rw.Write([]byte("cluster context name can't be empty"))
+		_, _ = rw.Write([]byte("cluster context name can't be empty"))
 		return
 	}
 
@@ -32,19 +32,19 @@ func (ep *ExplorerHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	explorer, err := common.DefaultDB.GetExplorer(clusterID)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
+		_, _ = rw.Write([]byte(err.Error()))
 		return
 	}
 	if explorer == nil || !explorer.Enabled {
 		rw.WriteHeader(http.StatusUnprocessableEntity)
-		rw.Write([]byte(fmt.Sprintf("cluster %s is not enable kube-explorer", clusterID)))
+		_, _ = rw.Write([]byte(fmt.Sprintf("cluster %s is not enable kube-explorer", clusterID)))
 		return
 	}
 
 	u, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d/", explorer.Port))
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
+		_, _ = rw.Write([]byte(err.Error()))
 		return
 	}
 

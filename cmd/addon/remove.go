@@ -18,7 +18,7 @@ var (
 )
 
 func RemoveCmd() *cobra.Command {
-	removeCmd.Run = func(cmd *cobra.Command, args []string) {
+	removeCmd.Run = func(_ *cobra.Command, args []string) {
 		name := args[0]
 		if utils.AskForConfirmation(fmt.Sprintf("are you going to remove the addon %s", name), false) {
 			if err := common.DefaultDB.DeleteAddon(name); err != nil {

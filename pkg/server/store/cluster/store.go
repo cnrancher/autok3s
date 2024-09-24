@@ -151,7 +151,7 @@ func (c *Store) Delete(_ *types.APIRequest, _ *types.APISchema, id string) (type
 		return types.APIObject{}, err
 	}
 	provider.GenerateClusterName()
-	go provider.DeleteK3sCluster(true)
+	go func() { _ = provider.DeleteK3sCluster(true) }()
 	return types.APIObject{}, nil
 }
 

@@ -61,9 +61,10 @@ func (b *Broadcaster) publish(s Subscriber, sf subscriberFunc, v interface{}, wg
 	if sf != nil && !sf(v) {
 		return
 	}
-	select {
-	case s <- v:
-	}
+	// select {
+	// case s <- v:
+	// }
+	s <- v
 }
 
 // Close all subscribers.

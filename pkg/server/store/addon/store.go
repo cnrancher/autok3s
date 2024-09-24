@@ -27,7 +27,7 @@ func (a *Store) Create(apiOp *types.APIRequest, schema *types.APISchema, data ty
 	if err := common.ValidateName(input.Name); err != nil {
 		return types.APIObject{}, err
 	}
-	if input.Manifest == nil || len(input.Manifest) == 0 {
+	if len(input.Manifest) == 0 {
 		return types.APIObject{}, errors.New("manifest file content cannot be empty")
 	}
 

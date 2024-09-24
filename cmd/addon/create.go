@@ -26,7 +26,7 @@ func init() {
 }
 
 func CreateCmd() *cobra.Command {
-	createCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	createCmd.PreRunE = func(_ *cobra.Command, args []string) error {
 		name := args[0]
 		if err := common.ValidateName(name); err != nil {
 			return err
@@ -40,7 +40,7 @@ func CreateCmd() *cobra.Command {
 		return nil
 	}
 
-	createCmd.Run = func(cmd *cobra.Command, args []string) {
+	createCmd.Run = func(_ *cobra.Command, args []string) {
 		name := args[0]
 		manifest, err := os.ReadFile(addonFlags.FromFile)
 		if err != nil {

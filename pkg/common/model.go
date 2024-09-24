@@ -303,59 +303,59 @@ func ConvertToCluster(state *ClusterState, nodeInfo bool) types.Cluster {
 	return c
 }
 
-func convertToClusterState(m interface{}) *ClusterState {
-	if m == nil {
-		return nil
-	}
-	model, err := json.Marshal(m)
-	if err != nil {
-		logrus.Errorf("failed to convert model %v to bytes: %v", m, err)
-		return nil
-	}
-	state := &ClusterState{}
-	err = json.Unmarshal(model, state)
-	if err != nil {
-		logrus.Errorf("failed to convert model %v to cluster state: %v", m, err)
-		return nil
-	}
-	return state
-}
+// func convertToClusterState(m interface{}) *ClusterState {
+// 	if m == nil {
+// 		return nil
+// 	}
+// 	model, err := json.Marshal(m)
+// 	if err != nil {
+// 		logrus.Errorf("failed to convert model %v to bytes: %v", m, err)
+// 		return nil
+// 	}
+// 	state := &ClusterState{}
+// 	err = json.Unmarshal(model, state)
+// 	if err != nil {
+// 		logrus.Errorf("failed to convert model %v to cluster state: %v", m, err)
+// 		return nil
+// 	}
+// 	return state
+// }
 
-func convertModelToTemplate(m interface{}) *Template {
-	if m == nil {
-		return nil
-	}
-	model, err := json.Marshal(m)
-	if err != nil {
-		logrus.Errorf("failed to convert model %v to bytes: %v", m, err)
-		return nil
-	}
-	temp := &Template{}
-	err = json.Unmarshal(model, temp)
-	if err != nil {
-		logrus.Errorf("failed to convert model %v to template: %v", m, err)
-		return nil
-	}
-	return temp
-}
+// func convertModelToTemplate(m interface{}) *Template {
+// 	if m == nil {
+// 		return nil
+// 	}
+// 	model, err := json.Marshal(m)
+// 	if err != nil {
+// 		logrus.Errorf("failed to convert model %v to bytes: %v", m, err)
+// 		return nil
+// 	}
+// 	temp := &Template{}
+// 	err = json.Unmarshal(model, temp)
+// 	if err != nil {
+// 		logrus.Errorf("failed to convert model %v to template: %v", m, err)
+// 		return nil
+// 	}
+// 	return temp
+// }
 
-func convertToExplorer(m interface{}) *Explorer {
-	if m == nil {
-		return nil
-	}
-	model, err := json.Marshal(m)
-	if err != nil {
-		logrus.Errorf("failed to convert model %v to bytes: %v", m, err)
-		return nil
-	}
-	exp := &Explorer{}
-	err = json.Unmarshal(model, exp)
-	if err != nil {
-		logrus.Errorf("failed to convert model %v to explorer: %v", m, err)
-		return nil
-	}
-	return exp
-}
+// func convertToExplorer(m interface{}) *Explorer {
+// 	if m == nil {
+// 		return nil
+// 	}
+// 	model, err := json.Marshal(m)
+// 	if err != nil {
+// 		logrus.Errorf("failed to convert model %v to bytes: %v", m, err)
+// 		return nil
+// 	}
+// 	exp := &Explorer{}
+// 	err = json.Unmarshal(model, exp)
+// 	if err != nil {
+// 		logrus.Errorf("failed to convert model %v to explorer: %v", m, err)
+// 		return nil
+// 	}
+// 	return exp
+// }
 
 // SaveCluster save cluster.
 func (d *Store) SaveCluster(cluster *types.Cluster) error {

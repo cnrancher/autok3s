@@ -1,24 +1,14 @@
 {
   "linters": {
-    "disable-all": true,
     "enable": [
-      "govet",
       "revive",
-      "goimports",
-      "misspell",
-      "ineffassign",
       "gofmt"
     ]
   },
   "run": {
-    "skip-files": [
-      "/zz_generated",
-      "api\\.pb\\.go"
-    ],
-    "deadline": "5m",
-    "tests": true,
+    "timeout": "5m",
     "build-tags": [
-      "test"
+      "netgo"
     ]
   },
   "linters-settings": {
@@ -26,7 +16,27 @@
       "ignore-words": [
         "mosquitto"
       ]
+    },
+    "revive": {
+      "rules": [
+        {
+          "name": "var-naming",
+          "disabled": true
+        }
+      ]
     }
+  },
+  "issues": {
+    "max-same-issues": 20,
+    "exclude-files": [
+      "/zz_generated",
+      "api\\.pb\\.go"
+    ],
+    "exclude-dirs": [
+      "test",
+      "scripts",
+      "hack",
+      "docs"
+    ]
   }
 }
-

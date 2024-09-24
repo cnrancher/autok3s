@@ -67,7 +67,7 @@ func importHandler(_ http.ResponseWriter, r *http.Request) {
 	if err := common.DefaultDB.PackageExists(name); err == nil {
 		apiContext.WriteError(validation.Conflict)
 	}
-	r.ParseMultipartForm(32 << 20)
+	_ = r.ParseMultipartForm(32 << 20)
 	file, _, err := r.FormFile("package")
 	if err != nil {
 		apiContext.WriteError(apierror.WrapAPIError(err, validation.InvalidBodyContent, ""))

@@ -30,7 +30,7 @@ func init() {
 
 // ServeCommand serve command.
 func ServeCommand() *cobra.Command {
-	serveCmd.Run = func(cmd *cobra.Command, args []string) {
+	serveCmd.Run = func(_ *cobra.Command, _ []string) {
 		common.IsCLI = false
 		router := server.Start()
 		addr := fmt.Sprintf("%s:%s", bindAddress, bindPort)

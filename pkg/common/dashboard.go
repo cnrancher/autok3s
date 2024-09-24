@@ -120,6 +120,6 @@ func enableDashboard(ctx context.Context) {
 	dashboardCtx, cancel := context.WithCancel(ctx)
 	DashboardCanceled = cancel
 	go func(ctx context.Context, port string) {
-		StartHelmDashboard(ctx, port)
+		_ = StartHelmDashboard(ctx, port)
 	}(dashboardCtx, dashboardPort)
 }

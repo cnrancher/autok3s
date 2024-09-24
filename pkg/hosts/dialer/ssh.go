@@ -19,7 +19,7 @@ import (
 
 	"github.com/moby/term"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
+	xterm "golang.org/x/term"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -274,15 +274,15 @@ func (d *SSHShell) Terminal() error {
 	fdInfo, _ := term.GetFdInfo(d.Stdout)
 	fd := int(fdInfo)
 
-	oldState, err := terminal.MakeRaw(fd)
+	oldState, err := xterm.MakeRaw(fd)
 	defer func() {
-		_ = terminal.Restore(fd, oldState)
+		_ = xterm.Restore(fd, oldState)
 	}()
 	if err != nil {
 		return err
 	}
 
-	win.Width, win.Height, err = terminal.GetSize(fd)
+	win.Width, win.Height, err = xterm.GetSize(fd)
 	if err != nil {
 		return err
 	}

@@ -17,7 +17,7 @@ var createCmd = &cobra.Command{
 	Use:   "create <name>",
 	Short: "Create a new airgap package and will download related resources from internet.",
 	Args:  cobra.ExactArgs(1),
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRun: func(_ *cobra.Command, _ []string) {
 		sort.Strings(airgapFlags.Archs)
 	},
 	RunE: create,

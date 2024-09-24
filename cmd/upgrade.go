@@ -33,7 +33,7 @@ func init() {
 
 // UpgradeCommand help upgrade a K3s cluster to specified version
 func UpgradeCommand() *cobra.Command {
-	upgradeCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	upgradeCmd.PreRunE = func(_ *cobra.Command, _ []string) error {
 		if clusterName == "" {
 			logrus.Fatalln("`-n` or `--name` must set to specify a cluster, i.e. autok3s upgrade -n <cluster-name>")
 		}
@@ -45,7 +45,7 @@ func UpgradeCommand() *cobra.Command {
 		}
 		return nil
 	}
-	upgradeCmd.Run = func(cmd *cobra.Command, args []string) {
+	upgradeCmd.Run = func(_ *cobra.Command, _ []string) {
 		upgradeCluster()
 	}
 	return upgradeCmd

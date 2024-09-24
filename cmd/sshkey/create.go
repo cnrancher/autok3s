@@ -165,7 +165,7 @@ func create(cmd *cobra.Command, args []string) error {
 		if sshKeyFlags.Passphrase != "" {
 			infoMsg += " and passphrase"
 		}
-		cmd.Printf(infoMsg + "...\n")
+		cmd.Print(infoMsg + "...\n")
 
 		if err := pkgsshkey.GenerateSSHKey(&toSave); err != nil {
 			return err

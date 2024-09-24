@@ -52,7 +52,7 @@ func init() {
 
 // Command root command.
 func Command() *cobra.Command {
-	cmd.Run = func(cmd *cobra.Command, args []string) {
+	cmd.Run = func(cmd *cobra.Command, _ []string) {
 		printASCII()
 
 		if err := cmd.Help(); err != nil {

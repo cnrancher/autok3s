@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -195,7 +194,7 @@ func (d *downloader) downloadArch(arch string) error {
 	}
 
 	archImageList := filepath.Join(basePath, imageListFilename)
-	if err := ioutil.WriteFile(archImageList, d.imageListContent, 0644); err != nil {
+	if err := os.WriteFile(archImageList, d.imageListContent, 0644); err != nil {
 		return err
 	}
 
@@ -253,12 +252,12 @@ func (d *downloader) validateVersion() error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		content, _ := ioutil.ReadAll(resp.Body)
+		content, _ := io.ReadAll(resp.Body)
 		d.logger.Debugf("failed to download image list resource, status code %d, data %s", resp.StatusCode, string(content))
 		return ErrVersionNotFound
 	}
 
-	d.imageListContent, err = ioutil.ReadAll(resp.Body)
+	d.imageListContent, err = io.ReadAll(resp.Body)
 	return err
 }
 
@@ -269,7 +268,7 @@ func (d *downloader) writeVersion() error {
 	_ = os.RemoveAll(versionPath)
 	_ = os.RemoveAll(getDonePath(d.basePath))
 	d.logger.Info("generating version file")
-	return ioutil.WriteFile(versionPath, versionJSON, 0644)
+	return os.WriteFile(versionPath, versionJSON, 0644)
 }
 
 // checkArchExists will fire HEAD request to server and check response
@@ -293,7 +292,7 @@ func (d *downloader) download(file, fromURL string) error {
 	}
 	defer resp.Body.Close()
 	if int(resp.StatusCode/100) != 2 {
-		content, _ := ioutil.ReadAll(resp.Body)
+		content, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("failed to download resource %s, %s", fromURL, string(content))
 	}
 
@@ -339,7 +338,7 @@ func versionAndBasePath(basePath string) (*version, error) {
 	}
 
 	versionPath := filepath.Join(basePath, versionFilename)
-	data, err := ioutil.ReadFile(versionPath)
+	data, err := os.ReadFile(versionPath)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -352,7 +351,7 @@ func versionAndBasePath(basePath string) (*version, error) {
 			return &v, nil
 		}
 	}
-	contents, err := ioutil.ReadDir(basePath)
+	contents, err := os.ReadDir(basePath)
 	if err != nil {
 		return nil, err
 	}

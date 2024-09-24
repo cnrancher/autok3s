@@ -24,7 +24,7 @@ func BindEnvFlags(cmd *cobra.Command) {
 		}
 		v, _ := cmd.Flags().GetString(f.Name)
 		if v == "" && os.Getenv(envAnnotation[0]) != "" {
-			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", os.Getenv(envAnnotation[0])))
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", os.Getenv(envAnnotation[0])))
 		}
 	})
 }
@@ -74,7 +74,7 @@ func MakeSureCredentialFlag(flags *pflag.FlagSet, p providers.Provider) error {
 						logrus.Errorf("failed to convert credential value: %v", err)
 						return
 					}
-					flags.Set(flag.Name, secrets[flag.Name])
+					_ = flags.Set(flag.Name, secrets[flag.Name])
 				}
 			}
 		}
