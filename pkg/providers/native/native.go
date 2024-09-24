@@ -122,7 +122,7 @@ func (p *Native) JoinK3sNode() (err error) {
 		}
 	}
 
-	return p.JoinNodes(func(ssh *types.SSH) (*types.Cluster, error) {
+	return p.JoinNodes(func(_ *types.SSH) (*types.Cluster, error) {
 		return c, nil
 	}, p.syncNodes, false, p.rollbackInstance)
 }
@@ -327,7 +327,7 @@ func (p *Native) assembleNodeStatus(ssh *types.SSH) (*types.Cluster, error) {
 		p.syncNodesMap(workerIps, false, ssh)
 	}
 
-	p.M.Range(func(key, value interface{}) bool {
+	p.M.Range(func(_, value interface{}) bool {
 		v := value.(types.Node)
 		nodes := p.Status.WorkerNodes
 		if v.Master {

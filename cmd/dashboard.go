@@ -29,7 +29,7 @@ func init() {
 
 // DashboardCommand will start a helm-dashboard server for specified K3s cluster
 func DashboardCommand() *cobra.Command {
-	dashboardCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	dashboardCmd.PreRunE = func(_ *cobra.Command, _ []string) error {
 		cfg, err := clientcmd.LoadFromFile(filepath.Join(common.CfgPath, common.KubeCfgFile))
 		if err != nil {
 			return err
@@ -39,7 +39,7 @@ func DashboardCommand() *cobra.Command {
 		}
 		return nil
 	}
-	dashboardCmd.Run = func(cmd *cobra.Command, args []string) {
+	dashboardCmd.Run = func(_ *cobra.Command, _ []string) {
 		if err := common.CheckCommandExist(common.HelmDashboardCommand); err != nil {
 			logrus.Fatalln(err)
 		}

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
@@ -149,7 +148,7 @@ func (p *Google) remove(force bool) (string, error) {
 		}
 	}
 
-	p.rollbackInstance(ids)
+	_ = p.rollbackInstance(ids)
 	p.Logger.Infof("[%s] successfully terminate instances for cluster %s", p.GetProviderName(), p.Name)
 
 	return p.ContextName, nil
@@ -169,7 +168,9 @@ func (p *Google) IsClusterExist() (bool, []string, error) {
 	ids := make([]string, 0)
 
 	if p.client == nil {
-		p.newClient()
+		if err := p.newClient(); err != nil {
+			return false, nil, err
+		}
 	}
 
 	instanceList, err := p.describeInstances()
@@ -339,7 +340,7 @@ func (p *Google) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 		}
 		p.StartupScriptContent = string(scriptByte)
 	} else if p.StartupScriptPath != "" {
-		userDataBytes, err := ioutil.ReadFile(p.StartupScriptPath)
+		userDataBytes, err := os.ReadFile(p.StartupScriptPath)
 		if err != nil {
 			return nil, err
 		}
@@ -682,7 +683,7 @@ func (p *Google) instance(name string) (*raw.Instance, error) {
 
 func (p *Google) uploadKeyPair(instance *raw.Instance, sshKeyPath string) error {
 	p.Logger.Infof("[%s] uploading ssh key...", p.GetProviderName())
-	sshKey, err := ioutil.ReadFile(sshKeyPath + ".pub")
+	sshKey, err := os.ReadFile(sshKeyPath + ".pub")
 	if err != nil {
 		return err
 	}
@@ -752,7 +753,9 @@ func (p *Google) describeInstances() ([]*raw.Instance, error) {
 
 func (p *Google) getInstanceNodes() ([]types.Node, error) {
 	if p.client == nil {
-		p.newClient()
+		if err := p.newClient(); err != nil {
+			return nil, err
+		}
 	}
 	instanceList, err := p.describeInstances()
 	if err != nil || len(instanceList) == 0 {

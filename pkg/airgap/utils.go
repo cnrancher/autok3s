@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -192,7 +191,7 @@ func isDone(basePath string) bool {
 }
 
 func done(basePath string) error {
-	return ioutil.WriteFile(getDonePath(basePath), []byte{}, 0644)
+	return os.WriteFile(getDonePath(basePath), []byte{}, 0644)
 }
 
 func getDonePath(basePath string) string {

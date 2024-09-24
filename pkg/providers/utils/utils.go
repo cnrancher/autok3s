@@ -2,7 +2,7 @@ package utils
 
 import (
 	"crypto/rand"
-	"io/ioutil"
+	"os"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/types"
@@ -69,7 +69,7 @@ func CreateKeyPair(ssh *types.SSH, providerName, name, keypair string) ([]byte, 
 	}
 
 	ssh.SSHKeyPath = keyPath
-	publicKey, err := ioutil.ReadFile(keyPath + ".pub")
+	publicKey, err := os.ReadFile(keyPath + ".pub")
 	if err != nil {
 		return nil, err
 	}

@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -23,7 +22,7 @@ func StripUserHome(path string) string {
 }
 
 func GetFileContent(path string) ([]byte, error) {
-	buff, err := ioutil.ReadFile(StripUserHome(path))
+	buff, err := os.ReadFile(StripUserHome(path))
 	if err != nil {
 		return []byte{}, err
 	}

@@ -16,8 +16,6 @@ import (
 	typesk3d "github.com/cnrancher/autok3s/pkg/types/k3d"
 	"github.com/cnrancher/autok3s/pkg/utils"
 
-	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	dockerunits "github.com/docker/go-units"
 	cliutil "github.com/k3d-io/k3d/v5/cmd/util"
 	k3dutil "github.com/k3d-io/k3d/v5/cmd/util"
@@ -27,7 +25,6 @@ import (
 	k3dconf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
 	k3dlogger "github.com/k3d-io/k3d/v5/pkg/logger"
 	"github.com/k3d-io/k3d/v5/pkg/runtimes"
-	dockerutils "github.com/k3d-io/k3d/v5/pkg/runtimes/docker"
 	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	k3dversion "github.com/k3d-io/k3d/v5/version"
 	"github.com/moby/term"
@@ -273,7 +270,7 @@ func (p *K3d) syncK3d() error {
 }
 
 func (p *K3d) k3dStatus() ([]types.Node, error) {
-	ids := make([]string, 0)
+	// ids := make([]string, 0)
 
 	cfg := &k3d.Cluster{
 		Name: p.Name,
@@ -304,7 +301,7 @@ func (p *K3d) k3dStatus() ([]types.Node, error) {
 		p.M.Store(n.Name, nodeWrapper)
 		// only scrape server and agent roles.
 		if n.Role == k3d.ServerRole || n.Role == k3d.AgentRole {
-			ids = append(ids, n.Name)
+			// ids = append(ids, n.Name)
 			nodes = append(nodes, nodeWrapper)
 		}
 	}
@@ -369,7 +366,7 @@ func (p *K3d) createK3d(_ *types.SSH) (*types.Cluster, error) {
 		return nil, err
 	}
 
-	p.M.Range(func(key, val interface{}) bool {
+	p.M.Range(func(_, val interface{}) bool {
 		v := val.(types.Node)
 		v.RollBack = true
 		p.M.Store(v.InstanceID, v)
@@ -543,46 +540,46 @@ func (p *K3d) attachNode(id string, cluster *types.Cluster) error {
 	return shell.Terminal()
 }
 
-func (p *K3d) getK3dContainer(node *k3d.Node) (*dockertypes.Container, error) {
-	// (0) create docker client.
-	docker, err := dockerutils.GetDockerClient()
-	if err != nil {
-		return nil, fmt.Errorf("[%s] failed to get docker client: %w", p.GetProviderName(), err)
-	}
-	defer func() {
-		_ = docker.Close()
-	}()
+// func (p *K3d) getK3dContainer(node *k3d.Node) (*dockertypes.Container, error) {
+// 	// (0) create docker client.
+// 	docker, err := dockerutils.GetDockerClient()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("[%s] failed to get docker client: %w", p.GetProviderName(), err)
+// 	}
+// 	defer func() {
+// 		_ = docker.Close()
+// 	}()
 
-	// (1) list containers which have the default k3d labels attached.
-	f := filters.NewArgs()
-	for k, v := range node.K3sNodeLabels {
-		f.Add("label", fmt.Sprintf("%s=%s", k, v))
-	}
+// 	// (1) list containers which have the default k3d labels attached.
+// 	f := filters.NewArgs()
+// 	for k, v := range node.K3sNodeLabels {
+// 		f.Add("label", fmt.Sprintf("%s=%s", k, v))
+// 	}
 
-	// regex filtering for exact name match.
-	// Assumptions:
-	// -> container names start with a / (see https://github.com/moby/moby/issues/29997).
-	// -> user input may or may not have the "k3d-" prefix.
-	f.Add("name", fmt.Sprintf("^/?(%s-)?%s$", k3d.DefaultObjectNamePrefix, node.Name))
+// 	// regex filtering for exact name match.
+// 	// Assumptions:
+// 	// -> container names start with a / (see https://github.com/moby/moby/issues/29997).
+// 	// -> user input may or may not have the "k3d-" prefix.
+// 	f.Add("name", fmt.Sprintf("^/?(%s-)?%s$", k3d.DefaultObjectNamePrefix, node.Name))
 
-	containers, err := docker.ContainerList(context.Background(), dockertypes.ContainerListOptions{
-		Filters: f,
-		All:     true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("[%s] failed to list containers: %+v", p.GetProviderName(), err)
-	}
+// 	containers, err := docker.ContainerList(context.Background(), containertypes.ListOptions{
+// 		Filters: f,
+// 		All:     true,
+// 	})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("[%s] failed to list containers: %+v", p.GetProviderName(), err)
+// 	}
 
-	if len(containers) > 1 {
-		return nil, fmt.Errorf("[%s] failed to get a single container for name '%s'. found: %d", p.GetProviderName(), node.Name, len(containers))
-	}
+// 	if len(containers) > 1 {
+// 		return nil, fmt.Errorf("[%s] failed to get a single container for name '%s'. found: %d", p.GetProviderName(), node.Name, len(containers))
+// 	}
 
-	if len(containers) == 0 {
-		return nil, fmt.Errorf("[%s] didn't find container for node '%s'", p.GetProviderName(), node.Name)
-	}
+// 	if len(containers) == 0 {
+// 		return nil, fmt.Errorf("[%s] didn't find container for node '%s'", p.GetProviderName(), node.Name)
+// 	}
 
-	return &containers[0], nil
-}
+// 	return &containers[0], nil
+// }
 
 func (p *K3d) wrapCliFlags(masters, workers int) (*k3dconf.ClusterConfig, error) {
 	ipPorts := strings.Split(p.APIPort, ":")

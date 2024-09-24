@@ -39,7 +39,7 @@ func SSHCommand() *cobra.Command {
 		sshCmd.Example = sp.GetUsageExample("ssh")
 	}
 
-	sshCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	sshCmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		if sProvider == "" {
 			logrus.Fatalln("required flag(s) \"[provider]\" not set")
 		}
@@ -55,7 +55,7 @@ func SSHCommand() *cobra.Command {
 		return nil
 	}
 
-	sshCmd.Run = func(cmd *cobra.Command, args []string) {
+	sshCmd.Run = func(_ *cobra.Command, args []string) {
 		sp.GenerateClusterName()
 		node := ""
 		if len(args) > 0 {

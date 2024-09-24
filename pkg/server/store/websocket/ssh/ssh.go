@@ -60,7 +60,7 @@ func handler(apiOp *types.APIRequest) error {
 	if provider == "" || id == "" || node == "" {
 		return apierror.NewAPIError(validation.InvalidOption, "provider, cluster, node can't be empty")
 	}
-	upgrader.CheckOrigin = func(r *http.Request) bool {
+	upgrader.CheckOrigin = func(_ *http.Request) bool {
 		return true
 	}
 	c, err := upgrader.Upgrade(apiOp.Response, apiOp.Request, nil)

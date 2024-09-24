@@ -42,7 +42,7 @@ func JoinCommand() *cobra.Command {
 		joinCmd.Use = fmt.Sprintf("join -p %s", pStr)
 	}
 
-	joinCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	joinCmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		if jProvider == "" {
 			logrus.Fatalln("required flag(s) \"[provider]\" not set")
 		}
@@ -59,7 +59,7 @@ func JoinCommand() *cobra.Command {
 		return nil
 	}
 
-	joinCmd.Run = func(cmd *cobra.Command, args []string) {
+	joinCmd.Run = func(_ *cobra.Command, _ []string) {
 		// generate cluster name. i.e. input: "--name k3s1 --region cn-hangzhou" output: "k3s1.cn-hangzhou".
 		jp.GenerateClusterName()
 		if err := jp.JoinCheck(); err != nil {

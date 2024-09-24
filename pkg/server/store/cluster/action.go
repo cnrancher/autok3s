@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"path/filepath"
 
@@ -80,7 +80,7 @@ func (j join) ServeHTTP(_ http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
 		return

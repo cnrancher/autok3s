@@ -31,7 +31,7 @@ func (kh *K8sProxyHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	cfg, err := clientcmd.RESTConfigFromKubeConfig([]byte(utils.StringSupportBase64(config)))
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
+		_, _ = rw.Write([]byte(err.Error()))
 		return
 	}
 	host := cfg.Host
@@ -41,7 +41,7 @@ func (kh *K8sProxyHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	u, err := url.Parse(host)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
+		_, _ = rw.Write([]byte(err.Error()))
 		return
 	}
 
@@ -52,7 +52,7 @@ func (kh *K8sProxyHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	transport, err := rest.TransportFor(cfg)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
+		_, _ = rw.Write([]byte(err.Error()))
 		return
 	}
 	handler := k8sproxy.NewUpgradeAwareHandler(u, transport, true, false, responder)

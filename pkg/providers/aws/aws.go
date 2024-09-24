@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
@@ -301,7 +300,7 @@ func (p *Amazon) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	}
 
 	if p.UserDataPath != "" {
-		userDataBytes, err := ioutil.ReadFile(p.UserDataPath)
+		userDataBytes, err := os.ReadFile(p.UserDataPath)
 		if err != nil {
 			return nil, err
 		}
@@ -643,9 +642,7 @@ func (p *Amazon) describeInstances() ([]*ec2.Instance, error) {
 
 		if len(output.Reservations) > 0 {
 			for _, reservation := range output.Reservations {
-				for _, instance := range reservation.Instances {
-					instanceList = append(instanceList, instance)
-				}
+				instanceList = append(instanceList, reservation.Instances...)
 			}
 		}
 		if aws.StringValue(output.NextToken) == "" {

@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/rancher/wharfie/pkg/registries"
 	"sigs.k8s.io/yaml"
@@ -13,7 +13,7 @@ func VerifyRegistryFileContent(path, content string) (*registries.Registry, erro
 	var err error
 	contentBytes := []byte(content)
 	if path != "" && content == "" {
-		contentBytes, err = ioutil.ReadFile(path)
+		contentBytes, err = os.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}

@@ -16,6 +16,7 @@ import (
 	"github.com/cnrancher/autok3s/pkg/types"
 
 	dockertypes "github.com/docker/docker/api/types"
+	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/ioutils"
@@ -73,7 +74,7 @@ func NewDockerShell(n *types.Node) (*DockerShell, error) {
 	// -> user input may or may not have the "k3d-" prefix.
 	f.Add("name", fmt.Sprintf("^/?(%s-)?%s$", k3dtypes.DefaultObjectNamePrefix, n.InstanceID))
 
-	containers, err := docker.ContainerList(d.ctx, dockertypes.ContainerListOptions{
+	containers, err := docker.ContainerList(d.ctx, containertypes.ListOptions{
 		Filters: f,
 		All:     true,
 	})
@@ -264,7 +265,7 @@ func (d *DockerShell) ResizeTtyTo(ctx context.Context, height, width uint) error
 		return nil
 	}
 
-	return d.client.ContainerExecResize(ctx, d.execID, dockertypes.ResizeOptions{
+	return d.client.ContainerExecResize(ctx, d.execID, containertypes.ResizeOptions{
 		Height: height,
 		Width:  width,
 	})

@@ -2,7 +2,7 @@ package sshkey
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/cnrancher/autok3s/pkg/common"
@@ -90,7 +90,7 @@ func exportKeyFiles(path string, target *common.SSHKey) error {
 			continue
 		}
 		targetPath := filepath.Join(path, filename)
-		if err := ioutil.WriteFile(targetPath, []byte(data), 0600); err != nil {
+		if err := os.WriteFile(targetPath, []byte(data), 0600); err != nil {
 			return fmt.Errorf("failed to write ssh key pair %s to files, %v", target.Name, err)
 		}
 	}

@@ -19,7 +19,7 @@ var (
 )
 
 func ListCmd() *cobra.Command {
-	listCmd.Run = func(cmd *cobra.Command, args []string) {
+	listCmd.Run = func(_ *cobra.Command, _ []string) {
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetBorder(false)
 		table.SetHeaderLine(false)

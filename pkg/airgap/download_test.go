@@ -1,7 +1,6 @@
 package airgap
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -9,7 +8,7 @@ import (
 )
 
 func TestCheckHash(t *testing.T) {
-	f, err := ioutil.TempFile(".", "test-checksum-****")
+	f, err := os.CreateTemp(".", "test-checksum-****")
 	if err != nil {
 		t.Fatal(err)
 	}

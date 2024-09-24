@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"runtime"
@@ -109,7 +108,7 @@ func (kp *KeyPair) Fingerprint() string {
 	b, _ := base64.StdEncoding.DecodeString(string(kp.PublicKey))
 	h := md5.New()
 
-	_, _ = io.WriteString(h, string(b))
+	_, _ = h.Write(b)
 
 	return fmt.Sprintf("%x", h.Sum(nil))
 }

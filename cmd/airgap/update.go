@@ -19,7 +19,7 @@ var updateCmd = &cobra.Command{
 	Use:   "update <name>",
 	Short: "Update a stored package with new selected archs.",
 	Args:  cobra.ExactArgs(1),
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRun: func(_ *cobra.Command, _ []string) {
 		sort.Strings(airgapFlags.Archs)
 	},
 	RunE: update,

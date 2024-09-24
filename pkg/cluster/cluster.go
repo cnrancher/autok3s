@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -402,7 +401,7 @@ func SaveCfg(cfg, ip, context string) error {
 		return fmt.Errorf("[cluster] generate kubecfg temp folder error, msg: %s", err)
 	}
 
-	temp, err := ioutil.TempFile(tempPath, common.KubeCfgTempName)
+	temp, err := os.CreateTemp(tempPath, common.KubeCfgTempName)
 	if err != nil {
 		return fmt.Errorf("[cluster] generate kubecfg temp file error, msg: %s", err)
 	}
@@ -414,7 +413,7 @@ func SaveCfg(cfg, ip, context string) error {
 	}()
 
 	absPath, _ := filepath.Abs(temp.Name())
-	if err = ioutil.WriteFile(absPath, []byte(result), 0600); err != nil {
+	if err = os.WriteFile(absPath, []byte(result), 0600); err != nil {
 		return fmt.Errorf("[cluster] write content to kubecfg temp file error: %v", err)
 	}
 
@@ -558,7 +557,7 @@ func (p *ProviderBase) handleRegistry(n *types.Node, c *types.Cluster) (err erro
 		return err
 	}
 
-	if tls != nil && len(tls) > 0 {
+	if len(tls) > 0 {
 		cmd, err = saveRegistryTLS(registry, tls)
 		if err != nil {
 			return err
@@ -591,7 +590,7 @@ func (p *ProviderBase) handleConfiguration(n *types.Node, c *types.Cluster) (err
 			}
 		}
 		if c.ServerConfigFile != "" && c.ServerConfigFileContent == "" {
-			configFileContent, err = ioutil.ReadFile(c.ServerConfigFile)
+			configFileContent, err = os.ReadFile(c.ServerConfigFile)
 			if err != nil {
 				return err
 			}
@@ -604,7 +603,7 @@ func (p *ProviderBase) handleConfiguration(n *types.Node, c *types.Cluster) (err
 			}
 		}
 		if c.AgentConfigFile != "" && c.AgentConfigFileContent == "" {
-			configFileContent, err = ioutil.ReadFile(c.AgentConfigFile)
+			configFileContent, err = os.ReadFile(c.AgentConfigFile)
 			if err != nil {
 				return err
 			}
@@ -635,21 +634,21 @@ func registryTLSMap(registry *registries.Registry) (m map[string]map[string][]by
 			continue
 		}
 		if c.TLS.CertFile != "" {
-			b, err := ioutil.ReadFile(c.TLS.CertFile)
+			b, err := os.ReadFile(c.TLS.CertFile)
 			if err != nil {
 				return m, err
 			}
 			m[r]["cert"] = b
 		}
 		if c.TLS.KeyFile != "" {
-			b, err := ioutil.ReadFile(c.TLS.KeyFile)
+			b, err := os.ReadFile(c.TLS.KeyFile)
 			if err != nil {
 				return m, err
 			}
 			m[r]["key"] = b
 		}
 		if c.TLS.CAFile != "" {
-			b, err := ioutil.ReadFile(c.TLS.CAFile)
+			b, err := os.ReadFile(c.TLS.CAFile)
 			if err != nil {
 				return m, err
 			}

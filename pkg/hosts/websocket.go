@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -149,7 +148,7 @@ func (t *TerminalReader) Read(p []byte) (int, error) {
 		}
 		switch msgType {
 		case websocket.TextMessage:
-			body, e := ioutil.ReadAll(t.reader)
+			body, e := io.ReadAll(t.reader)
 			if e != nil {
 				logrus.Errorf("[websocket-dialer] read text message error: %s", e.Error())
 				break

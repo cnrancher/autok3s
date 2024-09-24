@@ -23,14 +23,14 @@ func init() {
 }
 
 func TelemetryCommand() *cobra.Command {
-	telemetryCommand.PreRunE = func(cmd *cobra.Command, args []string) error {
+	telemetryCommand.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		_, err := getValidatedEnable(cmd)
 		if err != nil {
 			return errors.Wrap(err, "invalid set flag")
 		}
 		return nil
 	}
-	telemetryCommand.Run = func(cmd *cobra.Command, args []string) {
+	telemetryCommand.Run = func(cmd *cobra.Command, _ []string) {
 		rtn, _ := getValidatedEnable(cmd)
 		if rtn == nil {
 			getCurrentStatus(cmd)

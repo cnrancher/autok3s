@@ -2,7 +2,6 @@
 package main
 
 import (
-	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -32,8 +31,6 @@ func init() {
 }
 
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
-
 	args := os.Args[0]
 	os.Args[0] = filepath.Base(os.Args[0])
 	if reexec.Init() {

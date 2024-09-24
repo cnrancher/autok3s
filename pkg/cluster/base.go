@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -888,7 +887,7 @@ func (p *ProviderBase) DeleteCluster(force bool, delete func(f bool) (string, er
 		}
 		if exp != nil {
 			if exp.Enabled {
-				common.DisableExplorer(p.ContextName)
+				_ = common.DisableExplorer(p.ContextName)
 			}
 			err = common.DefaultDB.DeleteExplorer(p.ContextName)
 			if err != nil && !force {
@@ -1322,7 +1321,7 @@ func (p *ProviderBase) GetCustomManifests() ([]string, error) {
 	}
 	// upload all files under directory, not include recursive folders.
 	deployCmd := make([]string, 0)
-	files, err := ioutil.ReadDir(p.Manifests)
+	files, err := os.ReadDir(p.Manifests)
 	if err != nil {
 		return nil, err
 	}
@@ -1444,7 +1443,7 @@ func (p *ProviderBase) ValidateRequireSSHPrivateKey() error {
 		errStr = "ssh key is require but none of --ssh-key-path, --ssh-key-name or --ssh-key is provided"
 	}
 	if p.SSHKey == "" && p.SSHKeyPath == "" && p.SSHKeyName == "" {
-		return fmt.Errorf(errStr)
+		return errors.New(errStr)
 	}
 	return nil
 }

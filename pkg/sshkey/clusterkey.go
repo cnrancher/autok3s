@@ -2,7 +2,6 @@ package sshkey
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -48,7 +47,7 @@ func StoreClusterSSHKeys(clusterName string, ssh *types.SSH) (*types.SSH, error)
 		if err := os.RemoveAll(certPath); err != nil {
 			return nil, err
 		}
-		if err := ioutil.WriteFile(certPath, []byte(ssh.SSHCert), 0644); err != nil {
+		if err := os.WriteFile(certPath, []byte(ssh.SSHCert), 0644); err != nil {
 			return nil, errors.Wrapf(err, "failed to write cluster ssh cert to file %s", certPath)
 		}
 		rtn.SSHCertPath = certPath
@@ -63,7 +62,7 @@ func StoreClusterSSHKeys(clusterName string, ssh *types.SSH) (*types.SSH, error)
 		if err := os.RemoveAll(keyPath); err != nil {
 			return nil, err
 		}
-		if err := ioutil.WriteFile(keyPath, []byte(ssh.SSHKey), 0644); err != nil {
+		if err := os.WriteFile(keyPath, []byte(ssh.SSHKey), 0644); err != nil {
 			return nil, errors.Wrapf(err, "failed to write cluster ssh private key to file %s", keyPath)
 		}
 		rtn.SSHKeyPath = keyPath

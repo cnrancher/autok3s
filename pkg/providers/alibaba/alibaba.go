@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
@@ -435,7 +434,7 @@ func (p *Alibaba) deleteInstance(f bool) (string, error) {
 
 func (p *Alibaba) getInstanceStatus(aimStatus string) error {
 	ids := make([]string, 0)
-	p.M.Range(func(key, value interface{}) bool {
+	p.M.Range(func(key, _ interface{}) bool {
 		ids = append(ids, key.(string))
 		return true
 	})
@@ -554,9 +553,7 @@ func (p *Alibaba) describeInstances() ([]ecs.Instance, error) {
 				totalPage = totalPage + 1
 			}
 		}
-		for _, ins := range response.Instances.Instance {
-			instanceList = append(instanceList, ins)
-		}
+		instanceList = append(instanceList, response.Instances.Instance...)
 		if (pageNum + 1) > totalPage {
 			break
 		}
@@ -588,27 +585,27 @@ func (p *Alibaba) getVSwitchCIDR() (string, string, error) {
 	return response.VSwitches.VSwitch[0].VpcId, response.VSwitches.VSwitch[0].CidrBlock, nil
 }
 
-func (p *Alibaba) getVpcCIDR() (string, error) {
-	vpcID, vSwitchCIDR, err := p.getVSwitchCIDR()
-	if err != nil {
-		return "", fmt.Errorf("[%s] calling preflight error: vswitch %s cidr not be found",
-			p.GetProviderName(), p.VSwitch)
-	}
+// func (p *Alibaba) getVpcCIDR() (string, error) {
+// 	vpcID, vSwitchCIDR, err := p.getVSwitchCIDR()
+// 	if err != nil {
+// 		return "", fmt.Errorf("[%s] calling preflight error: vswitch %s cidr not be found",
+// 			p.GetProviderName(), p.VSwitch)
+// 	}
 
-	p.ClusterCidr = vSwitchCIDR
+// 	p.ClusterCidr = vSwitchCIDR
 
-	request := ecs.CreateDescribeVpcsRequest()
-	request.Scheme = "https"
-	request.VpcId = vpcID
+// 	request := ecs.CreateDescribeVpcsRequest()
+// 	request.Scheme = "https"
+// 	request.VpcId = vpcID
 
-	response, err := p.c.DescribeVpcs(request)
-	if err != nil || !response.IsSuccess() || len(response.Vpcs.Vpc) != 1 {
-		return "", fmt.Errorf("[%s] calling describeVpcs error. region: %s, "+"instanceName: %s, msg: [%v]",
-			p.GetProviderName(), p.Region, p.Vpc, err)
-	}
+// 	response, err := p.c.DescribeVpcs(request)
+// 	if err != nil || !response.IsSuccess() || len(response.Vpcs.Vpc) != 1 {
+// 		return "", fmt.Errorf("[%s] calling describeVpcs error. region: %s, "+"instanceName: %s, msg: [%v]",
+// 			p.GetProviderName(), p.Region, p.Vpc, err)
+// 	}
 
-	return response.Vpcs.Vpc[0].CidrBlock, nil
-}
+// 	return response.Vpcs.Vpc[0].CidrBlock, nil
+// }
 
 // CreateCheck check create command and flags.
 func (p *Alibaba) CreateCheck() error {
@@ -661,9 +658,7 @@ func (p *Alibaba) describeEipAddresses(allocationIds []string) ([]vpc.EipAddress
 		if err != nil || !response.IsSuccess() || len(response.EipAddresses.EipAddress) <= 0 {
 			return nil, err
 		}
-		for _, eip := range response.EipAddresses.EipAddress {
-			eipList = append(eipList, eip)
-		}
+		eipList = append(eipList, response.EipAddresses.EipAddress...)
 	}
 
 	return eipList, nil
@@ -831,7 +826,7 @@ func (p *Alibaba) releaseEipAddresses(rollBack bool) {
 }
 
 func (p *Alibaba) getEipStatus(allocationIds []string, aimStatus string) error {
-	if allocationIds == nil || len(allocationIds) == 0 {
+	if len(allocationIds) == 0 {
 		return fmt.Errorf("[%s] allocationIds can not be empty", p.GetProviderName())
 	}
 
@@ -940,7 +935,7 @@ func (p *Alibaba) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	}
 
 	if p.UserDataPath != "" {
-		userDataBytes, err := ioutil.ReadFile(p.UserDataPath)
+		userDataBytes, err := os.ReadFile(p.UserDataPath)
 		if err != nil {
 			return nil, err
 		}

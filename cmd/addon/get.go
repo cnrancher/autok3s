@@ -18,7 +18,7 @@ var (
 )
 
 func GetCmd() *cobra.Command {
-	getCmd.Run = func(cmd *cobra.Command, args []string) {
+	getCmd.Run = func(_ *cobra.Command, args []string) {
 		name := args[0]
 		addon, err := common.DefaultDB.GetAddon(name)
 		if err != nil {

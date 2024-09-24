@@ -30,13 +30,13 @@ func init() {
 
 // DescribeCommand returns the specified cluster details.
 func DescribeCommand() *cobra.Command {
-	describeCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	describeCmd.PreRunE = func(_ *cobra.Command, _ []string) error {
 		if name == "" {
 			logrus.Fatalln("`-n` or `--name` must set to specify a cluster, i.e. autok3s describe -n <cluster-name>")
 		}
 		return nil
 	}
-	describeCmd.Run = func(cmd *cobra.Command, args []string) {
+	describeCmd.Run = func(_ *cobra.Command, _ []string) {
 		describeCluster()
 	}
 	return describeCmd

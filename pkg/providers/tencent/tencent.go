@@ -4,12 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
@@ -63,7 +61,7 @@ type Tencent struct {
 	v *vpc.Client
 	t *tag.Client
 	r *tke.Client
-	m *sync.Map
+	// m *sync.Map
 }
 
 func init() {
@@ -423,7 +421,7 @@ func (p *Tencent) generateInstance(ssh *types.SSH) (*types.Cluster, error) {
 	}
 
 	if p.UserDataPath != "" {
-		userDataBytes, err := ioutil.ReadFile(p.UserDataPath)
+		userDataBytes, err := os.ReadFile(p.UserDataPath)
 		if err != nil {
 			return nil, err
 		}
@@ -783,9 +781,7 @@ func (p *Tencent) describeInstances() ([]*cvm.Instance, error) {
 			break
 		}
 		total := *response.Response.TotalCount
-		for _, ins := range response.Response.InstanceSet {
-			instanceList = append(instanceList, ins)
-		}
+		instanceList = append(instanceList, response.Response.InstanceSet...)
 		offset = limit*index + limit
 		index = index + 1
 		if offset >= total {

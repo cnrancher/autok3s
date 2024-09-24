@@ -43,7 +43,7 @@ func DeleteCommand() *cobra.Command {
 		deleteCmd.Use = fmt.Sprintf("delete -p %s", pStr)
 	}
 
-	deleteCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	deleteCmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		if dProvider == "" {
 			logrus.Fatalln("required flag(s) \"[provider]\" not set")
 		}
@@ -60,7 +60,7 @@ func DeleteCommand() *cobra.Command {
 		return nil
 	}
 
-	deleteCmd.Run = func(cmd *cobra.Command, args []string) {
+	deleteCmd.Run = func(_ *cobra.Command, _ []string) {
 		dp.GenerateClusterName()
 		if err := dp.DeleteK3sCluster(force); err != nil {
 			logrus.Fatalln(err)

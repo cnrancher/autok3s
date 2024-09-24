@@ -35,7 +35,7 @@ func (f fsFunc) Open(name string) (fs.File, error) {
 // Serve serve ui component.
 func Serve() http.Handler {
 	if uiMode() == "dev" {
-		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		return http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 			_ = serveIndex(writer)
 		})
 	}
@@ -45,7 +45,7 @@ func Serve() http.Handler {
 // ServeNotFound server ui component, not found will be return index.html.
 func ServeNotFound(next http.Handler) http.Handler {
 	if uiMode() == "dev" {
-		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		return http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 			_ = serveIndex(writer)
 		})
 	}
