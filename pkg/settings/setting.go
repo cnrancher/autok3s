@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -59,6 +61,11 @@ func SetProvider(p Provider) error {
 
 func (s Setting) Get() string {
 	if provider == nil {
+		key := GetEnvKey(s.Name)
+		envValue := os.Getenv(key)
+		if envValue != "" {
+			return envValue
+		}
 		return settings[s.Name].Default
 	}
 	return provider.Get(s.Name)
@@ -90,4 +97,9 @@ func GetScriptFromSource(writer io.Writer) error {
 		return errors.Wrap(err, "failed to copy data to target writer")
 	}
 	return nil
+}
+
+// GetEnvKey will return the given string formatted as a autok3s environmental variable.
+func GetEnvKey(key string) string {
+	return "AUTOK3S_" + strings.ToUpper(strings.Replace(key, "-", "_", -1))
 }
