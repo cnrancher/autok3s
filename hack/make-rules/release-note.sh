@@ -2,7 +2,7 @@
 
 set -e
 
-GIT_VERSION=${DRONE_TAG:-}
+GIT_VERSION=${DRONE_TAG:-${GITHUB_REF#refs/tags/}}
 TARGET_PATH="$1"
 RC_RELEASE="false"
 
@@ -36,5 +36,5 @@ for tag in $(git tag -l --sort=-v:refname); do
 done
 
 echo "following release notes will be published..."
-release-notary publish -d 2>/dev/null | sed '1d' | sed '$d' > $TARGET_PATH
+release-notary publish -d 2>/dev/null | sed '1d' | sed '$d' > "$TARGET_PATH"
 cat "$TARGET_PATH"

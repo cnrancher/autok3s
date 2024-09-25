@@ -1,0 +1,77 @@
+name: Push to Master
+
+on:
+  push:
+    branches:
+      - release/v*
+      - master
+    tags:
+      - "v*.*.*" # Matches any tag that starts with 'v' and follows semantic versioning
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Release Note
+        id: release-note
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: docker://aevea/release-notary:0.9.2
+        with:
+          entrypoint: /bin/sh
+          args: hack/make-rules/release-note.sh ./note.txt
+      - name: ls bin
+        run: |
+          ls -al
+      - name: Login to Dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61.0
+      - 
+        name: Build to push
+        env:
+          AUTOK3S_INSTALL_SCRIPT_SOURCE_REPO: https://get.k3s.io
+        run: |
+          make autok3s cross_build only
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.REPO || 'cnrancher' }}/${{ vars.IMAGE || 'autok3s' }}
+          tags: |
+            type=ref,event=tag
+            type=ref,event=branch
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build to Dockerhub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64/v8
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: "${{ steps.meta.outputs.tags }}"
+          push: true
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/autok3s_*
+          body_path: ./note.txt
+          draft: true
+    permissions:
+      contents: write
