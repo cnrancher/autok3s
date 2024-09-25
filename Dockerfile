@@ -20,9 +20,9 @@ RUN curl -sSL https://github.com/cnrancher/kube-explorer/releases/download/${KUB
 RUN curl -sLf https://github.com/komodorio/helm-dashboard/releases/download/v${HELM_DASHBOARD_VERSION}/helm-dashboard_${HELM_DASHBOARD_VERSION}_Linux_x86_64.tar.gz | tar xvzf - -C /usr/local/bin && \
     chmod +x /usr/local/bin/helm-dashboard
 
-ENV AUTOK3S_CONFIG /root/.autok3s
-ENV DOCKER_HOST unix:///var/run/docker.sock
-ENV HOME /root
+ENV AUTOK3S_CONFIG=/root/.autok3s
+ENV DOCKER_HOST=unix:///var/run/docker.sock
+ENV HOME=/root
 ENV AUTOK3S_HELM_DASHBOARD_ADDRESS=0.0.0.0
 
 WORKDIR /home/shell
