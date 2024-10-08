@@ -3,11 +3,13 @@ package proxy
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/gorilla/mux"
+	"github.com/rancher/apiserver/pkg/urlbuilder"
 )
 
 type ExplorerHandler struct {
@@ -47,13 +49,21 @@ func (ep *ExplorerHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		_, _ = rw.Write([]byte(err.Error()))
 		return
 	}
+	prefix := fmt.Sprintf("/proxy/explorer/%s", clusterID)
 
-	u.Path = strings.TrimPrefix(req.URL.Path, fmt.Sprintf("/proxy/explorer/%s", clusterID))
-	u.RawQuery = req.URL.RawQuery
-	req.URL.Host = req.Host
-
-	ph := RemoteHandler{
-		Location: u,
+	proxy := &httputil.ReverseProxy{}
+	proxy.Director = func(req *http.Request) {
+		scheme := urlbuilder.GetScheme(req)
+		host := urlbuilder.GetHost(req, scheme)
+		req.Header.Set(urlbuilder.ForwardedProtoHeader, scheme)
+		req.Header.Set(urlbuilder.ForwardedHostHeader, host)
+		req.Header.Set(urlbuilder.PrefixHeader, prefix)
+		req.URL.Scheme = u.Scheme
+		req.URL.Host = u.Host
+		req.URL.Path = strings.TrimPrefix(req.URL.Path, prefix)
+		if req.URL.Path == "" {
+			req.URL.Path = "/"
+		}
 	}
-	ph.ServeHTTP(rw, req)
+	proxy.ServeHTTP(rw, req)
 }
