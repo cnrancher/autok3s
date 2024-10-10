@@ -1,9 +1,14 @@
 package cmd
 
 import (
-	"github.com/cnrancher/autok3s/pkg/common"
+	"context"
+	"fmt"
+	"net"
+	"net/http"
 
-	k3dutil "github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/cnrancher/autok3s/pkg/common"
+	"github.com/cnrancher/autok3s/pkg/server/proxy"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +20,7 @@ var (
 		Example: "autok3s explorer --context myk3s",
 	}
 	clusterID    = ""
-	explorerPort = 0
+	explorerPort = 8080
 )
 
 func init() {
@@ -31,18 +36,29 @@ func ExplorerCommand() *cobra.Command {
 		}
 		return nil
 	}
-	explorerCmd.Run = func(_ *cobra.Command, _ []string) {
+	explorerCmd.Run = func(cmd *cobra.Command, _ []string) {
 		if err := common.CheckCommandExist(common.KubeExplorerCommand); err != nil {
 			logrus.Fatalln(err)
 		}
-		if explorerPort == 0 {
-			port, err := k3dutil.GetFreePort()
-			if err != nil {
-				logrus.Fatalf("failed to get free port for kube-explorer: %v", err)
-			}
-			explorerPort = port
+
+		wait, err := common.StartKubeExplorer(cmd.Context(), clusterID)
+		if err != nil {
+			logrus.Fatalln(err)
 		}
-		_ = common.StartKubeExplorer(explorerCmd.Context(), clusterID, explorerPort)
+
+		server := http.Server{
+			Addr:    fmt.Sprintf(":%d", explorerPort),
+			Handler: proxy.DynamicPrefixProxy(clusterID),
+			BaseContext: func(_ net.Listener) context.Context {
+				return cmd.Context()
+			},
+		}
+		go func() {
+			logrus.Infof("autok3s serving kube-explorer on %s", server.Addr)
+			_ = server.ListenAndServe()
+		}()
+		<-wait
+		_ = server.Shutdown(context.Background())
 	}
 
 	return explorerCmd

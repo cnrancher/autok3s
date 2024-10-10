@@ -1,10 +1,11 @@
+ARG KUBE_EXPLORER_VERSION=latest
+FROM cnrancher/kube-explorer:${KUBE_EXPLORER_VERSION} as kube-explorer
 FROM registry.suse.com/bci/bci-base:15.5
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETOS
 
 ENV TARGETPLATFORM=${TARGETPLATFORM:-"linux/amd64"} ARCH=${TARGETARCH:-"amd64"} OS=${TARGETOS:-"linux"}
-ENV KUBE_EXPLORER_VERSION=v0.5.0
 ENV HELM_DASHBOARD_VERSION=1.3.3
 
 RUN zypper -n install curl ca-certificates tar gzip
@@ -14,8 +15,7 @@ RUN mkdir /home/shell && \
     echo 'source <(kubectl completion bash)' >> /home/shell/.bashrc && \
     echo 'PS1="> "' >> /home/shell/.bashrc
 
-RUN curl -sSL https://github.com/cnrancher/kube-explorer/releases/download/${KUBE_EXPLORER_VERSION}/kube-explorer-${OS}-${ARCH} > /usr/local/bin/kube-explorer && \
-    chmod +x /usr/local/bin/kube-explorer
+COPY --from=kube-explorer /usr/bin/kube-explorer /usr/local/bin/kube-explorer
 
 RUN curl -sLf https://github.com/komodorio/helm-dashboard/releases/download/v${HELM_DASHBOARD_VERSION}/helm-dashboard_${HELM_DASHBOARD_VERSION}_Linux_x86_64.tar.gz | tar xvzf - -C /usr/local/bin && \
     chmod +x /usr/local/bin/helm-dashboard

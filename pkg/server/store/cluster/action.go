@@ -173,15 +173,16 @@ func (e explorer) ServeHTTP(_ http.ResponseWriter, req *http.Request) {
 	action := apiRequest.Action
 	switch action {
 	case actionEnableExplorer:
-		port, err := common.EnableExplorer(context.Background(), clusterID)
+		err := common.EnableExplorer(context.Background(), clusterID)
 		if err != nil {
 			apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
 			return
 		}
+		socketName := common.GetSocketName(clusterID)
 		apiRequest.WriteResponse(http.StatusOK, types.APIObject{
 			Type: "enableExplorerOutput",
 			Object: &autok3stypes.EnableExplorerOutput{
-				Data: fmt.Sprintf("kube-explorer for cluster %s will listen on 127.0.0.1:%d...", clusterID, port),
+				Data: fmt.Sprintf("kube-explorer for cluster %s will listen on %s ...", clusterID, socketName),
 			},
 		})
 	case actionDisableExplorer:
