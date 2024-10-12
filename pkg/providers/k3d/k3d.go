@@ -45,6 +45,8 @@ var (
 type K3d struct {
 	*cluster.ProviderBase `json:",inline"`
 	typesk3d.Options      `json:",inline"`
+
+	dockerHost, additionalHost string
 }
 
 func init() {
@@ -62,6 +64,7 @@ func newProvider() *K3d {
 			APIPort: k3dAPIPort,
 			Image:   k3dImage,
 		},
+		dockerHost: getDockerHost(),
 	}
 }
 
@@ -173,6 +176,11 @@ func (p *K3d) GetProviderOptions(opt []byte) (interface{}, error) {
 
 // SetConfig set cluster config.
 func (p *K3d) SetConfig(config []byte) error {
+	tmpHost := struct {
+		AdditionalHost string `json:"additionalHost,omitempty"`
+	}{}
+	_ = json.Unmarshal(config, &tmpHost)
+
 	c, err := p.SetClusterConfig(config)
 	if err != nil {
 		return err
@@ -189,7 +197,7 @@ func (p *K3d) SetConfig(config []byte) error {
 	}
 	targetOption := reflect.ValueOf(opt).Elem()
 	utils.MergeConfig(sourceOption, targetOption)
-
+	p.additionalHost = tmpHost.AdditionalHost
 	return nil
 }
 
@@ -325,6 +333,8 @@ func (p *K3d) obtainKubeCfg() (kubeCfg, ip string, err error) {
 	if err != nil {
 		return
 	}
+
+	OverrideK3dKubeConfigServer(k3d.DefaultAPIHost, p.dockerHost, kubeConfig)
 
 	bytes, err := clientcmd.Write(*kubeConfig)
 	if err != nil {
@@ -611,20 +621,15 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*k3dconf.ClusterConfig, error)
 	}
 
 	if p.APIPort != "" {
-		exposeAPI, err := k3dutil.ParsePortExposureSpec(p.APIPort, k3d.DefaultAPIPort)
+		apiPort := p.APIPort
+		if strings.HasSuffix(apiPort, ":0") {
+			apiPort = strings.TrimSuffix(apiPort, ":0") + ":random"
+		}
+		exposeAPI, err := k3dutil.ParsePortExposureSpec(apiPort, k3d.DefaultAPIPort)
 		if err != nil {
 			return nil, fmt.Errorf("[%s] cluster %s parse port config failed: %w", p.GetProviderName(), p.Name, err)
 		}
-
 		cfg.ExposeAPI.HostIP = exposeAPI.Binding.HostIP
-
-		if exposeAPI.Binding.HostPort == "0" {
-			exposeAPI, err = k3dutil.ParsePortExposureSpec("random", k3d.DefaultAPIPort)
-			if err != nil {
-				return nil, fmt.Errorf("[%s] cluster %s parse random port config failed: %w", p.GetProviderName(), p.Name, err)
-			}
-		}
-
 		cfg.ExposeAPI.HostPort = exposeAPI.Binding.HostPort
 		p.APIPort = fmt.Sprintf("%s:%s", cfg.ExposeAPI.HostIP, cfg.ExposeAPI.HostPort)
 	}
@@ -643,6 +648,13 @@ func (p *K3d) wrapCliFlags(masters, workers int) (*k3dconf.ClusterConfig, error)
 
 	if p.WorkersMemory != "" {
 		cfg.Options.Runtime.AgentsMemory = p.WorkersMemory
+	}
+
+	for _, host := range []string{p.additionalHost, p.dockerHost} {
+		if host == "" {
+			continue
+		}
+		p.MasterExtraArgs = strings.TrimPrefix(p.MasterExtraArgs+" --tls-san="+host, " ")
 	}
 
 	if p.MasterExtraArgs != "" {
