@@ -1,0 +1,31 @@
+{
+    "datastore-cafile-content": "",
+    "datastore-certfile-content": "",
+    "datastore-keyfile-content": "",
+    "master": "1",
+    "master-extra-args": "",
+    "masters-memory": "",
+    "name": "{{randAlpha 4}}",
+    "network": "",
+    "registry": "",
+    "registry-content": "",
+    "token": "",
+    "worker": "0",
+    "worker-extra-args": "",
+    "workers-memory": "",
+    "rollback": true,
+    "provider": "k3d",
+    "options": {
+        "api-port": "0.0.0.0:0",
+        "envs": null,
+        "gpus": "",
+        "image": "docker.io/rancher/k3s:v1.27.6-k3s1",
+        "labels": null,
+        "masters-memory": "",
+        "no-image-volume": false,
+        "no-lb": false,
+        "ports": null,
+        "volumes": null,
+        "workers-memory": ""
+    }
+}
