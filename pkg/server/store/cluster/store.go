@@ -3,6 +3,7 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/cluster"
@@ -14,6 +15,7 @@ import (
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/store/empty"
 	"github.com/rancher/apiserver/pkg/types"
+	"github.com/rancher/apiserver/pkg/urlbuilder"
 	"github.com/rancher/wrangler/v2/pkg/schemas/validation"
 	"github.com/sirupsen/logrus"
 )
@@ -24,9 +26,13 @@ type Store struct {
 }
 
 // Create creates cluster based on the request data.
-func (c *Store) Create(_ *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
+func (c *Store) Create(req *types.APIRequest, schema *types.APISchema, data types.APIObject) (types.APIObject, error) {
 	providerName := data.Data().String("provider")
-	b, err := json.Marshal(data.Data())
+	// for k3d to add the request host for additional tls-san
+	objMap := data.Data()
+	host, _, _ := net.SplitHostPort(urlbuilder.GetHost(req.Request, ""))
+	objMap.Set("additionalHost", host)
+	b, err := json.Marshal(objMap)
 	if err != nil {
 		return types.APIObject{}, err
 	}

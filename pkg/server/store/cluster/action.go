@@ -5,16 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/cnrancher/autok3s/pkg/common"
 	"github.com/cnrancher/autok3s/pkg/providers"
+	"github.com/cnrancher/autok3s/pkg/providers/k3d"
 	autok3stypes "github.com/cnrancher/autok3s/pkg/types/apis"
 
 	"github.com/gorilla/mux"
 	"github.com/rancher/apiserver/pkg/apierror"
 	"github.com/rancher/apiserver/pkg/types"
+	"github.com/rancher/apiserver/pkg/urlbuilder"
 	"github.com/rancher/wrangler/v2/pkg/schemas/validation"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -173,15 +177,16 @@ func (e explorer) ServeHTTP(_ http.ResponseWriter, req *http.Request) {
 	action := apiRequest.Action
 	switch action {
 	case actionEnableExplorer:
-		port, err := common.EnableExplorer(context.Background(), clusterID)
+		err := common.EnableExplorer(context.Background(), clusterID)
 		if err != nil {
 			apiRequest.WriteError(apierror.NewAPIError(validation.ServerError, err.Error()))
 			return
 		}
+		socketName := common.GetSocketName(clusterID)
 		apiRequest.WriteResponse(http.StatusOK, types.APIObject{
 			Type: "enableExplorerOutput",
 			Object: &autok3stypes.EnableExplorerOutput{
-				Data: fmt.Sprintf("kube-explorer for cluster %s will listen on 127.0.0.1:%d...", clusterID, port),
+				Data: fmt.Sprintf("kube-explorer for cluster %s will listen on %s ...", clusterID, socketName),
 			},
 		})
 	case actionDisableExplorer:
@@ -253,6 +258,14 @@ func (d downloadKubeconfig) ServeHTTP(_ http.ResponseWriter, req *http.Request) 
 		currentCfg.Extensions = map[string]runtime.Object{
 			clusterID: extensionCfg,
 		}
+	}
+
+	if strings.HasPrefix(clusterID, "k3d-") {
+		host, _, _ := net.SplitHostPort(urlbuilder.GetHost(req, ""))
+		// When parsing empty string as from parameter, the dockerHost will be used as the origin server
+		// if the dockerHost is empty(e.g. DOCKER_HOST is set), this function will do nothing as the k3d already use the
+		// proper cluster server address in kubeconfig
+		k3d.OverrideK3dKubeConfigServer("", host, &currentCfg)
 	}
 
 	result, err := clientcmd.Write(currentCfg)

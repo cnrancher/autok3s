@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
-	k3dutil "github.com/k3d-io/k3d/v5/cmd/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,77 +16,66 @@ const (
 )
 
 // EnableExplorer will start kube-explorer with random port for specified K3s cluster
-func EnableExplorer(ctx context.Context, config string) (int, error) {
+func EnableExplorer(ctx context.Context, config string) error {
 	if _, ok := ExplorerWatchers[config]; ok {
-		return 0, fmt.Errorf("kube-explorer for cluster %s has already started", config)
+		return fmt.Errorf("kube-explorer for cluster %s has already started", config)
 	}
 	if err := CheckCommandExist(KubeExplorerCommand); err != nil {
-		return 0, err
+		return err
 	}
 
 	// command execution validate
 	if err := checkExplorerCmd(); err != nil {
-		return 0, err
+		return err
 	}
 
 	// save config for kube-explorer
 	exp, err := DefaultDB.GetExplorer(config)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if exp == nil || !exp.Enabled {
-		var port int
-		if exp == nil {
-			port, err = k3dutil.GetFreePort()
-			if err != nil {
-				return 0, err
-			}
-		} else {
-			port = exp.Port
-		}
 		exp = &Explorer{
 			ContextName: config,
-			Port:        port,
 			Enabled:     true,
 		}
 		if err = DefaultDB.SaveExplorer(exp); err != nil {
-			return 0, err
+			return err
 		}
 	}
 
 	// start kube-explorer
 	explorerCtx, cancel := context.WithCancel(ctx)
 	ExplorerWatchers[config] = cancel
-	go func(ctx context.Context, config string, port int) {
-		_ = StartKubeExplorer(ctx, config, port)
-	}(explorerCtx, config, exp.Port)
-	return exp.Port, nil
+
+	if _, err := StartKubeExplorer(explorerCtx, config); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DisableExplorer will stop kube-explorer server for specified K3s cluster
 func DisableExplorer(config string) error {
-	if _, ok := ExplorerWatchers[config]; !ok {
+	cancelFunc, ok := ExplorerWatchers[config]
+	if !ok {
 		return fmt.Errorf("cann't disable unactive kube-explorer for cluster %s", config)
 	}
+
 	// update kube-explorer settings
 	exp, err := DefaultDB.GetExplorer(config)
 	if err != nil {
 		return err
 	}
+	if exp != nil && exp.Enabled {
+		// stop kube-explorer
+		cancelFunc()
+		delete(ExplorerWatchers, config)
+	}
 	if exp == nil || exp.Enabled {
-		var port int
-		if exp == nil {
-			port, err = k3dutil.GetFreePort()
-			if err != nil {
-				return err
-			}
-		} else {
-			port = exp.Port
-		}
 		err = DefaultDB.SaveExplorer(&Explorer{
 			ContextName: config,
-			Port:        port,
 			Enabled:     false,
 		})
 		if err != nil {
@@ -94,9 +83,6 @@ func DisableExplorer(config string) error {
 		}
 	}
 
-	// stop kube-explorer
-	ExplorerWatchers[config]()
-	delete(ExplorerWatchers, config)
 	return nil
 }
 
@@ -110,26 +96,34 @@ func InitExplorer(ctx context.Context) {
 	for _, exp := range expList {
 		if exp.Enabled {
 			logrus.Infof("start kube-explorer for cluster %s", exp.ContextName)
-			go func(ctx context.Context, name string) {
-				if _, err = EnableExplorer(ctx, name); err != nil {
-					logrus.Errorf("failed to start kube-explorer for cluster %s: %v", name, err)
-				}
-			}(ctx, exp.ContextName)
+			if err = EnableExplorer(ctx, exp.ContextName); err != nil {
+				logrus.Errorf("failed to start kube-explorer for cluster %s: %v", exp.ContextName, err)
+			}
 		}
 	}
 }
 
 // StartKubeExplorer start kube-explorer server listen on specified port
-func StartKubeExplorer(ctx context.Context, config string, port int) error {
+func StartKubeExplorer(ctx context.Context, clusterID string) (chan int, error) {
+	socketName := GetSocketName(clusterID)
 	explorer := exec.CommandContext(ctx, KubeExplorerCommand, fmt.Sprintf("--kubeconfig=%s", filepath.Join(CfgPath, KubeCfgFile)),
-		fmt.Sprintf("--context=%s", config), fmt.Sprintf("--http-listen-port=%d", port), "--https-listen-port=0")
+		fmt.Sprintf("--context=%s", clusterID), fmt.Sprintf("--bind-address=%s", socketName))
 	explorer.Stdout = os.Stdout
 	explorer.Stderr = os.Stderr
-	if err := explorer.Start(); err != nil {
-		logrus.Errorf("fail to start kube-explorer for cluster %s: %v", config, err)
+	explorer.Cancel = func() error {
+		return explorer.Process.Signal(os.Interrupt)
 	}
-	logrus.Infof("kube-explorer for %s K3s cluster will listen on 127.0.0.1:%d ...", config, port)
-	return explorer.Wait()
+	explorer.WaitDelay = 10 * time.Second
+	if err := explorer.Start(); err != nil {
+		logrus.Errorf("fail to start kube-explorer for cluster %s: %v", clusterID, err)
+	}
+	logrus.Infof("kube-explorer for %s K3s cluster will listen on %s ...", clusterID, socketName)
+	stopChan := make(chan int)
+	go func() {
+		_ = explorer.Wait()
+		close(stopChan)
+	}()
+	return stopChan, nil
 }
 
 func CheckCommandExist(cmd string) error {

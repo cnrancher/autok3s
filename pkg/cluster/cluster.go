@@ -156,12 +156,9 @@ func (p *ProviderBase) InitK3sCluster(cluster *types.Cluster, deployCCM func() [
 	for plugin := range enabledPlugins {
 		if plugin == "explorer" {
 			// start kube-explorer
-			port, err := common.EnableExplorer(context.Background(), cluster.ContextName)
+			err := common.EnableExplorer(context.Background(), cluster.ContextName)
 			if err != nil {
 				p.Logger.Errorf("[%s] failed to start kube-explorer for cluster %s: %v", p.Provider, cluster.ContextName, err)
-			}
-			if port != 0 {
-				p.Logger.Infof("[%s] kube-explorer for cluster %s will listen on 127.0.0.1:%d...", p.Provider, cluster.Name, port)
 			}
 		}
 	}
