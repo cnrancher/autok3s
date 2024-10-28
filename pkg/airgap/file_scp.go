@@ -74,7 +74,7 @@ func ScpFiles(logger *logrus.Logger, clusterName string, pkg *common.Package, di
 	if err != nil {
 		return err
 	}
-	if ValidatedArch[arch] {
+	if !ValidatedArch[arch] {
 		return errors.Wrapf(errArchNotSupport, "remote server arch: %s", arch)
 	}
 	if !pkg.Archs.Contains(arch) {
