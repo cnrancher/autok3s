@@ -176,6 +176,12 @@ func (p *ProviderBase) GetClusterOptions() []types.Flag {
 			Usage: fmt.Sprintf("Change the default docker install script address, default is : %s", dockerInstallScript),
 		},
 		{
+			Name:  "cluster-cidr",
+			P:     &p.ClusterCidr,
+			V:     p.ClusterCidr,
+			Usage: fmt.Sprintf("Change the default cluster CIDR, default is : %s", defaultCidr),
+		},
+		{
 			Name:  "master-extra-args",
 			P:     &p.MasterExtraArgs,
 			V:     p.MasterExtraArgs,
