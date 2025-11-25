@@ -35,7 +35,6 @@ const (
 	worker              = "0"
 	ui                  = false
 	embedEtcd           = false
-	defaultCidr         = "10.42.0.0/16"
 	uploadManifestCmd   = "echo \"%s\" | base64 -d | tee \"%s/%s\""
 	dockerInstallScript = "https://get.docker.com"
 
@@ -70,7 +69,6 @@ func NewBaseProvider() *ProviderBase {
 			Cluster:       embedEtcd,
 			Master:        master,
 			Worker:        worker,
-			ClusterCidr:   defaultCidr,
 			DockerScript:  dockerInstallScript,
 			Rollback:      true,
 		},
