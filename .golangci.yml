@@ -1,0 +1,22 @@
+version: "2"
+run:
+  go: "1.24"
+  tests: false
+  allow-parallel-runners: true
+linters:
+  default: none
+  enable:
+    - revive
+  settings:
+    gosec:
+      excludes:
+        - G115 # https://github.com/moby/moby/issues/48358#issuecomment-2323339603
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax

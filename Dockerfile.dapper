@@ -1,5 +1,4 @@
-FROM registry.suse.com/bci/golang:1.23
-# confirm that suse bci golang version upgraded to 1.20.10 after 2023-11-14
+FROM registry.suse.com/bci/golang:1.24
 ARG PROXY
 ARG GOPROXY
 ARG ARCH=amd64
@@ -8,21 +7,16 @@ RUN zypper install -y -f docker
 ## install golangci-lint
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
     export HTTPS_PROXY=${PROXY}; \
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.61.0; \
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s v2.6.2; \
     golangci-lint --version; \
-    fi
-## install mockgen
-RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
-    go install github.com/golang/mock/mockgen@v1.6.0; \
-    mockgen --version; \
     fi
 ## install ginkgo
 RUN if [ "$(go env GOARCH)" = "amd64" ]; then \
-    go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1; \
+    go install github.com/onsi/ginkgo/v2/ginkgo@v2.27.2; \
     ginkgo version; \
     fi
 ## install upx
-ENV UPX_VERSION 4.2.1
+ENV UPX_VERSION 5.0.2
 RUN export HTTPS_PROXY=${PROXY}; \
     curl -sL https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-${ARCH}_linux.tar.xz | tar xvJf - --strip-components=1 -C /tmp && \
     mv /tmp/upx /usr/bin/

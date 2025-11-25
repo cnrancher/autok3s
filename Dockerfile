@@ -1,6 +1,6 @@
 ARG KUBE_EXPLORER_VERSION=latest
 FROM cnrancher/kube-explorer:${KUBE_EXPLORER_VERSION} as kube-explorer
-FROM registry.suse.com/bci/bci-base:15.5
+FROM registry.suse.com/bci/bci-base:15.7
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETOS
