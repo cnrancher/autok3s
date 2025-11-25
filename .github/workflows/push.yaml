@@ -33,11 +33,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: 1.24.x
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.61.0
+          version: v2.5.0
       - 
         name: Build to push
         env:
