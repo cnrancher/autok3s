@@ -147,6 +147,10 @@ func getRunArgs(isFirstMaster bool, fixedIP string, cluster *types.Cluster, node
 		if internalIPAddress != "" {
 			runArgs = append(runArgs, "--advertise-address="+internalIPAddress)
 		}
+
+		if cluster.SystemDefaultRegistry != "" {
+			runArgs = append(runArgs, "--system-default-registry="+cluster.SystemDefaultRegistry)
+		}
 	}
 
 	if externalAddr := getFirstAddress(node.PublicIPAddress); externalAddr != "" {
@@ -155,10 +159,6 @@ func getRunArgs(isFirstMaster bool, fixedIP string, cluster *types.Cluster, node
 
 	if cluster.Network != "" {
 		runArgs = append(runArgs, "--flannel-backend="+cluster.Network)
-	}
-
-	if cluster.SystemDefaultRegistry != "" {
-		runArgs = append(runArgs, "--system-default-registry="+cluster.SystemDefaultRegistry)
 	}
 
 	sort.Strings(runArgs)
